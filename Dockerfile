@@ -1,14 +1,11 @@
 # ── better-issues: Next.js Frontend ────────────────────────────
 #
-# Multi-stage build for the Next.js app.
-# Produces a minimal standalone Node.js server.
-#
-# Build args (required -- baked into client JS bundle):
-#   NEXT_PUBLIC_CONVEX_URL    - Convex backend URL (browser connects here)
-#   NEXT_PUBLIC_CONVEX_SITE_URL - Convex site URL (auth/HTTP actions)
+# Stage 1 (deps):    Bun installs from bun.lock
+# Stage 2 (builder): Node.js builds the Next.js app
+# Stage 3 (runner):  Minimal Node.js production server
 # ───────────────────────────────────────────────────────────────
 
-# ── Stage 1: Install dependencies ──────────────────────────────
+# ── Stage 1: Install dependencies with Bun ─────────────────────
 FROM oven/bun:1.3-alpine AS deps
 WORKDIR /app
 
@@ -20,22 +17,19 @@ COPY packages/config/package.json ./packages/config/package.json
 
 RUN bun install --frozen-lockfile
 
-# ── Stage 2: Build the Next.js app ────────────────────────────
-FROM oven/bun:1.3-alpine AS builder
+# ── Stage 2: Build with Node.js ───────────────────────────────
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# next CLI has #!/usr/bin/env node shebang -- need node in PATH
-RUN apk add --no-cache nodejs
 
 ARG NEXT_PUBLIC_CONVEX_URL
 ARG NEXT_PUBLIC_CONVEX_SITE_URL
 ENV NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
 ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
-RUN cd apps/web && /app/node_modules/.bin/next build
+RUN cd apps/web && npx next build
 
 # ── Stage 3: Production runner ─────────────────────────────────
 FROM node:20-alpine AS runner

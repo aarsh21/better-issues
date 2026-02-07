@@ -7,13 +7,30 @@ services:
     expose:
       - "3210"
       - "3211"
+    labels:
+      # Traefik: convex domain. Port 3210 = main backend; port 3211 = HTTP actions (/api/auth).
+      # Route /http/* to 3211 so auth proxy reaches HTTP actions.
+      - "traefik.enable=true"
+      - "traefik.http.routers.convex-main.rule=Host(`convex.hyorinmaru.me`)"
+      - "traefik.http.routers.convex-main.entrypoints=websecure"
+      - "traefik.http.routers.convex-main.tls=true"
+      - "traefik.http.routers.convex-main.service=convex-main"
+      - "traefik.http.services.convex-main.loadbalancer.server.port=3210"
+      - "traefik.http.routers.convex-http.rule=Host(`convex.hyorinmaru.me`) && PathPrefix(`/http`)"
+      - "traefik.http.routers.convex-http.entrypoints=websecure"
+      - "traefik.http.routers.convex-http.tls=true"
+      - "traefik.http.routers.convex-http.priority=200"
+      - "traefik.http.routers.convex-http.service=convex-http"
+      - "traefik.http.routers.convex-http.middlewares=convex-http-strip"
+      - "traefik.http.middlewares.convex-http-strip.stripprefix.prefixes=/http"
+      - "traefik.http.services.convex-http.loadbalancer.server.port=3211"
     volumes:
       - data:/convex/data
     environment:
       INSTANCE_NAME: convex-prod
       INSTANCE_SECRET: ${INSTANCE_SECRET}
       CONVEX_CLOUD_ORIGIN: https://convex.hyorinmaru.me
-      CONVEX_SITE_ORIGIN: https://convex.hyorinmaru.me
+      CONVEX_SITE_ORIGIN: https://convex.hyorinmaru.me/http
       RUST_LOG: info
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3210/version"]
@@ -41,7 +58,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_CONVEX_URL: https://convex.hyorinmaru.me
-        NEXT_PUBLIC_CONVEX_SITE_URL: https://convex.hyorinmaru.me
+        NEXT_PUBLIC_CONVEX_SITE_URL: https://convex.hyorinmaru.me/http
     restart: unless-stopped
     labels:
       # Traefik: route issues domain to web; all paths (incl. /api/auth) must reach this container.

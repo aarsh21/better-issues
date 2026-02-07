@@ -98,7 +98,7 @@ Point Dokploy at this repo. Set build args:
 
 ```env
 NEXT_PUBLIC_CONVEX_URL=https://convex.yourdomain.com
-NEXT_PUBLIC_CONVEX_SITE_URL=https://convex.yourdomain.com
+NEXT_PUBLIC_CONVEX_SITE_URL=https://convex.yourdomain.com/http
 ```
 
 Set runtime env vars:
@@ -128,7 +128,7 @@ curl -s https://issues.hyorinmaru.me/api/health
 curl -s https://issues.hyorinmaru.me/api/auth/ready
 ```
 
-- If **both** return 200: routing is correct; the problem is likely in the Convex proxy or backend.
+- If **both** return 200: routing is correct; the problem is Convex HTTP actions (port 3211). See Step 3.
 - If **`/api/health`** returns 200 but **`/api/auth/ready`** returns 404: the proxy is sending `/api/auth` somewhere else. Point all traffic for the issues domain to the web service (no path-based split for `/api`).
 - If **both** return 404: `/api/*` is not reaching the web container; fix the proxy so the web service receives all paths.
 
@@ -136,6 +136,8 @@ curl -s https://issues.hyorinmaru.me/api/auth/ready
 
 - **Dokploy**: Ensure the application domain (e.g. `issues.hyorinmaru.me`) targets the web service and that no path rules redirect `/api` elsewhere.
 - **Traefik**: The `docker-compose.yml` includes Traefik labels for the web service. If these conflict with Dokploy’s config, remove the `labels` block and configure routing in Dokploy instead.
+
+**Step 3 – Convex HTTP actions (port 3211):** Self-hosted Convex uses port 3210 (main) and 3211 (HTTP actions). The auth proxy fetches `https://convex.hyorinmaru.me/http/api/auth/*`, which must reach port 3211. The `docker-compose.yml` adds Traefik labels for the backend: route `/http` → 3211 with prefix stripped. Set `NEXT_PUBLIC_CONVEX_SITE_URL` and `CONVEX_SITE_ORIGIN` to `https://convex.yourdomain.com/http`. If Convex is deployed separately, add equivalent routing.
 
 ---
 

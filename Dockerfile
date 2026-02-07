@@ -1,14 +1,18 @@
 # ── better-issues: Next.js Frontend ────────────────────────────
 #
-# Stage 1 (deps):    Bun installs from bun.lock
-# Stage 2 (builder): Node.js builds the Next.js app
-# Stage 3 (runner):  Minimal Node.js production server
+# Single builder stage with Node.js + Bun.
+# Bun handles install (bun.lock), Bun runs the build.
+# No cross-stage node_modules compatibility issues.
 # ───────────────────────────────────────────────────────────────
 
-# ── Stage 1: Install dependencies with Bun ─────────────────────
-FROM oven/bun:1.3-alpine AS deps
+# ── Stage 1: Install deps + build ──────────────────────────────
+FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Install Bun
+RUN npm install -g bun
+
+# Copy manifests first (cached when unchanged)
 COPY package.json bun.lock ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/backend/package.json ./packages/backend/package.json
@@ -17,11 +21,7 @@ COPY packages/config/package.json ./packages/config/package.json
 
 RUN bun install --frozen-lockfile
 
-# ── Stage 2: Build with Node.js ───────────────────────────────
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
+# Copy full source
 COPY . .
 
 ARG NEXT_PUBLIC_CONVEX_URL
@@ -29,9 +29,9 @@ ARG NEXT_PUBLIC_CONVEX_SITE_URL
 ENV NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
 ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
-RUN cd apps/web && npx next build
+RUN cd apps/web && bun run build
 
-# ── Stage 3: Production runner ─────────────────────────────────
+# ── Stage 2: Minimal production runner ─────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 

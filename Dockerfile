@@ -1,18 +1,15 @@
 # ── better-issues: Next.js Frontend ────────────────────────────
 #
-# Single builder stage with Node.js + Bun.
-# Bun handles install (bun.lock), Bun runs the build.
-# No cross-stage node_modules compatibility issues.
+# Build args (required):
+#   NEXT_PUBLIC_CONVEX_URL      - Your Convex backend URL
+#   NEXT_PUBLIC_CONVEX_SITE_URL - Your Convex site URL
 # ───────────────────────────────────────────────────────────────
 
-# ── Stage 1: Install deps + build ──────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install Bun
 RUN npm install -g bun
 
-# Copy manifests first (cached when unchanged)
 COPY package.json bun.lock ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/backend/package.json ./packages/backend/package.json
@@ -21,7 +18,6 @@ COPY packages/config/package.json ./packages/config/package.json
 
 RUN bun install --frozen-lockfile
 
-# Copy full source
 COPY . .
 
 ARG NEXT_PUBLIC_CONVEX_URL
@@ -31,7 +27,7 @@ ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
 RUN cd apps/web && bun run build
 
-# ── Stage 2: Minimal production runner ─────────────────────────
+# ── Production runner ──────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 

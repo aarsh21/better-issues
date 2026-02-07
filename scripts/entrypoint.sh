@@ -4,7 +4,7 @@ set -e
 # ── Deploy Convex functions if self-hosted vars are set ────────
 if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; then
   echo "==> Deploying Convex functions to $CONVEX_SELF_HOSTED_URL ..."
-  cd /convex-backend
+  cd /convex-deploy
 
   convex deploy \
     --url "$CONVEX_SELF_HOSTED_URL" \
@@ -32,4 +32,4 @@ fi
 
 # ── Start Next.js ──────────────────────────────────────────────
 echo "==> Starting Next.js on port ${PORT:-8080}"
-exec node apps/web/server.js
+exec node server.js

@@ -1,14 +1,14 @@
-# ── better-issues: Frontend + Convex Deploy ────────────────────
+# ── better-issues ─────────────────────────────────────────────
 #
-# Build args (baked into client JS at build time):
-#   NEXT_PUBLIC_CONVEX_URL  - Convex backend URL (browser connects here)
+# Build arg:
+#   NEXT_PUBLIC_CONVEX_URL  - Convex backend URL (baked into JS)
 #
 # Runtime env vars (for self-hosted Convex deploy on startup):
-#   CONVEX_SELF_HOSTED_URL       - Convex backend URL (for CLI deploy)
-#   CONVEX_SELF_HOSTED_ADMIN_KEY - Admin key from generate_admin_key.sh
+#   CONVEX_SELF_HOSTED_URL       - Convex backend URL (for CLI)
+#   CONVEX_SELF_HOSTED_ADMIN_KEY - Admin key
 #   BETTER_AUTH_SECRET           - Auth secret
-#   SITE_URL                     - Public URL of this web app
-# ───────────────────────────────────────────────────────────────
+#   SITE_URL                     - Public URL of this app
+# ──────────────────────────────────────────────────────────────
 
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -16,11 +16,6 @@ WORKDIR /app
 RUN npm install -g bun
 
 COPY package.json bun.lock ./
-COPY apps/web/package.json ./apps/web/package.json
-COPY packages/backend/package.json ./packages/backend/package.json
-COPY packages/env/package.json ./packages/env/package.json
-COPY packages/config/package.json ./packages/config/package.json
-
 RUN bun install --frozen-lockfile
 
 COPY . .
@@ -28,9 +23,9 @@ COPY . .
 ARG NEXT_PUBLIC_CONVEX_URL
 ENV NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
 
-RUN cd apps/web && bun run build
+RUN bun run build
 
-# ── Production runner ──────────────────────────────────────────
+# ── Production runner ─────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -41,25 +36,25 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Convex CLI + deps for deploying functions at startup
+# Convex CLI for deploying functions at startup
 RUN npm install -g convex && \
-    mkdir -p /convex-backend && \
-    cd /convex-backend && \
+    mkdir -p /convex-deploy && \
+    cd /convex-deploy && \
     npm init -y > /dev/null 2>&1 && \
     npm install --save convex@1.31.2 better-auth@1.4.9 @convex-dev/better-auth@0.10.9 zod dotenv > /dev/null 2>&1
 
 # Next.js standalone output
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Convex backend source (functions + schema + package.json)
-COPY --from=builder /app/packages/backend/convex /convex-backend/convex
-COPY --from=builder /app/packages/backend/package.json /convex-backend/package.json
+# Convex source for deployment
+COPY --from=builder /app/convex /convex-deploy/convex
+COPY --from=builder /app/package.json /convex-deploy/package.json
 
-# Entrypoint: deploy convex functions (if configured), then start Next.js
+# Entrypoint
 COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && chown -R nextjs:nodejs /convex-backend
+RUN chmod +x /entrypoint.sh && chown -R nextjs:nodejs /convex-deploy
 
 USER nextjs
 EXPOSE 8080

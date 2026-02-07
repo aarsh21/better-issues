@@ -27,15 +27,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Make hoisted binaries (next, etc.) available in PATH
-ENV PATH="/app/node_modules/.bin:$PATH"
-
 ARG NEXT_PUBLIC_CONVEX_URL
 ARG NEXT_PUBLIC_CONVEX_SITE_URL
 ENV NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
 ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
-RUN cd apps/web && next build
+# Use absolute path -- monorepo hoists next to root node_modules
+RUN cd apps/web && /app/node_modules/.bin/next build
 
 # ── Stage 3: Production runner ─────────────────────────────────
 FROM node:20-alpine AS runner

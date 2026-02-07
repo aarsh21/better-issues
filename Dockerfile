@@ -35,7 +35,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs && \
@@ -58,9 +58,9 @@ COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER nextjs
-EXPOSE 3000
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget -q --spider http://localhost:3000/api/health || exit 1
+  CMD wget -q --spider http://localhost:8080/api/health || exit 1
 
 CMD ["/entrypoint.sh"]

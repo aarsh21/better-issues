@@ -94,10 +94,11 @@ Use `ghcr.io/get-convex/convex-backend:latest` as a Docker service in Dokploy. G
 
 ### Step 2: Create web Application
 
-Point Dokploy at this repo. Set build arg:
+Point Dokploy at this repo. Set build args:
 
 ```env
 NEXT_PUBLIC_CONVEX_URL=https://convex.yourdomain.com
+NEXT_PUBLIC_CONVEX_SITE_URL=https://convex.yourdomain.com
 ```
 
 Set runtime env vars:
@@ -112,6 +113,13 @@ SITE_URL=https://issues.yourdomain.com
 ### Step 3: Deploy
 
 On startup, the container deploys Convex functions, sets auth env vars, then starts Next.js.
+
+### Auth 404 troubleshooting
+
+If `/api/auth/*` returns 404, the reverse proxy may be routing `/api` elsewhere. The web container must receive **all** paths, including `/api/auth/*` (the Next.js route proxies auth to Convex).
+
+- **Traefik**: The `docker-compose.yml` includes Traefik labels for the web service. If you use Traefik directly, these ensure `issues.hyorinmaru.me` routes to the web container.
+- **Dokploy**: Ensure the application routing forwards all paths to the web service (no path-based split for `/api`).
 
 ---
 

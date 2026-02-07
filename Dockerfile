@@ -1,7 +1,8 @@
 # ── better-issues ─────────────────────────────────────────────
 #
-# Build arg:
-#   NEXT_PUBLIC_CONVEX_URL  - Convex backend URL (baked into JS)
+# Build args (both baked into JS):
+#   NEXT_PUBLIC_CONVEX_URL       - Convex backend URL
+#   NEXT_PUBLIC_CONVEX_SITE_URL  - Convex HTTP/site URL (for auth proxy; defaults to CONVEX_URL)
 #
 # Runtime env vars (for self-hosted Convex deploy on startup):
 #   CONVEX_SELF_HOSTED_URL       - Convex backend URL (for CLI)
@@ -21,7 +22,9 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 ARG NEXT_PUBLIC_CONVEX_URL
+ARG NEXT_PUBLIC_CONVEX_SITE_URL
 ENV NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
+ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
 RUN bun run build
 

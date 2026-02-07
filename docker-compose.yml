@@ -41,7 +41,16 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_CONVEX_URL: https://convex.hyorinmaru.me
+        NEXT_PUBLIC_CONVEX_SITE_URL: https://convex.hyorinmaru.me
     restart: unless-stopped
+    labels:
+      # Traefik: route issues domain to web; all paths (incl. /api/auth) must reach this container
+      - "traefik.enable=true"
+      - "traefik.http.routers.better-issues-web.rule=Host(`issues.hyorinmaru.me`)"
+      - "traefik.http.routers.better-issues-web.entrypoints=websecure"
+      - "traefik.http.routers.better-issues-web.tls=true"
+      - "traefik.http.routers.better-issues-web.service=better-issues-web"
+      - "traefik.http.services.better-issues-web.loadbalancer.server.port=4100"
     networks:
       - dokploy-network
     expose:

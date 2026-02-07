@@ -41,8 +41,12 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Convex CLI for deploying functions at startup
-RUN npm install -g convex
+# Convex CLI + deps for deploying functions at startup
+RUN npm install -g convex && \
+    mkdir -p /convex-backend && \
+    cd /convex-backend && \
+    npm init -y > /dev/null 2>&1 && \
+    npm install --save convex@1.31.2 better-auth@1.4.9 @convex-dev/better-auth@0.10.9 zod dotenv > /dev/null 2>&1
 
 # Next.js standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./

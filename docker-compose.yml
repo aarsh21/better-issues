@@ -19,6 +19,8 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    networks:
+      - app
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -37,6 +39,8 @@ services:
     restart: unless-stopped
     stop_grace_period: 10s
     stop_signal: SIGINT
+    networks:
+      - app
     ports:
       - "${CONVEX_PORT:-3210}:3210"
       - "${CONVEX_SITE_PORT:-3211}:3211"
@@ -47,7 +51,7 @@ services:
       INSTANCE_SECRET: ${INSTANCE_SECRET}
       CONVEX_CLOUD_ORIGIN: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
       CONVEX_SITE_ORIGIN: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
-      POSTGRES_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432
+      POSTGRES_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/convex_self_hosted
       DO_NOT_REQUIRE_SSL: "1"
       RUST_LOG: ${RUST_LOG:-info}
       DISABLE_BEACON: "true"
@@ -58,12 +62,15 @@ services:
     healthcheck:
       test: curl -f http://localhost:3210/version
       interval: 5s
-      start_period: 10s
+      start_period: 30s
+      retries: 10
 
   # ─── Convex Dashboard ──────────────────────────────────────
   dashboard:
     image: ghcr.io/get-convex/convex-dashboard:latest
     restart: unless-stopped
+    networks:
+      - app
     ports:
       - "${DASHBOARD_PORT:-6791}:6791"
     environment:
@@ -75,6 +82,8 @@ services:
   # ─── Admin Key Generator (runs once, writes to shared volume) ──
   keygen:
     image: ghcr.io/get-convex/convex-backend:latest
+    networks:
+      - app
     volumes:
       - admin_key:/key
     environment:
@@ -99,6 +108,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.deploy
+    networks:
+      - app
     volumes:
       - admin_key:/key:ro
     environment:
@@ -118,12 +129,18 @@ services:
       args:
         NEXT_PUBLIC_CONVEX_URL: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
         NEXT_PUBLIC_CONVEX_SITE_URL: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
+    networks:
+      - app
     ports:
       - "${WEB_PORT:-3000}:3000"
     restart: unless-stopped
     depends_on:
       convex-deploy:
         condition: service_completed_successfully
+
+networks:
+  app:
+    driver: bridge
 
 volumes:
   postgres_data:

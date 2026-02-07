@@ -31,5 +31,5 @@ if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; t
 fi
 
 # ── Start Next.js ──────────────────────────────────────────────
-echo "==> Starting Next.js on port ${PORT:-8080}"
+echo "==> Starting Next.js on port ${PORT:-4100}"
 exec node server.js

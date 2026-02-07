@@ -1,8 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import { CircleDot, Settings, Plus, Search, Tag, LayoutList } from "lucide-react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -80,32 +81,35 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
 
           <Separator className="my-2" />
 
-          <div className="p-2">
-            <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Quick filters
-            </p>
-            <Link
-              href={`/org/${slug}?status=open`}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <LayoutList className="h-3.5 w-3.5" />
-              Open issues
-            </Link>
-            <Link
-              href={`/org/${slug}?status=in_progress`}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <CircleDot className="h-3.5 w-3.5" />
-              In progress
-            </Link>
-            <Link
-              href={`/org/${slug}?status=closed`}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <Tag className="h-3.5 w-3.5" />
-              Closed
-            </Link>
-          </div>
+          <Suspense
+            fallback={
+              <div className="p-2">
+                <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Quick filters
+                </p>
+                <QuickFilterLink
+                  href={`/org/${slug}?status=open`}
+                  icon={LayoutList}
+                  label="Open issues"
+                  active={false}
+                />
+                <QuickFilterLink
+                  href={`/org/${slug}?status=in_progress`}
+                  icon={CircleDot}
+                  label="In progress"
+                  active={false}
+                />
+                <QuickFilterLink
+                  href={`/org/${slug}?status=closed`}
+                  icon={Tag}
+                  label="Closed"
+                  active={false}
+                />
+              </div>
+            }
+          >
+            <QuickFilters slug={slug} pathname={pathname} />
+          </Suspense>
         </ScrollArea>
 
         <Separator />
@@ -122,5 +126,66 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
 
       <CreateOrgDialog open={createOrgOpen} onOpenChange={setCreateOrgOpen} />
     </>
+  );
+}
+
+/* ── Inner components ─────────────────────────────────────────── */
+
+function QuickFilterLink({
+  href,
+  icon: Icon,
+  label,
+  active,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href as never}
+      className={cn(
+        "flex items-center gap-2 px-2 py-1.5 text-sm transition-colors",
+        active
+          ? "bg-accent text-accent-foreground font-medium"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </Link>
+  );
+}
+
+function QuickFilters({ slug, pathname }: { slug: string; pathname: string }) {
+  const searchParams = useSearchParams();
+  const activeStatus = searchParams.get("status");
+  const isOnIssuesPage = pathname === `/org/${slug}`;
+
+  return (
+    <div className="p-2">
+      <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Quick filters
+      </p>
+      <QuickFilterLink
+        href={`/org/${slug}?status=open`}
+        icon={LayoutList}
+        label="Open issues"
+        active={isOnIssuesPage && activeStatus === "open"}
+      />
+      <QuickFilterLink
+        href={`/org/${slug}?status=in_progress`}
+        icon={CircleDot}
+        label="In progress"
+        active={isOnIssuesPage && activeStatus === "in_progress"}
+      />
+      <QuickFilterLink
+        href={`/org/${slug}?status=closed`}
+        icon={Tag}
+        label="Closed"
+        active={isOnIssuesPage && activeStatus === "closed"}
+      />
+    </div>
   );
 }

@@ -1,5 +1,3 @@
-"use client";
-
 import { Circle, CircleDot, CircleCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";

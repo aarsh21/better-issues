@@ -4,6 +4,25 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
+const issueValidator = v.object({
+  _id: v.id("issues"),
+  _creationTime: v.number(),
+  organizationId: v.string(),
+  number: v.number(),
+  title: v.string(),
+  description: v.optional(v.string()),
+  status: v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed")),
+  priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent")),
+  assigneeId: v.optional(v.string()),
+  labelIds: v.array(v.id("labels")),
+  createdBy: v.string(),
+  templateId: v.optional(v.id("issueTemplates")),
+  templateData: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  closedAt: v.optional(v.number()),
+});
+
 export const list = query({
   args: {
     organizationId: v.string(),
@@ -12,6 +31,15 @@ export const list = query({
     labelId: v.optional(v.id("labels")),
     paginationOpts: paginationOptsValidator,
   },
+  returns: v.object({
+    page: v.array(issueValidator),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+    splitCursor: v.optional(v.union(v.string(), v.null())),
+    pageStatus: v.optional(
+      v.union(v.literal("SplitRecommended"), v.literal("SplitRequired"), v.null()),
+    ),
+  }),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -52,6 +80,7 @@ export const search = query({
     searchQuery: v.string(),
     status: v.optional(v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed"))),
   },
+  returns: v.array(issueValidator),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -75,6 +104,7 @@ export const getByNumber = query({
     organizationId: v.string(),
     number: v.number(),
   },
+  returns: v.union(issueValidator, v.null()),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -106,6 +136,7 @@ export const create = mutation({
     templateId: v.optional(v.id("issueTemplates")),
     templateData: v.optional(v.string()),
   },
+  returns: v.object({ issueId: v.id("issues"), number: v.number() }),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -154,6 +185,7 @@ export const update = mutation({
     assigneeId: v.optional(v.union(v.string(), v.null())),
     labelIds: v.optional(v.array(v.id("labels"))),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -183,6 +215,7 @@ export const updateStatus = mutation({
     issueId: v.id("issues"),
     status: v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed")),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -209,6 +242,7 @@ export const remove = mutation({
   args: {
     issueId: v.id("issues"),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");

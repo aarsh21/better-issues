@@ -3,10 +3,20 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
+const labelValidator = v.object({
+  _id: v.id("labels"),
+  _creationTime: v.number(),
+  organizationId: v.string(),
+  name: v.string(),
+  color: v.string(),
+  description: v.optional(v.string()),
+});
+
 export const list = query({
   args: {
     organizationId: v.string(),
   },
+  returns: v.array(labelValidator),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -25,6 +35,7 @@ export const create = mutation({
     color: v.string(),
     description: v.optional(v.string()),
   },
+  returns: v.id("labels"),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -62,6 +73,7 @@ export const update = mutation({
     color: v.optional(v.string()),
     description: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
@@ -85,6 +97,7 @@ export const remove = mutation({
   args: {
     labelId: v.id("labels"),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");

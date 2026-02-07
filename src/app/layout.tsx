@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "../index.css";
@@ -21,16 +22,22 @@ export const metadata: Metadata = {
   description: "A premium issue tracker for small teams",
 };
 
-export default async function RootLayout({
+async function AuthenticatedProviders({ children }: { children: React.ReactNode }) {
+  const token = await getToken();
+  return <Providers initialToken={token}>{children}</Providers>;
+}
+
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const token = await getToken();
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers initialToken={token}>{children}</Providers>
+        <Suspense>
+          <AuthenticatedProviders>{children}</AuthenticatedProviders>
+        </Suspense>
       </body>
     </html>
   );

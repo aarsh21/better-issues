@@ -21,6 +21,7 @@ import { StatusBadge } from "@/components/issues/status-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { LabelBadge } from "@/components/issues/label-badge";
 import { authClient } from "@/lib/auth-client";
+import { formatDate } from "@/lib/utils";
 
 type IssueStatus = "open" | "in_progress" | "closed";
 type IssuePriority = "low" | "medium" | "high" | "urgent";
@@ -44,8 +45,51 @@ export default function IssueDetailPage() {
     issue?.templateId ? { templateId: issue.templateId } : "skip",
   );
 
-  const updateIssue = useMutation(api.issues.update);
-  const updateStatus = useMutation(api.issues.updateStatus);
+  const updateIssue = useMutation(api.issues.update).withOptimisticUpdate((localStore, args) => {
+    if (!activeOrg) return;
+    const current = localStore.getQuery(api.issues.getByNumber, {
+      organizationId: activeOrg.id,
+      number: issueNumber,
+    });
+    if (current !== undefined && current !== null) {
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      if (args.title !== undefined) updates.title = args.title;
+      if (args.description !== undefined) updates.description = args.description;
+      if (args.priority !== undefined) updates.priority = args.priority;
+      if (args.labelIds !== undefined) updates.labelIds = args.labelIds;
+      localStore.setQuery(
+        api.issues.getByNumber,
+        { organizationId: activeOrg.id, number: issueNumber },
+        { ...current, ...updates },
+      );
+    }
+  });
+  const updateStatus = useMutation(api.issues.updateStatus).withOptimisticUpdate(
+    (localStore, args) => {
+      if (!activeOrg) return;
+      const current = localStore.getQuery(api.issues.getByNumber, {
+        organizationId: activeOrg.id,
+        number: issueNumber,
+      });
+      if (current !== undefined && current !== null) {
+        localStore.setQuery(
+          api.issues.getByNumber,
+          { organizationId: activeOrg.id, number: issueNumber },
+          {
+            ...current,
+            status: args.status,
+            updatedAt: Date.now(),
+            closedAt:
+              args.status === "closed"
+                ? Date.now()
+                : current.status === "closed"
+                  ? undefined
+                  : current.closedAt,
+          },
+        );
+      }
+    },
+  );
   const removeIssue = useMutation(api.issues.remove);
 
   const [editing, setEditing] = useState(false);
@@ -160,16 +204,6 @@ export default function IssueDetailPage() {
     }
   };
 
-  const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -201,7 +235,7 @@ export default function IssueDetailPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto">
         <div className="mx-auto max-w-3xl p-6">
-          <div className="grid grid-cols-[1fr_220px] gap-8">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_220px]">
             {/* Main content */}
             <div className="space-y-6">
               {editing ? (

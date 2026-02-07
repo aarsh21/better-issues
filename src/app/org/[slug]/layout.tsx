@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { Menu } from "lucide-react";
@@ -7,10 +8,14 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProjectSidebar } from "@/components/project-sidebar";
-import { SearchCommand } from "@/components/search-command";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { authClient } from "@/lib/auth-client";
+
+const SearchCommand = dynamic(
+  () => import("@/components/search-command").then((m) => ({ default: m.SearchCommand })),
+  { ssr: false },
+);
 
 export default function OrgSlugLayout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ slug: string }>();
@@ -69,7 +74,7 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
         <main className="flex-1 overflow-hidden">{children}</main>
       </div>
 
-      <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
+      {searchOpen && <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />}
     </div>
   );
 }

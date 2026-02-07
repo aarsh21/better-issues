@@ -1,5 +1,3 @@
-"use client";
-
 import { SignalHigh, SignalMedium, SignalLow, AlertTriangle } from "lucide-react";
 
 import { cn } from "@/lib/utils";

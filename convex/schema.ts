@@ -39,9 +39,11 @@ export default defineSchema({
     updatedAt: v.number(),
     closedAt: v.optional(v.number()),
   })
+    .index("by_organization", ["organizationId"])
     .index("by_org_and_status", ["organizationId", "status"])
     .index("by_org_and_number", ["organizationId", "number"])
-    .index("by_assignee", ["assigneeId"])
+    .index("by_org_and_priority", ["organizationId", "priority"])
+    .index("by_assignee", ["organizationId", "assigneeId"])
     .searchIndex("search_issues", {
       searchField: "title",
       filterFields: ["organizationId", "status"],

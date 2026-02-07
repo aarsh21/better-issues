@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+
 import { api } from "@/convex";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { Plus } from "lucide-react";
@@ -10,6 +12,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner } from "@/components/ui/spinner";
 import { FilterBar } from "@/components/issues/filter-bar";
 import { IssueRow } from "@/components/issues/issue-row";
 import { authClient } from "@/lib/auth-client";
@@ -17,6 +20,35 @@ import { authClient } from "@/lib/auth-client";
 type IssueStatus = "open" | "in_progress" | "closed";
 
 export default function IssueListPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <div className="flex items-center gap-4">
+              <h1 className="text-sm font-bold">Issues</h1>
+            </div>
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <div className="space-y-0">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b px-4 py-3">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-10" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <IssueListContent />
+    </Suspense>
+  );
+}
+
+function IssueListContent() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const { data: activeOrg } = authClient.useActiveOrganization();
@@ -51,6 +83,12 @@ export default function IssueListPage() {
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-4">
           <h1 className="text-sm font-bold">Issues</h1>
+          {!isLoading && results.length > 0 && (
+            <span className="text-xs text-muted-foreground font-mono">
+              {results.length}
+              {status === "CanLoadMore" ? "+" : ""}
+            </span>
+          )}
           <FilterBar activeStatus={statusFilter} onStatusChange={setStatusFilter} />
         </div>
         <Link href={`/org/${params.slug}/issues/new`}>
@@ -112,7 +150,7 @@ export default function IssueListPage() {
 
             {status === "LoadingMore" && (
               <div className="flex justify-center border-b py-3">
-                <span className="text-xs text-muted-foreground">Loading...</span>
+                <Spinner className="text-muted-foreground" />
               </div>
             )}
           </div>

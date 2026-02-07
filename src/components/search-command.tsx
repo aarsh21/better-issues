@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useDeferredValue } from "react";
 import { api } from "@/convex";
 import { useQuery } from "convex/react";
 
@@ -28,14 +28,16 @@ export function SearchCommand({
   const params = useParams<{ slug: string }>();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
+  const isStale = searchQuery !== deferredQuery;
   const { data: activeOrg } = authClient.useActiveOrganization();
 
   const results = useQuery(
     api.issues.search,
-    activeOrg
+    activeOrg && deferredQuery.trim()
       ? {
           organizationId: activeOrg.id,
-          searchQuery: searchQuery,
+          searchQuery: deferredQuery,
         }
       : "skip",
   );
@@ -58,9 +60,13 @@ export function SearchCommand({
           value={searchQuery}
           onValueChange={setSearchQuery}
         />
-        <CommandList>
+        <CommandList className={isStale ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <CommandEmpty>
-            {searchQuery.trim() ? "No issues found." : "Type to search issues..."}
+            {searchQuery.trim()
+              ? isStale
+                ? "Searching..."
+                : "No issues found."
+              : "Type to search issues..."}
           </CommandEmpty>
           {results && results.length > 0 && (
             <CommandGroup heading="Issues">

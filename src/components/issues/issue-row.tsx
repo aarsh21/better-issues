@@ -1,6 +1,8 @@
 "use client";
 
 import type { Doc } from "@/convex";
+
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -27,7 +29,7 @@ export function IssueRow({ issue, labels }: { issue: Issue; labels: Label[] }) {
     >
       <StatusIcon status={issue.status} />
 
-      <span className="text-xs text-muted-foreground font-mono shrink-0 w-10 text-right">
+      <span className="text-xs text-muted-foreground font-mono shrink-0 w-10 text-right transition-colors group-hover:text-foreground">
         #{issue.number}
       </span>
 
@@ -48,6 +50,8 @@ export function IssueRow({ issue, labels }: { issue: Issue; labels: Label[] }) {
       </div>
 
       <PriorityIndicator priority={issue.priority} />
+
+      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
     </Link>
   );
 }

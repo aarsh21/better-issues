@@ -92,8 +92,34 @@ export default function SettingsPage() {
 
 function LabelsTab({ organizationId }: { organizationId: string }) {
   const labels = useQuery(api.labels.list, { organizationId });
-  const createLabel = useMutation(api.labels.create);
-  const removeLabel = useMutation(api.labels.remove);
+  const createLabel = useMutation(api.labels.create).withOptimisticUpdate((localStore, args) => {
+    const current = localStore.getQuery(api.labels.list, {
+      organizationId: args.organizationId,
+    });
+    if (current !== undefined) {
+      localStore.setQuery(api.labels.list, { organizationId: args.organizationId }, [
+        ...current,
+        {
+          _id: crypto.randomUUID() as any,
+          _creationTime: Date.now(),
+          organizationId: args.organizationId,
+          name: args.name,
+          color: args.color,
+          description: args.description,
+        },
+      ]);
+    }
+  });
+  const removeLabel = useMutation(api.labels.remove).withOptimisticUpdate((localStore, args) => {
+    const current = localStore.getQuery(api.labels.list, { organizationId });
+    if (current !== undefined) {
+      localStore.setQuery(
+        api.labels.list,
+        { organizationId },
+        current.filter((l) => l._id !== args.labelId),
+      );
+    }
+  });
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

@@ -66,13 +66,13 @@ npx convex env set SITE_URL http://localhost:3001
 
 #### Environment variable reference (local dev)
 
-| Variable | Where | Required | Description |
-| --- | --- | --- | --- |
-| `CONVEX_DEPLOYMENT` | `.env.local` | Yes | Convex deployment identifier (auto-set by `dev:setup`) |
-| `NEXT_PUBLIC_CONVEX_URL` | `.env.local` | Yes | Convex backend URL (auto-set by `dev:setup`) |
-| `NEXT_PUBLIC_CONVEX_SITE_URL` | `.env.local` | No | Convex HTTP actions URL; falls back to `NEXT_PUBLIC_CONVEX_URL` |
-| `BETTER_AUTH_SECRET` | Convex env | Yes | Signing secret for Better Auth (`openssl rand -hex 32`) |
-| `SITE_URL` | Convex env | Yes | Public app URL (`http://localhost:3001` for local dev) |
+| Variable                      | Where        | Required | Description                                                     |
+| ----------------------------- | ------------ | -------- | --------------------------------------------------------------- |
+| `CONVEX_DEPLOYMENT`           | `.env.local` | Yes      | Convex deployment identifier (auto-set by `dev:setup`)          |
+| `NEXT_PUBLIC_CONVEX_URL`      | `.env.local` | Yes      | Convex backend URL (auto-set by `dev:setup`)                    |
+| `NEXT_PUBLIC_CONVEX_SITE_URL` | `.env.local` | No       | Convex HTTP actions URL; falls back to `NEXT_PUBLIC_CONVEX_URL` |
+| `BETTER_AUTH_SECRET`          | Convex env   | Yes      | Signing secret for Better Auth (`openssl rand -hex 32`)         |
+| `SITE_URL`                    | Convex env   | Yes      | Public app URL (`http://localhost:3001` for local dev)          |
 
 > **Note:** `BETTER_AUTH_SECRET` and `SITE_URL` live on the Convex backend, not in `.env.local`. Set them with `npx convex env set`.
 
@@ -90,14 +90,14 @@ The app runs at [http://localhost:3001](http://localhost:3001).
 
 ### Scripts
 
-| Command              | Description                    |
-| -------------------- | ------------------------------ |
-| `bun run dev`        | Start Next.js dev server       |
-| `bun run dev:server` | Start Convex dev server        |
-| `bun run dev:setup`  | One-time Convex configuration  |
-| `bun run build`      | Production build               |
-| `bun run check`      | Lint + format (oxlint + oxfmt) |
-| `bun run check-types`| TypeScript type checking       |
+| Command               | Description                    |
+| --------------------- | ------------------------------ |
+| `bun run dev`         | Start Next.js dev server       |
+| `bun run dev:server`  | Start Convex dev server        |
+| `bun run dev:setup`   | One-time Convex configuration  |
+| `bun run build`       | Production build               |
+| `bun run check`       | Lint + format (oxlint + oxfmt) |
+| `bun run check-types` | TypeScript type checking       |
 
 ---
 

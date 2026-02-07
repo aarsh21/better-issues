@@ -48,3 +48,9 @@ coverage
 .cache
 tmp
 temp
+.next/dev
+convex/_generated
+convex/betterAuth/_generated
+convex/_generated
+convex/betterAuth/_generated
+convex/_generated

@@ -1,23 +1,17 @@
-# ── better-issues: Full Stack Docker Compose ───────────────────
+# ── better-issues: Full Stack ──────────────────────────────────
 #
-# Services:
-#   - postgres:       PostgreSQL database for Convex
-#   - convex:         Convex self-hosted backend (real-time DB + functions)
-#   - dashboard:      Convex admin dashboard
-#   - convex-deploy:  One-shot: pushes functions + sets env vars
-#   - web:            Next.js frontend
-#
-# First-time setup:
-#   1. Copy .env.example to .env and fill in values
-#   2. Generate INSTANCE_SECRET:  openssl rand -hex 32
-#   3. Start backend:             docker compose up -d convex postgres
-#   4. Generate admin key:        docker compose exec convex /bin/sh -c "cd convex && ./generate_admin_key.sh"
-#   5. Add CONVEX_ADMIN_KEY to .env
-#   6. Start everything:          docker compose up --build -d
-#
-# After first setup, just run:
+# One command to run everything:
 #   docker compose up --build -d
 #
+# Required env vars (set in Dokploy Environment tab or .env file):
+#   INSTANCE_SECRET       - openssl rand -hex 32
+#   DB_PASSWORD           - openssl rand -hex 16
+#   BETTER_AUTH_SECRET    - openssl rand -hex 32
+#   CONVEX_CLOUD_ORIGIN   - External URL for Convex API  (e.g. https://convex.yourdomain.com)
+#   CONVEX_SITE_ORIGIN    - External URL for Convex site (e.g. https://convex-site.yourdomain.com)
+#   SITE_URL              - External URL for the web app  (e.g. https://issues.yourdomain.com)
+#
+# No manual admin key step. The keygen service auto-generates it.
 # ───────────────────────────────────────────────────────────────
 
 services:
@@ -29,7 +23,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: convex_self_hosted
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -50,7 +44,7 @@ services:
       - convex_data:/convex/data
     environment:
       INSTANCE_NAME: better-issues
-      INSTANCE_SECRET: ${INSTANCE_SECRET:?Set INSTANCE_SECRET in .env}
+      INSTANCE_SECRET: ${INSTANCE_SECRET}
       CONVEX_CLOUD_ORIGIN: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
       CONVEX_SITE_ORIGIN: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
       POSTGRES_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432
@@ -70,8 +64,6 @@ services:
   dashboard:
     image: ghcr.io/get-convex/convex-dashboard:latest
     restart: unless-stopped
-    stop_grace_period: 10s
-    stop_signal: SIGINT
     ports:
       - "${DASHBOARD_PORT:-6791}:6791"
     environment:
@@ -80,27 +72,50 @@ services:
       convex:
         condition: service_healthy
 
-  # ─── Deploy Convex Functions (one-shot) ────────────────────
+  # ─── Admin Key Generator (runs once, writes to shared volume) ──
+  keygen:
+    image: ghcr.io/get-convex/convex-backend:latest
+    volumes:
+      - admin_key:/key
+    environment:
+      INSTANCE_NAME: better-issues
+      INSTANCE_SECRET: ${INSTANCE_SECRET}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        cd /convex
+        ./generate_admin_key.sh 2>/dev/null | tail -1 | tr -d '\n' > /key/admin_key
+        if [ -s /key/admin_key ]; then
+          echo "==> Admin key generated successfully"
+        else
+          echo "!!! Failed to generate admin key. Raw output:"
+          ./generate_admin_key.sh
+          exit 1
+        fi
+
+  # ─── Deploy Convex Functions (runs once, then exits) ───────
   convex-deploy:
     build:
       context: .
       dockerfile: Dockerfile.deploy
+    volumes:
+      - admin_key:/key:ro
     environment:
       CONVEX_SELF_HOSTED_URL: http://convex:3210
-      CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_ADMIN_KEY:?Generate admin key first (see setup instructions)}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       SITE_URL: ${SITE_URL:-http://localhost:3000}
     depends_on:
       convex:
         condition: service_healthy
+      keygen:
+        condition: service_completed_successfully
 
   # ─── Next.js Frontend ──────────────────────────────────────
   web:
     build:
       context: .
       args:
-        # These are baked into the client JS bundle at build time.
-        # Must be the externally-accessible URLs (what the browser sees).
         NEXT_PUBLIC_CONVEX_URL: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
         NEXT_PUBLIC_CONVEX_SITE_URL: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
     ports:
@@ -113,3 +128,4 @@ services:
 volumes:
   postgres_data:
   convex_data:
+  admin_key:

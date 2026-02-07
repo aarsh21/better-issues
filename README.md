@@ -98,9 +98,9 @@ The web app runs at [http://localhost:3001](http://localhost:3001).
 
 ---
 
-## Deploy on Dokploy
+## Deploy on Dokploy (Self-Hosted)
 
-This runs the full stack self-hosted: Convex backend, PostgreSQL, Convex dashboard, and the Next.js frontend — all via Docker Compose.
+One `docker compose up --build -d` starts the full stack: Convex backend, PostgreSQL, Convex dashboard, and Next.js frontend. The admin key is auto-generated -- no manual steps beyond setting three secrets.
 
 ### Prerequisites
 
@@ -132,25 +132,30 @@ This runs the full stack self-hosted: Convex backend, PostgreSQL, Convex dashboa
 └─────────────────────────────────────────────┘
 ```
 
-### Step 1: Create the project in Dokploy
+### Step 1: Create a Compose project in Dokploy
+
+> **Important**: You must create a **Compose** project, not an Application.
+> An Application only builds a single Dockerfile. Compose runs all 5 services.
 
 1. Log into Dokploy
 2. Create a new project (e.g. "better-issues")
-3. Add a **Docker Compose** service
-4. Connect your Git repository or upload the code
+3. Click **"+ Create Service"** and choose **"Compose"**
+4. Under **Provider**, select your Git source and point to the repo
+5. Set **Compose Path** to `docker-compose.yml` (default)
 
-### Step 2: Configure environment
+### Step 2: Generate secrets
 
-Copy `.env.example` to `.env` and generate secrets:
+Run these locally or on your server:
 
 ```bash
-# Generate required secrets
 openssl rand -hex 32   # → INSTANCE_SECRET
 openssl rand -hex 16   # → DB_PASSWORD
 openssl rand -hex 32   # → BETTER_AUTH_SECRET
 ```
 
-Fill in `.env`:
+### Step 3: Set environment variables in Dokploy
+
+Go to the **Environment** tab in Dokploy and add:
 
 ```env
 # Secrets
@@ -158,20 +163,17 @@ INSTANCE_SECRET=<generated>
 DB_PASSWORD=<generated>
 BETTER_AUTH_SECRET=<generated>
 
-# Leave CONVEX_ADMIN_KEY empty for now
-CONVEX_ADMIN_KEY=
-
-# Public URLs (use your actual domains)
+# Public URLs (what the browser sees — use YOUR domains)
 CONVEX_CLOUD_ORIGIN=https://convex.yourdomain.com
 CONVEX_SITE_ORIGIN=https://convex-site.yourdomain.com
 SITE_URL=https://issues.yourdomain.com
 ```
 
-In Dokploy, paste these into the **Environment** tab.
+The Convex admin key is **auto-derived** from `INSTANCE_SECRET` -- you do not need to set it manually.
 
-### Step 3: Configure domains in Dokploy
+### Step 4: Configure domains in Dokploy
 
-Add domains in the **Domains** tab:
+In the **Domains** tab, add:
 
 | Service     | Domain                       | Internal Port |
 | ----------- | ---------------------------- | ------------- |
@@ -182,39 +184,19 @@ Add domains in the **Domains** tab:
 
 Dokploy handles SSL via Traefik automatically.
 
-### Step 4: First deploy — generate admin key
+**Important for Convex**: Ensure WebSocket upgrade is allowed on `convex.yourdomain.com`. In Dokploy's domain settings for the convex service, verify the proxy supports `Upgrade: websocket` headers.
 
-Start only the backend services first:
+### Step 5: Deploy
 
-```bash
-docker compose up -d convex postgres
-```
-
-Wait for the backend to become healthy, then generate the admin key:
-
-```bash
-docker compose exec convex /bin/sh -c "cd convex && ./generate_admin_key.sh"
-```
-
-Copy the output (looks like `better-issues|abc123...`) and add it to `.env`:
-
-```env
-CONVEX_ADMIN_KEY=better-issues|<the_generated_key>
-```
-
-### Step 5: Full deploy
-
-Now start everything:
-
-```bash
-docker compose up --build -d
-```
+Click **Deploy** in Dokploy. That's it.
 
 This will:
 
-1. Start PostgreSQL and Convex backend
-2. Run `convex-deploy` to push functions and set env vars
-3. Build and start the Next.js frontend
+1. Start PostgreSQL and wait for it to be healthy
+2. Start the Convex backend (connects to Postgres)
+3. Start the Convex dashboard
+4. Build and run `convex-deploy` which auto-generates the admin key, pushes functions, and sets auth env vars
+5. Build and start the Next.js frontend
 
 ### Step 6: Verify
 
@@ -224,21 +206,9 @@ This will:
 
 ### Subsequent Deploys
 
-After the first setup, updating is simple:
-
-```bash
-# Pull latest code
-git pull
-
-# Rebuild and restart
-docker compose up --build -d
-```
-
-The `convex-deploy` service re-runs automatically to push any function changes.
+Push to your repo and click **Deploy** (or enable Autodeploy). The `convex-deploy` service re-runs automatically to push any function changes.
 
 ### Backup
-
-PostgreSQL data:
 
 ```bash
 docker compose exec postgres pg_dump -U postgres convex_self_hosted > backup.sql
@@ -246,13 +216,13 @@ docker compose exec postgres pg_dump -U postgres convex_self_hosted > backup.sql
 
 ### Troubleshooting
 
-| Issue                 | Fix                                                      |
-| --------------------- | -------------------------------------------------------- |
-| Backend won't start   | Check `INSTANCE_SECRET` is set and `postgres` is healthy |
-| Deploy fails          | Verify `CONVEX_ADMIN_KEY` is correct                     |
-| Auth errors           | Ensure `BETTER_AUTH_SECRET` and `SITE_URL` are set       |
-| Browser can't connect | Check `CONVEX_CLOUD_ORIGIN` matches external URL         |
-| WebSocket fails       | Ensure reverse proxy supports WebSocket upgrade          |
+| Issue                 | Fix                                                             |
+| --------------------- | --------------------------------------------------------------- |
+| Backend won't start   | Check `INSTANCE_SECRET` is set and `postgres` is healthy        |
+| Deploy fails          | Check `convex-deploy` logs: `docker compose logs convex-deploy` |
+| Auth errors           | Ensure `BETTER_AUTH_SECRET` and `SITE_URL` are set              |
+| Browser can't connect | Check `CONVEX_CLOUD_ORIGIN` matches external URL                |
+| WebSocket fails       | Ensure reverse proxy supports WebSocket upgrade                 |
 
 ---
 

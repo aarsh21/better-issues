@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+CONVEX_CLI="/convex-backend/node_modules/.bin/convex"
+
 # ── Deploy Convex functions if self-hosted vars are set ────────
 if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; then
   echo "==> Deploying Convex functions to $CONVEX_SELF_HOSTED_URL ..."
@@ -8,14 +10,14 @@ if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; t
 
   CONVEX_FLAGS="--url $CONVEX_SELF_HOSTED_URL --admin-key $CONVEX_SELF_HOSTED_ADMIN_KEY"
 
-  npx convex deploy $CONVEX_FLAGS 2>&1 || echo "!!! Convex deploy failed (backend may not be ready yet)"
+  $CONVEX_CLI deploy $CONVEX_FLAGS 2>&1 || echo "!!! Convex deploy failed (backend may not be ready yet)"
 
   if [ -n "$BETTER_AUTH_SECRET" ]; then
-    npx convex env set BETTER_AUTH_SECRET "$BETTER_AUTH_SECRET" $CONVEX_FLAGS 2>&1 || true
+    $CONVEX_CLI env set BETTER_AUTH_SECRET "$BETTER_AUTH_SECRET" $CONVEX_FLAGS 2>&1 || true
     echo "    BETTER_AUTH_SECRET set"
   fi
   if [ -n "$SITE_URL" ]; then
-    npx convex env set SITE_URL "$SITE_URL" $CONVEX_FLAGS 2>&1 || true
+    $CONVEX_CLI env set SITE_URL "$SITE_URL" $CONVEX_FLAGS 2>&1 || true
     echo "    SITE_URL set"
   fi
 

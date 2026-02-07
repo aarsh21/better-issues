@@ -41,17 +41,16 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Convex CLI for deploying functions at startup
+RUN npm install -g convex
+
 # Next.js standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
-# Convex backend source + CLI for function deployment at startup
-COPY --from=builder /app/packages/backend /convex-backend/packages/backend
-COPY --from=builder /app/packages/config /convex-backend/packages/config
-COPY --from=builder /app/packages/env /convex-backend/packages/env
-COPY --from=builder /app/node_modules /convex-backend/node_modules
-COPY --from=builder /app/package.json /convex-backend/package.json
+# Convex backend source (functions + schema)
+COPY --from=builder /app/packages/backend/convex /convex-backend/convex
 
 # Entrypoint: deploy convex functions (if configured), then start Next.js
 COPY scripts/entrypoint.sh /entrypoint.sh

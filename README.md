@@ -116,10 +116,26 @@ On startup, the container deploys Convex functions, sets auth env vars, then sta
 
 ### Auth 404 troubleshooting
 
-If `/api/auth/*` returns 404, the reverse proxy may be routing `/api` elsewhere. The web container must receive **all** paths, including `/api/auth/*` (the Next.js route proxies auth to Convex).
+If `/api/auth/*` returns 404, the reverse proxy is likely routing `/api/auth` to a different service. The web container must receive **all** paths (including `/api/auth/*`).
 
-- **Traefik**: The `docker-compose.yml` includes Traefik labels for the web service. If you use Traefik directly, these ensure `issues.hyorinmaru.me` routes to the web container.
-- **Dokploy**: Ensure the application routing forwards all paths to the web service (no path-based split for `/api`).
+**Step 1 – Verify routing:**
+
+```bash
+# Should return 200: {"status":"healthy",...}
+curl -s https://issues.hyorinmaru.me/api/health
+
+# Should return 200: {"ok":true,"message":"auth route reachable"}
+curl -s https://issues.hyorinmaru.me/api/auth/ready
+```
+
+- If **both** return 200: routing is correct; the problem is likely in the Convex proxy or backend.
+- If **`/api/health`** returns 200 but **`/api/auth/ready`** returns 404: the proxy is sending `/api/auth` somewhere else. Point all traffic for the issues domain to the web service (no path-based split for `/api`).
+- If **both** return 404: `/api/*` is not reaching the web container; fix the proxy so the web service receives all paths.
+
+**Step 2 – Fix proxy config:**
+
+- **Dokploy**: Ensure the application domain (e.g. `issues.hyorinmaru.me`) targets the web service and that no path rules redirect `/api` elsewhere.
+- **Traefik**: The `docker-compose.yml` includes Traefik labels for the web service. If these conflict with Dokploy’s config, remove the `labels` block and configure routing in Dokploy instead.
 
 ---
 

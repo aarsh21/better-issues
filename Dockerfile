@@ -1,11 +1,10 @@
 # ── better-issues: Frontend + Convex Deploy ────────────────────
 #
 # Build args (baked into client JS at build time):
-#   NEXT_PUBLIC_CONVEX_URL      - Convex backend URL (browser connects here)
-#   NEXT_PUBLIC_CONVEX_SITE_URL - Convex site URL (auth/HTTP actions)
+#   NEXT_PUBLIC_CONVEX_URL  - Convex backend URL (browser connects here)
 #
-# Runtime env vars (optional, for self-hosted Convex):
-#   CONVEX_SELF_HOSTED_URL      - Convex backend internal URL
+# Runtime env vars (for self-hosted Convex deploy on startup):
+#   CONVEX_SELF_HOSTED_URL       - Convex backend URL (for CLI deploy)
 #   CONVEX_SELF_HOSTED_ADMIN_KEY - Admin key from generate_admin_key.sh
 #   BETTER_AUTH_SECRET           - Auth secret
 #   SITE_URL                     - Public URL of this web app
@@ -27,9 +26,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 ARG NEXT_PUBLIC_CONVEX_URL
-ARG NEXT_PUBLIC_CONVEX_SITE_URL
 ENV NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
-ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
 RUN cd apps/web && bun run build
 

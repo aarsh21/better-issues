@@ -21,10 +21,8 @@ better-issues/
 │   ├── config/              # Shared TypeScript config
 │   └── env/                 # Environment variable validation
 ├── scripts/
-│   └── deploy-convex.sh     # Docker deploy helper
-├── Dockerfile               # Next.js production build
-├── Dockerfile.deploy        # Convex function deploy (one-shot)
-├── docker-compose.yml       # Full stack: Convex + Postgres + Web
+│   └── entrypoint.sh        # Docker entrypoint (deploy + start)
+├── Dockerfile               # Frontend build + Convex deploy
 └── .env.example             # Environment template
 ```
 
@@ -57,10 +55,9 @@ Create `apps/web/.env.local`:
 
 ```env
 NEXT_PUBLIC_CONVEX_URL=<your convex cloud URL>
-NEXT_PUBLIC_CONVEX_SITE_URL=<your convex site URL>
 ```
 
-These are printed during `dev:setup`.
+This is printed during `dev:setup`. If you use Convex Cloud, the site URL is derived automatically.
 
 Set Convex environment variables for auth:
 
@@ -100,129 +97,107 @@ The web app runs at [http://localhost:3001](http://localhost:3001).
 
 ## Deploy on Dokploy (Self-Hosted)
 
-One `docker compose up --build -d` starts the full stack: Convex backend, PostgreSQL, Convex dashboard, and Next.js frontend. The admin key is auto-generated -- no manual steps beyond setting three secrets.
-
-### Prerequisites
-
-- A VPS with 2+ GB RAM (4 GB recommended)
-- [Dokploy](https://dokploy.com) installed on the VPS
-- A domain name with DNS configured
+The frontend is a single Dockerfile. Deploy Convex separately, then point this container at it.
 
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│ Docker Compose                              │
-│                                             │
-│  ┌──────────┐    ┌───────────────────────┐  │
-│  │ postgres │◄───│  convex (backend)     │  │
-│  │ :5432    │    │  :3210 (API/WS)       │  │
-│  └──────────┘    │  :3211 (HTTP actions) │  │
-│                  └───────────┬───────────┘  │
-│                              │              │
-│  ┌──────────────┐   ┌───────┴──────────┐   │
-│  │ dashboard    │   │ convex-deploy    │   │
-│  │ :6791        │   │ (one-shot)       │   │
-│  └──────────────┘   └───────┬──────────┘   │
-│                              │              │
-│                     ┌───────┴──────────┐   │
-│                     │  web (Next.js)   │   │
-│                     │  :3000           │   │
-│                     └──────────────────┘   │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  Dokploy                                 │
+│                                          │
+│  Service 1: Convex Backend (separate)    │
+│  ┌──────────┐    ┌────────────────────┐  │
+│  │ postgres │◄───│ convex-backend     │  │
+│  │ :5432    │    │ :3210 (API/WS)     │  │
+│  └──────────┘    └────────────────────┘  │
+│                                          │
+│  Service 2: better-issues (this repo)    │
+│  ┌────────────────────────────────────┐  │
+│  │  Dockerfile                        │  │
+│  │  1. Deploy Convex functions        │  │
+│  │  2. Set auth env vars              │  │
+│  │  3. Start Next.js on :3000         │  │
+│  └────────────────────────────────────┘  │
+└──────────────────────────────────────────┘
 ```
 
-### Step 1: Create a Compose project in Dokploy
+### Step 1: Deploy Convex backend separately
 
-> **Important**: You must create a **Compose** project, not an Application.
-> An Application only builds a single Dockerfile. Compose runs all 5 services.
+Create a Docker service in Dokploy using the official image:
 
-1. Log into Dokploy
-2. Create a new project (e.g. "better-issues")
-3. Click **"+ Create Service"** and choose **"Compose"**
-4. Under **Provider**, select your Git source and point to the repo
-5. Set **Compose Path** to `docker-compose.yml` (default)
-
-### Step 2: Generate secrets
-
-Run these locally or on your server:
-
-```bash
-openssl rand -hex 32   # → INSTANCE_SECRET
-openssl rand -hex 16   # → DB_PASSWORD
-openssl rand -hex 32   # → BETTER_AUTH_SECRET
+```
+ghcr.io/get-convex/convex-backend:latest
 ```
 
-### Step 3: Set environment variables in Dokploy
-
-Go to the **Environment** tab in Dokploy and add:
+Set the required env vars for the Convex service:
 
 ```env
-# Secrets
-INSTANCE_SECRET=<generated>
-DB_PASSWORD=<generated>
-BETTER_AUTH_SECRET=<generated>
+INSTANCE_NAME=better-issues
+INSTANCE_SECRET=<openssl rand -hex 32>
+POSTGRES_URL=postgresql://postgres:<password>@<postgres-host>:5432
+```
 
-# Public URLs (what the browser sees — use YOUR domains)
-CONVEX_CLOUD_ORIGIN=https://convex.yourdomain.com
-CONVEX_SITE_ORIGIN=https://convex-site.yourdomain.com
+Expose port **3210** to a domain (e.g. `convex.yourdomain.com`). Make sure WebSocket upgrade is allowed.
+
+Generate the admin key on your server:
+
+```bash
+docker exec <convex-container> ./generate_admin_key.sh
+```
+
+Save this key -- you'll need it for the web service.
+
+### Step 2: Create the web Application in Dokploy
+
+1. Create a new project in Dokploy
+2. Click **"+ Create Service"** and choose **"Application"**
+3. Point to your Git repo, Dokploy will pick up the `Dockerfile`
+4. Map port **3000** to your domain (e.g. `issues.yourdomain.com`)
+
+### Step 3: Set build args
+
+In the Dokploy **Environment** tab, set this **build argument** (baked into the JS bundle):
+
+```env
+NEXT_PUBLIC_CONVEX_URL=https://convex.yourdomain.com
+```
+
+### Step 4: Set runtime env vars
+
+In the same **Environment** tab, add these **runtime env vars**:
+
+```env
+CONVEX_SELF_HOSTED_URL=https://convex.yourdomain.com
+CONVEX_SELF_HOSTED_ADMIN_KEY=<admin key from step 1>
+BETTER_AUTH_SECRET=<openssl rand -hex 32>
 SITE_URL=https://issues.yourdomain.com
 ```
 
-The Convex admin key is **auto-derived** from `INSTANCE_SECRET` -- you do not need to set it manually.
-
-### Step 4: Configure domains in Dokploy
-
-In the **Domains** tab, add:
-
-| Service     | Domain                       | Internal Port |
-| ----------- | ---------------------------- | ------------- |
-| `convex`    | `convex.yourdomain.com`      | 3210          |
-| `convex`    | `convex-site.yourdomain.com` | 3211          |
-| `web`       | `issues.yourdomain.com`      | 3000          |
-| `dashboard` | `dashboard.yourdomain.com`   | 6791          |
-
-Dokploy handles SSL via Traefik automatically.
-
-**Important for Convex**: Ensure WebSocket upgrade is allowed on `convex.yourdomain.com`. In Dokploy's domain settings for the convex service, verify the proxy supports `Upgrade: websocket` headers.
-
 ### Step 5: Deploy
 
-Click **Deploy** in Dokploy. That's it.
+Click **Deploy**. On startup, the container will:
 
-This will:
+1. Deploy Convex functions to your self-hosted backend
+2. Set `BETTER_AUTH_SECRET` and `SITE_URL` on the Convex backend
+3. Start the Next.js server
 
-1. Start PostgreSQL and wait for it to be healthy
-2. Start the Convex backend (connects to Postgres)
-3. Start the Convex dashboard
-4. Build and run `convex-deploy` which auto-generates the admin key, pushes functions, and sets auth env vars
-5. Build and start the Next.js frontend
-
-### Step 6: Verify
+### Verify
 
 - Frontend: `https://issues.yourdomain.com`
-- Dashboard: `https://dashboard.yourdomain.com`
 - Health check: `https://issues.yourdomain.com/api/health`
 
 ### Subsequent Deploys
 
-Push to your repo and click **Deploy** (or enable Autodeploy). The `convex-deploy` service re-runs automatically to push any function changes.
-
-### Backup
-
-```bash
-docker compose exec postgres pg_dump -U postgres convex_self_hosted > backup.sql
-```
+Push to your repo and click **Deploy**. The entrypoint re-deploys Convex functions automatically on every container start.
 
 ### Troubleshooting
 
-| Issue                 | Fix                                                             |
-| --------------------- | --------------------------------------------------------------- |
-| Backend won't start   | Check `INSTANCE_SECRET` is set and `postgres` is healthy        |
-| Deploy fails          | Check `convex-deploy` logs: `docker compose logs convex-deploy` |
-| Auth errors           | Ensure `BETTER_AUTH_SECRET` and `SITE_URL` are set              |
-| Browser can't connect | Check `CONVEX_CLOUD_ORIGIN` matches external URL                |
-| WebSocket fails       | Ensure reverse proxy supports WebSocket upgrade                 |
+| Issue                 | Fix                                                                |
+| --------------------- | ------------------------------------------------------------------ |
+| Convex deploy fails   | Check `CONVEX_SELF_HOSTED_URL` and `CONVEX_SELF_HOSTED_ADMIN_KEY`  |
+| Auth errors           | Ensure `BETTER_AUTH_SECRET` and `SITE_URL` are set                 |
+| Browser can't connect | Check `NEXT_PUBLIC_CONVEX_URL` matches your Convex backend domain  |
+| WebSocket fails       | Ensure reverse proxy supports WebSocket upgrade headers            |
 
 ---
 

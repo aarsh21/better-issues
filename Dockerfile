@@ -49,8 +49,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
-# Convex backend source (functions + schema)
+# Convex backend source (functions + schema + package.json)
 COPY --from=builder /app/packages/backend/convex /convex-backend/convex
+COPY --from=builder /app/packages/backend/package.json /convex-backend/package.json
 
 # Entrypoint: deploy convex functions (if configured), then start Next.js
 COPY scripts/entrypoint.sh /entrypoint.sh

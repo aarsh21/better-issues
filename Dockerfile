@@ -59,7 +59,7 @@ COPY --from=builder /app/packages/backend/package.json /convex-backend/package.j
 
 # Entrypoint: deploy convex functions (if configured), then start Next.js
 COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown -R nextjs:nodejs /convex-backend
 
 USER nextjs
 EXPOSE 8080

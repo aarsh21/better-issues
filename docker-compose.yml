@@ -1,0 +1,115 @@
+# ── better-issues: Full Stack Docker Compose ───────────────────
+#
+# Services:
+#   - postgres:       PostgreSQL database for Convex
+#   - convex:         Convex self-hosted backend (real-time DB + functions)
+#   - dashboard:      Convex admin dashboard
+#   - convex-deploy:  One-shot: pushes functions + sets env vars
+#   - web:            Next.js frontend
+#
+# First-time setup:
+#   1. Copy .env.example to .env and fill in values
+#   2. Generate INSTANCE_SECRET:  openssl rand -hex 32
+#   3. Start backend:             docker compose up -d convex postgres
+#   4. Generate admin key:        docker compose exec convex /bin/sh -c "cd convex && ./generate_admin_key.sh"
+#   5. Add CONVEX_ADMIN_KEY to .env
+#   6. Start everything:          docker compose up --build -d
+#
+# After first setup, just run:
+#   docker compose up --build -d
+#
+# ───────────────────────────────────────────────────────────────
+
+services:
+  # ─── PostgreSQL ────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: convex_self_hosted
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Convex Backend ────────────────────────────────────────
+  convex:
+    image: ghcr.io/get-convex/convex-backend:latest
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "${CONVEX_PORT:-3210}:3210"
+      - "${CONVEX_SITE_PORT:-3211}:3211"
+    volumes:
+      - convex_data:/convex/data
+    environment:
+      INSTANCE_NAME: better-issues
+      INSTANCE_SECRET: ${INSTANCE_SECRET:?Set INSTANCE_SECRET in .env}
+      CONVEX_CLOUD_ORIGIN: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
+      CONVEX_SITE_ORIGIN: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
+      POSTGRES_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432
+      DO_NOT_REQUIRE_SSL: "1"
+      RUST_LOG: ${RUST_LOG:-info}
+      DISABLE_BEACON: "true"
+      DOCUMENT_RETENTION_DELAY: "172800"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 5s
+      start_period: 10s
+
+  # ─── Convex Dashboard ──────────────────────────────────────
+  dashboard:
+    image: ghcr.io/get-convex/convex-dashboard:latest
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "${DASHBOARD_PORT:-6791}:6791"
+    environment:
+      NEXT_PUBLIC_DEPLOYMENT_URL: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
+    depends_on:
+      convex:
+        condition: service_healthy
+
+  # ─── Deploy Convex Functions (one-shot) ────────────────────
+  convex-deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile.deploy
+    environment:
+      CONVEX_SELF_HOSTED_URL: http://convex:3210
+      CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_ADMIN_KEY:?Generate admin key first (see setup instructions)}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
+      SITE_URL: ${SITE_URL:-http://localhost:3000}
+    depends_on:
+      convex:
+        condition: service_healthy
+
+  # ─── Next.js Frontend ──────────────────────────────────────
+  web:
+    build:
+      context: .
+      args:
+        # These are baked into the client JS bundle at build time.
+        # Must be the externally-accessible URLs (what the browser sees).
+        NEXT_PUBLIC_CONVEX_URL: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
+        NEXT_PUBLIC_CONVEX_SITE_URL: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    restart: unless-stopped
+    depends_on:
+      convex-deploy:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  convex_data:

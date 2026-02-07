@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "../index.css";
-import Header from "@/components/header";
 import Providers from "@/components/providers";
 import { getToken } from "@/lib/auth-server";
 
@@ -19,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "better-issues",
-  description: "better-issues",
+  description: "A premium issue tracker for small teams",
 };
 
 export default async function RootLayout({
@@ -31,12 +30,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers initialToken={token}>
-          <div className="grid grid-rows-[auto_1fr] h-svh bg-background">
-            <Header />
-            {children}
-          </div>
-        </Providers>
+        <Providers initialToken={token}>{children}</Providers>
       </body>
     </html>
   );

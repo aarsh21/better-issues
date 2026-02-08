@@ -5,7 +5,7 @@ import type { TemplateSchema, Id } from "@/convex";
 import { api } from "@/convex";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowLeft, Pencil, Trash2, Clock } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";

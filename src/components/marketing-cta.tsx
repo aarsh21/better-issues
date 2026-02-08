@@ -1,7 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated } from "convex/react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { ArrowRight } from "lucide-react";
 
 export function MarketingCTA() {

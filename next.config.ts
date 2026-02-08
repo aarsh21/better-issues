@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   reactCompiler: true,
   cacheComponents: true,
+  poweredByHeader: false,
+  experimental: {
+    inlineCss: true,
+    optimizePackageImports: ["lucide-react"],
+  },
 };
 
 export default nextConfig;

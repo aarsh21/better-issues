@@ -59,6 +59,26 @@
   --spacing: 0.25rem;
 }
 
+/* Prevent iOS Safari from zooming on input focus (requires >= 16px font-size) */
+input[type="color"],
+input[type="date"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="month"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="text"],
+input[type="time"],
+input[type="url"],
+input[type="week"],
+select,
+textarea {
+  font-size: 16px;
+}
+
 .dark {
   --background: oklch(0 0 0);
   --foreground: oklch(1 0 0);

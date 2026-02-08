@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { api } from "@/convex";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { Plus } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 

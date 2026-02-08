@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { CircleDot, Settings, Plus, Search, Tag, LayoutList } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 

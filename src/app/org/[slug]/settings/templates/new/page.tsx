@@ -4,7 +4,7 @@ import type { TemplateField, TemplateSchema } from "@/convex";
 import { TEMPLATE_FIELD_TYPES, api } from "@/convex";
 import { useMutation } from "convex/react";
 import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";

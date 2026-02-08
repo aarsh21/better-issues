@@ -3,7 +3,7 @@
 import { api } from "@/convex";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowLeft, Plus, Trash2, FileText, Users, Tag, UserPlus, X } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

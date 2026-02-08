@@ -3,7 +3,7 @@
 import type { Doc } from "@/convex";
 
 import { ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/ui/link";
 import { useParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";

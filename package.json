@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3001",
+    "dev": "trap 'kill 0' EXIT; convex dev --local & next dev --turbo --port 3001",
+    "dev:next": "next dev --turbo --port 3001",
     "dev:server": "convex dev --local",
     "dev:setup": "convex dev --configure --until-success",
     "build": "next build",

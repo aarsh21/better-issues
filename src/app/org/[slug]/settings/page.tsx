@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+
 import { api } from "@/convex";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowLeft, Plus, Trash2, FileText, Users, Tag, UserPlus, X } from "lucide-react";
@@ -44,7 +46,7 @@ export default function SettingsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b px-4 py-3">
-        <Link href={`/org/${params.slug}`}>
+        <Link href={`/org/${params.slug}` as Route}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
@@ -294,7 +296,7 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
             Define structured templates with custom fields for issue reporting.
           </p>
         </div>
-        <Link href={`/org/${slug}/settings/templates/new`}>
+        <Link href={`/org/${slug}/settings/templates/new` as Route}>
           <Button size="sm" className="gap-1.5">
             <Plus className="h-3.5 w-3.5" />
             New Template

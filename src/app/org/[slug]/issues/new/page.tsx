@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import type { Doc, Id, TemplateSchema } from "@/convex";
 
 import { api } from "@/convex";
@@ -84,7 +85,7 @@ export default function NewIssuePage() {
       });
 
       toast.success(`Issue #${result.number} created`);
-      router.push(`/org/${params.slug}/issues/${result.number}`);
+      router.push(`/org/${params.slug}/issues/${result.number}` as Route);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create issue");
     } finally {
@@ -113,7 +114,7 @@ export default function NewIssuePage() {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-3 border-b px-4 py-3">
-          <Link href={`/org/${params.slug}`}>
+          <Link href={`/org/${params.slug}` as Route}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
@@ -294,7 +295,7 @@ export default function NewIssuePage() {
             <Button type="submit" disabled={submitting || !title.trim()} className="flex-1">
               {submitting ? "Creating..." : "Create Issue"}
             </Button>
-            <Link href={`/org/${params.slug}`}>
+            <Link href={`/org/${params.slug}` as Route}>
               <Button type="button" variant="outline">
                 Cancel
               </Button>

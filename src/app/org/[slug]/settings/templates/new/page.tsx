@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import type { TemplateField, TemplateSchema } from "@/convex";
 import { TEMPLATE_FIELD_TYPES, api } from "@/convex";
 import { useMutation } from "convex/react";
@@ -77,7 +78,7 @@ export default function NewTemplatePage() {
         schema: JSON.stringify(schema),
       });
       toast.success("Template created");
-      router.push(`/org/${params.slug}/settings`);
+      router.push(`/org/${params.slug}/settings` as Route);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create template");
     } finally {
@@ -93,7 +94,7 @@ export default function NewTemplatePage() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
-          <Link href={`/org/${params.slug}/settings`}>
+          <Link href={`/org/${params.slug}/settings` as Route}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
@@ -312,7 +313,7 @@ export default function NewTemplatePage() {
               >
                 {submitting ? "Creating..." : "Create Template"}
               </Button>
-              <Link href={`/org/${params.slug}/settings`}>
+              <Link href={`/org/${params.slug}/settings` as Route}>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>

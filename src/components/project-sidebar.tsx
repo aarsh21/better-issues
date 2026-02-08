@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+
 import { Suspense } from "react";
 import { CircleDot, Settings, Plus, Search, Tag, LayoutList } from "lucide-react";
 import { Link } from "@/components/ui/link";
@@ -22,13 +24,13 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
 
   const navItems = [
     {
-      href: `/org/${slug}` as const,
+      href: `/org/${slug}` as Route,
       label: "Issues",
       icon: CircleDot,
       active: pathname === `/org/${slug}`,
     },
     {
-      href: `/org/${slug}/settings` as const,
+      href: `/org/${slug}/settings` as Route,
       label: "Settings",
       icon: Settings,
       active: pathname.startsWith(`/org/${slug}/settings`),
@@ -115,7 +117,7 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
         <Separator />
 
         <div className="p-3">
-          <Link href={`/org/${slug}/issues/new`}>
+          <Link href={`/org/${slug}/issues/new` as Route}>
             <Button className="w-full gap-2" size="sm">
               <Plus className="h-3.5 w-3.5" />
               New Issue

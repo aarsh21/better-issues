@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import type { TemplateSchema, Id } from "@/convex";
 
 import { api } from "@/convex";
@@ -115,7 +116,7 @@ export default function IssueDetailPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <p className="text-sm font-medium">Issue not found</p>
-        <Link href={`/org/${params.slug}`}>
+        <Link href={`/org/${params.slug}` as Route}>
           <Button variant="ghost" size="sm" className="mt-2">
             Back to issues
           </Button>
@@ -198,7 +199,7 @@ export default function IssueDetailPage() {
     try {
       await removeIssue({ issueId: issue._id });
       toast.success("Issue deleted");
-      router.push(`/org/${params.slug}`);
+      router.push(`/org/${params.slug}` as Route);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete");
     }
@@ -209,7 +210,7 @@ export default function IssueDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
-          <Link href={`/org/${params.slug}`}>
+          <Link href={`/org/${params.slug}` as Route}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>

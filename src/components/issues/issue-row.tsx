@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import type { Doc } from "@/convex";
 
 import { ChevronRight } from "lucide-react";
@@ -21,7 +22,7 @@ export function IssueRow({ issue, labels }: { issue: Issue; labels: Label[] }) {
 
   return (
     <Link
-      href={`/org/${params.slug}/issues/${issue.number}`}
+      href={`/org/${params.slug}/issues/${issue.number}` as Route}
       className={cn(
         "flex items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-accent cursor-pointer group",
         issue.status === "closed" && "opacity-60",

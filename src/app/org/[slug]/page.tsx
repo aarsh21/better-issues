@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+
 import { Suspense } from "react";
 
 import { api } from "@/convex";
@@ -91,7 +93,7 @@ function IssueListContent() {
           )}
           <FilterBar activeStatus={statusFilter} onStatusChange={setStatusFilter} />
         </div>
-        <Link href={`/org/${params.slug}/issues/new`}>
+        <Link href={`/org/${params.slug}/issues/new` as Route}>
           <Button size="sm" className="gap-1.5">
             <Plus className="h-3.5 w-3.5" />
             New Issue
@@ -121,7 +123,7 @@ function IssueListContent() {
                 : "Create your first issue to get started."}
             </p>
             {!statusFilter && (
-              <Link href={`/org/${params.slug}/issues/new`}>
+              <Link href={`/org/${params.slug}/issues/new` as Route}>
                 <Button size="sm" className="gap-1.5">
                   <Plus className="h-3.5 w-3.5" />
                   New Issue

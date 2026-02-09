@@ -43,6 +43,28 @@ bun run dev
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 Your app will connect to the Convex cloud backend automatically.
 
+## Docker Compose Deployment (Dokploy)
+
+Environment variables required for `docker-compose.yml`:
+
+- `INSTANCE_SECRET` (Convex instance secret)
+- `DOMAIN` (Convex public domain, e.g. `convex.example.com`)
+- `APP_DOMAIN` (web app domain, e.g. `issues.example.com`)
+- `CONVEX_SELF_HOSTED_ADMIN_KEY` (admin key used by the Convex CLI)
+- `BETTER_AUTH_SECRET` (Better Auth secret)
+- `SITE_URL` (public URL of the web app)
+- `CONVEX_DASHBOARD_DOMAIN` (optional, only if you expose the dashboard)
+- `INSTANCE_NAME` (optional, defaults to `convex-prod`)
+- `DOKPLOY_NETWORK` (optional, defaults to `dokploy-network`)
+
+Start the stack:
+
+```bash
+docker compose up -d --build
+```
+
+If you expose the Convex dashboard, add `CONVEX_DASHBOARD_DOMAIN` and the Traefik route in Dokploy.
+
 ## Git Hooks and Formatting
 
 - Initialize hooks: `bun run prepare`

@@ -3,7 +3,7 @@ services:
     image: ghcr.io/get-convex/convex-backend:latest
     restart: unless-stopped
     networks:
-      - dokploy-network
+      - dokploy
     expose:
       - "3210"
       - "3211"
@@ -11,12 +11,12 @@ services:
       # Traefik: convex domain. Port 3210 = main backend; port 3211 = HTTP actions (/api/auth).
       # Route /http/* to 3211 so auth proxy reaches HTTP actions.
       - "traefik.enable=true"
-      - "traefik.http.routers.convex-main.rule=Host(`convex.hyorinmaru.me`)"
+      - "traefik.http.routers.convex-main.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.convex-main.entrypoints=websecure"
       - "traefik.http.routers.convex-main.tls=true"
       - "traefik.http.routers.convex-main.service=convex-main"
       - "traefik.http.services.convex-main.loadbalancer.server.port=3210"
-      - "traefik.http.routers.convex-http.rule=Host(`convex.hyorinmaru.me`) && PathPrefix(`/http`)"
+      - "traefik.http.routers.convex-http.rule=Host(`${DOMAIN}`) && PathPrefix(`/http`)"
       - "traefik.http.routers.convex-http.entrypoints=websecure"
       - "traefik.http.routers.convex-http.tls=true"
       - "traefik.http.routers.convex-http.priority=200"
@@ -27,13 +27,13 @@ services:
     volumes:
       - data:/convex/data
     environment:
-      INSTANCE_NAME: convex-prod
+      INSTANCE_NAME: ${INSTANCE_NAME:-convex-prod}
       INSTANCE_SECRET: ${INSTANCE_SECRET}
-      CONVEX_CLOUD_ORIGIN: https://convex.hyorinmaru.me
-      CONVEX_SITE_ORIGIN: https://convex.hyorinmaru.me/http
+      CONVEX_CLOUD_ORIGIN: https://${DOMAIN}
+      CONVEX_SITE_ORIGIN: https://${DOMAIN}/http
       RUST_LOG: info
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3210/version"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3210/version || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,46 +42,46 @@ services:
     image: ghcr.io/get-convex/convex-dashboard:latest
     restart: unless-stopped
     networks:
-      - dokploy-network
+      - dokploy
     expose:
       - "6791"
     environment:
-      NEXT_PUBLIC_DEPLOYMENT_URL: https://convex.hyorinmaru.me
-      NEXT_PUBLIC_SITE_URL: https://convex-dashboard.hyorinmaru.me
+      NEXT_PUBLIC_DEPLOYMENT_URL: https://${DOMAIN}
+      NEXT_PUBLIC_SITE_URL: https://${CONVEX_DASHBOARD_DOMAIN}
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
 
   web:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_CONVEX_URL: https://convex.hyorinmaru.me
-        NEXT_PUBLIC_CONVEX_SITE_URL: https://convex.hyorinmaru.me/http
+        NEXT_PUBLIC_CONVEX_URL: https://${DOMAIN}
+        NEXT_PUBLIC_CONVEX_SITE_URL: https://${DOMAIN}/http
     restart: unless-stopped
     labels:
       # Traefik: route issues domain to web; all paths (incl. /api/auth) must reach this container.
       # If Dokploy has path-based rules (e.g. /api -> elsewhere), remove them or set higher priority here.
       - "traefik.enable=true"
-      - "traefik.http.routers.better-issues-web.rule=Host(`issues.hyorinmaru.me`)"
+      - "traefik.http.routers.better-issues-web.rule=Host(`${APP_DOMAIN}`)"
       - "traefik.http.routers.better-issues-web.entrypoints=websecure"
       - "traefik.http.routers.better-issues-web.tls=true"
       - "traefik.http.routers.better-issues-web.priority=100"
       - "traefik.http.routers.better-issues-web.service=better-issues-web"
       - "traefik.http.services.better-issues-web.loadbalancer.server.port=4100"
     networks:
-      - dokploy-network
+      - dokploy
     expose:
       - "4100"
     environment:
+      NEXT_PUBLIC_CONVEX_URL: https://${DOMAIN}
+      NEXT_PUBLIC_CONVEX_SITE_URL: https://${DOMAIN}/http
       CONVEX_SELF_HOSTED_URL: http://backend:3210
       CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_SELF_HOSTED_ADMIN_KEY}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       SITE_URL: ${SITE_URL}
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4100/api/health"]
       interval: 30s
@@ -93,5 +93,6 @@ volumes:
   data:
 
 networks:
-  dokploy-network:
+  dokploy:
     external: true
+    name: ${DOKPLOY_NETWORK:-dokploy-network}

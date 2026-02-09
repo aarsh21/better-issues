@@ -3,6 +3,18 @@ set -e
 
 # ── Deploy Convex functions if self-hosted vars are set ────────
 if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; then
+  echo "==> Waiting for Convex backend at $CONVEX_SELF_HOSTED_URL ..."
+  attempts=0
+  max_attempts="${CONVEX_DEPLOY_MAX_ATTEMPTS:-60}"
+  while ! wget -q --spider "$CONVEX_SELF_HOSTED_URL/version"; do
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge "$max_attempts" ]; then
+      echo "!!! Convex backend not ready after ${max_attempts} attempts"
+      break
+    fi
+    sleep 2
+  done
+
   echo "==> Deploying Convex functions to $CONVEX_SELF_HOSTED_URL ..."
   cd /convex-deploy
 

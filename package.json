@@ -1,65 +1,51 @@
 {
   "name": "better-issues",
-  "version": "0.1.0",
   "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "dotenv": "^17.2.2",
+      "zod": "^4.1.13",
+      "typescript": "^5",
+      "convex": "^1.31.2",
+      "better-auth": "1.4.9",
+      "@convex-dev/better-auth": "^0.10.9"
+    }
+  },
   "type": "module",
   "scripts": {
-    "dev": "trap 'kill 0' EXIT; convex dev --local & next dev --turbo --port 3001",
-    "dev:next": "next dev --turbo --port 3001",
-    "dev:server": "convex dev --local",
-    "dev:setup": "convex dev --configure --until-success",
-    "build": "next build",
-    "start": "next start",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F @better-issues/backend dev",
+    "dev:setup": "turbo -F @better-issues/backend dev:setup",
     "check": "oxlint && oxfmt --write",
-    "check-types": "tsc --noEmit",
     "prepare": "husky"
   },
   "dependencies": {
-    "@base-ui/react": "^1.1.0",
-    "@convex-dev/better-auth": "^0.10.9",
-    "@t3-oss/env-nextjs": "^0.13.1",
-    "@tanstack/react-form": "^1.27.3",
-    "babel-plugin-react-compiler": "^1.0.0",
-    "better-auth": "1.4.9",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
-    "convex": "^1.31.2",
-    "date-fns": "^4.1.0",
-    "dotenv": "^17.2.2",
-    "embla-carousel-react": "^8.6.0",
-    "input-otp": "^1.4.2",
-    "lucide-react": "^0.546.0",
-    "next": "^16.1.1",
-    "next-themes": "^0.4.6",
-    "react": "^19.2.3",
-    "react-day-picker": "^9.13.1",
-    "react-dom": "^19.2.3",
-    "react-resizable-panels": "^4.6.2",
-    "recharts": "2.15.4",
-    "shadcn": "^3.6.2",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.1",
-    "tw-animate-css": "^1.3.4",
-    "vaul": "^1.1.2",
-    "zod": "^4.1.13"
+    "@better-issues/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.10",
-    "@types/node": "^20",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
+    "@better-issues/config": "workspace:*",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
-    "tailwindcss": "^4.1.10",
-    "typescript": "^5"
+    "turbo": "^2.6.3",
+    "typescript": "catalog:"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs,json}": [
+    "*": [
       "oxlint",
       "oxfmt --write"
     ]
-  }
+  },
+  "packageManager": "bun@1.3.7"
 }

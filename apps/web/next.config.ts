@@ -1,4 +1,4 @@
-import "@/lib/env";
+import "@better-issues/env/web";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

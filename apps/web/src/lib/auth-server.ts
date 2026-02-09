@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { env } from "@better-issues/env/web";
 import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
 
 export const {

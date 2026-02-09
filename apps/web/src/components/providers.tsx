@@ -1,6 +1,6 @@
 "use client";
 
-import { env } from "@/lib/env";
+import { env } from "@better-issues/env/web";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { ConvexReactClient } from "convex/react";
 

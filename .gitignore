@@ -4,8 +4,8 @@ node_modules
 .pnp.js
 
 # Convex generated files (should not be linted/formatted)
-convex/_generated
-convex/betterAuth/_generated
+packages/backend/convex/_generated
+packages/backend/convex/betterAuth/_generated
 
 # Build outputs
 dist

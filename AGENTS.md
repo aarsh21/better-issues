@@ -1,21 +1,23 @@
 # AGENTS
 
 better-issues is a premium issue tracker with best-in-market UI and UX.
-It is a single Next.js app with a Convex backend (not a monorepo).
+It is a Turbo monorepo with a single Next.js app and a Convex backend.
 Treat every change as user-facing and keep design quality high.
 
 **Project Structure**
 
-- `src/` — Next.js app (pages, components, hooks, lib, styles)
-- `convex/` — Convex backend (schema, functions, auth, http)
-- `public/` — Static assets
-- `next.config.ts` — Next.js config (standalone output, typed routes, React Compiler)
+- `apps/web/` — Next.js app
+- `apps/web/src/` — App Router pages, components, hooks, lib, styles
+- `apps/web/public/` — Static assets
+- `apps/web/next.config.ts` — Next.js config (standalone output, typed routes, React Compiler)
+- `packages/backend/convex/` — Convex backend (schema, functions, auth, http)
+- `packages/env/` — Shared env schema
 
 **Non-Negotiables**
 
 - Always use shadcn colors and shadcn/ui components for UI work.
 - Never run `bun run dev`; the user will run it manually.
-- Do not edit generated Convex files in `convex/_generated`.
+- Do not edit generated Convex files in `packages/backend/convex/_generated` or `packages/backend/convex/betterAuth/_generated`.
 - Keep the UX clean, fast, and consistent with existing patterns.
 
 **Core Commands**
@@ -25,7 +27,7 @@ Treat every change as user-facing and keep design quality high.
 - Lint + format: `bun run check`
 - Type check: `bun run check-types`
 - Build: `bun run build`
-- Dev servers (only if asked): `bun run dev`, `bun run dev:server`
+- Dev servers (only if asked): `bun run dev:web`, `bun run dev:server`
 
 **Tests**
 
@@ -45,13 +47,13 @@ Treat every change as user-facing and keep design quality high.
 
 **Convex Backend**
 
-- Use `query`, `mutation`, `action` from `convex/_generated/server`.
+- Use `query`, `mutation`, `action` from `packages/backend/convex/_generated/server`.
 - Validate args with `v`; return serializable data; prefer `ConvexError` for user-facing errors.
 
 **Styling and UI**
 
-- Use shadcn tokens from `src/index.css` and shadcn/ui primitives.
-- Use `cn` from `src/lib/utils.ts`; follow CVA patterns; keep `rounded-none`.
+- Use shadcn tokens from `apps/web/src/index.css` and shadcn/ui primitives.
+- Use `cn` from `apps/web/src/lib/utils.ts`; follow CVA patterns; keep `rounded-none`.
 
 **Naming and Errors**
 

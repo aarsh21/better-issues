@@ -2,14 +2,13 @@
 
 import type { Route } from "next";
 
-import { api } from "@/convex";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Plus, Trash2, FileText, Users, Tag, UserPlus, X } from "lucide-react";
-import { Link } from "@/components/ui/link";
+import { ArrowLeft, FileText, Plus, Tag, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { api } from "@/convex";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,10 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link } from "@/components/ui/link";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabelBadge } from "@/components/issues/label-badge";
 import { authClient } from "@/lib/auth-client";
+import { TEMPLATE_PRESETS } from "@/lib/template-presets";
 
 const LABEL_COLORS = [
   "#ef4444",
@@ -277,6 +279,8 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
 function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: string }) {
   const templates = useQuery(api.templates.list, { organizationId });
   const removeTemplate = useMutation(api.templates.remove);
+  const createTemplate = useMutation(api.templates.create);
+  const [creatingPreset, setCreatingPreset] = useState<string | null>(null);
 
   const handleRemove = async (templateId: string) => {
     try {
@@ -286,6 +290,27 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
       toast.error(error instanceof Error ? error.message : "Failed to remove template");
     }
   };
+
+  const handleCreatePreset = async (preset: (typeof TEMPLATE_PRESETS)[number]) => {
+    setCreatingPreset(preset.name);
+    try {
+      await createTemplate({
+        organizationId,
+        name: preset.name,
+        description: preset.description,
+        schema: JSON.stringify(preset.schema),
+      });
+      toast.success(`${preset.name} template created`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create template");
+    } finally {
+      setCreatingPreset(null);
+    }
+  };
+
+  const templateNameSet = new Set(
+    (templates ?? []).map((template) => template.name.trim().toLowerCase()),
+  );
 
   return (
     <div className="space-y-4">
@@ -310,30 +335,76 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
-      ) : templates.length === 0 ? (
-        <div className="border border-dashed p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No templates yet. Templates help reporters provide structured information.
-          </p>
-        </div>
       ) : (
-        <div className="space-y-1">
-          {templates.map((template: { _id: any; name: string; description: string }) => (
-            <div key={template._id} className="flex items-center justify-between border px-3 py-3">
-              <div>
-                <p className="text-sm font-medium">{template.name}</p>
-                <p className="text-xs text-muted-foreground">{template.description}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRemove(template._id)}
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+        <div className="space-y-6">
+          {templates.length === 0 ? (
+            <div className="border border-dashed p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                No templates yet. Templates help reporters provide structured information.
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="space-y-1">
+              {templates.map((template: { _id: any; name: string; description: string }) => (
+                <div
+                  key={template._id}
+                  className="flex items-center justify-between border px-3 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{template.name}</p>
+                    <p className="text-xs text-muted-foreground">{template.description}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemove(template._id)}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-medium">Starter templates</h3>
+              <p className="text-xs text-muted-foreground">
+                Start with a proven structure and customize later.
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {TEMPLATE_PRESETS.map((preset) => {
+                const presetExists = templateNameSet.has(preset.name.toLowerCase());
+                return (
+                  <div
+                    key={preset.name}
+                    className="flex flex-col gap-3 border px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{preset.name}</p>
+                      <p className="text-xs text-muted-foreground">{preset.description}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCreatePreset(preset)}
+                      disabled={creatingPreset !== null || presetExists}
+                    >
+                      {presetExists
+                        ? "Already created"
+                        : creatingPreset === preset.name
+                          ? "Creating..."
+                          : "Use template"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

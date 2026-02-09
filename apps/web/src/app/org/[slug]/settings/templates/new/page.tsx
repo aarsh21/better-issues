@@ -2,18 +2,19 @@
 
 import type { Route } from "next";
 import type { TemplateField, TemplateSchema } from "@/convex";
-import { TEMPLATE_FIELD_TYPES, api } from "@/convex";
+
 import { useMutation } from "convex/react";
-import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
-import { Link } from "@/components/ui/link";
+import { ArrowLeft, GripVertical, Plus, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { TEMPLATE_FIELD_TYPES, api } from "@/convex";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -122,6 +123,7 @@ export default function NewTemplatePage() {
                     field={field}
                     value={undefined}
                     onChange={() => {}}
+                    readOnly
                   />
                 ))}
               </div>
@@ -276,19 +278,53 @@ export default function NewTemplatePage() {
                     </div>
                   )}
 
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">Placeholder (optional)</Label>
-                    <Input
-                      placeholder="Enter placeholder text..."
-                      value={field.placeholder ?? ""}
-                      onChange={(e) =>
-                        updateField(index, {
-                          placeholder: e.target.value || undefined,
-                        })
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
+                  {field.type === "file" && (
+                    <div className="grid gap-3">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`multiple-${index}`}
+                          checked={field.multiple !== false}
+                          onCheckedChange={(checked) =>
+                            updateField(index, {
+                              multiple: checked === true,
+                            })
+                          }
+                        />
+                        <Label htmlFor={`multiple-${index}`} className="text-xs cursor-pointer">
+                          Allow multiple files
+                        </Label>
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label className="text-xs">Accepted file types (optional)</Label>
+                        <Input
+                          placeholder="image/*,.pdf"
+                          value={field.accept ?? ""}
+                          onChange={(e) =>
+                            updateField(index, {
+                              accept: e.target.value || undefined,
+                            })
+                          }
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {field.type !== "file" && (
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Placeholder (optional)</Label>
+                      <Input
+                        placeholder="Enter placeholder text..."
+                        value={field.placeholder ?? ""}
+                        onChange={(e) =>
+                          updateField(index, {
+                            placeholder: e.target.value || undefined,
+                          })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -1,31 +1,127 @@
 "use client";
 
 import type { Route } from "next";
-import type { TemplateSchema, Id } from "@/convex";
+import type { Id, TemplateField, TemplateSchema } from "@/convex";
 
-import { api } from "@/convex";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Pencil, Trash2, Clock } from "lucide-react";
-import { Link } from "@/components/ui/link";
+import { ArrowLeft, Clock, ExternalLink, FileText, Pencil, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { api } from "@/convex";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Link } from "@/components/ui/link";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { StatusBadge } from "@/components/issues/status-badge";
-import { PriorityIndicator } from "@/components/issues/priority-indicator";
+import { Textarea } from "@/components/ui/textarea";
 import { LabelBadge } from "@/components/issues/label-badge";
+import { PriorityIndicator } from "@/components/issues/priority-indicator";
+import { StatusBadge } from "@/components/issues/status-badge";
 import { authClient } from "@/lib/auth-client";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatFileSize } from "@/lib/utils";
 
 type IssueStatus = "open" | "in_progress" | "closed";
 type IssuePriority = "low" | "medium" | "high" | "urgent";
+
+type TemplateFileValue = {
+  storageId: Id<"_storage">;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+};
+
+const isTemplateFileValue = (candidate: unknown): candidate is TemplateFileValue => {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    return false;
+  }
+  const record = candidate as {
+    storageId?: unknown;
+    fileName?: unknown;
+    fileType?: unknown;
+    fileSize?: unknown;
+  };
+
+  return (
+    typeof record.storageId === "string" &&
+    record.storageId.length > 0 &&
+    typeof record.fileName === "string" &&
+    record.fileName.length > 0 &&
+    typeof record.fileType === "string" &&
+    typeof record.fileSize === "number" &&
+    Number.isFinite(record.fileSize)
+  );
+};
+
+const normalizeFileValues = (value: unknown, allowMultiple: boolean) => {
+  if (Array.isArray(value)) {
+    const files = value.filter(isTemplateFileValue);
+    return allowMultiple ? files : files.slice(0, 1);
+  }
+
+  if (isTemplateFileValue(value)) {
+    return [value];
+  }
+
+  return [];
+};
+
+function TemplateFileList({ field, value }: { field: TemplateField; value: unknown }) {
+  const allowMultiple = field.multiple !== false;
+  const files = normalizeFileValues(value, allowMultiple);
+  const storageIds = files.map((file) => file.storageId);
+  const resolvedUrls = useQuery(api.files.getUrls, storageIds.length > 0 ? { storageIds } : "skip");
+
+  if (files.length === 0) return null;
+
+  const isLoadingUrls = resolvedUrls === undefined;
+  const urlByStorageId = new Map((resolvedUrls ?? []).map((entry) => [entry.storageId, entry.url]));
+
+  return (
+    <div className="grid gap-2">
+      {files.map((file) => {
+        const url = urlByStorageId.get(file.storageId) ?? null;
+        const isImage = file.fileType.startsWith("image/");
+
+        return (
+          <div
+            key={file.storageId}
+            className="flex flex-col gap-3 border p-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="grid gap-1">
+              <div className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-sm font-medium">{file.fileName}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}</p>
+              {isLoadingUrls ? (
+                <span className="text-xs text-muted-foreground">Loading link...</span>
+              ) : url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Open file
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : (
+                <span className="text-xs text-muted-foreground">Link unavailable</span>
+              )}
+            </div>
+            {url && isImage && (
+              <img src={url} alt={file.fileName} className="h-20 w-20 border object-cover" />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function IssueDetailPage() {
   const params = useParams<{ slug: string; number: string }>();
@@ -283,7 +379,22 @@ export default function IssueDetailPage() {
                     </p>
                     {parsedSchema.fields.map((field) => {
                       const value = parsedTemplateData[field.key];
-                      if (value === undefined || value === null || value === "") return null;
+                      const isEmptyValue =
+                        value === undefined ||
+                        value === null ||
+                        value === "" ||
+                        (Array.isArray(value) && value.length === 0);
+                      if (isEmptyValue) return null;
+                      if (field.type === "file") {
+                        return (
+                          <div key={field.key} className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {field.label}
+                            </p>
+                            <TemplateFileList field={field} value={value} />
+                          </div>
+                        );
+                      }
                       return (
                         <div key={field.key} className="space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">{field.label}</p>

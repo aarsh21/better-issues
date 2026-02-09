@@ -7,6 +7,7 @@ export const TEMPLATE_FIELD_TYPES = [
   "checkbox",
   "number",
   "url",
+  "file",
 ] as const;
 
 export type TemplateFieldType = (typeof TEMPLATE_FIELD_TYPES)[number];
@@ -24,6 +25,8 @@ export const templateFieldSchema = z
     description: z.string().optional(),
     options: z.array(z.string().min(1)).optional(),
     defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
+    accept: z.string().optional(),
+    multiple: z.boolean().optional(),
   })
   .refine(
     (field) => {
@@ -64,13 +67,15 @@ export function validateTemplateData(
 
   for (const field of schema.fields) {
     const value = data[field.key];
+    const isEmptyArray = Array.isArray(value) && value.length === 0;
+    const isEmptyValue = value === undefined || value === null || value === "" || isEmptyArray;
 
-    if (field.required && (value === undefined || value === null || value === "")) {
+    if (field.required && isEmptyValue) {
       errors.push(`${field.label} is required`);
       continue;
     }
 
-    if (value === undefined || value === null || value === "") {
+    if (isEmptyValue) {
       continue;
     }
 
@@ -97,6 +102,46 @@ export function validateTemplateData(
           errors.push(`${field.label} must be a valid URL`);
         }
         break;
+      case "file": {
+        const allowsMultiple = field.multiple !== false;
+        const isValidFile = (candidate: unknown) => {
+          if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+            return false;
+          }
+          const record = candidate as {
+            storageId?: unknown;
+            fileName?: unknown;
+            fileType?: unknown;
+            fileSize?: unknown;
+          };
+          return (
+            typeof record.storageId === "string" &&
+            record.storageId.length > 0 &&
+            typeof record.fileName === "string" &&
+            record.fileName.length > 0 &&
+            typeof record.fileType === "string" &&
+            typeof record.fileSize === "number" &&
+            Number.isFinite(record.fileSize) &&
+            record.fileSize >= 0
+          );
+        };
+
+        if (allowsMultiple) {
+          if (!Array.isArray(value)) {
+            errors.push(`${field.label} must include one or more files`);
+            break;
+          }
+          const invalidFile = value.some((file) => !isValidFile(file));
+          if (invalidFile) {
+            errors.push(`${field.label} must include valid file uploads`);
+          }
+        } else {
+          if (!isValidFile(value)) {
+            errors.push(`${field.label} must include a valid file`);
+          }
+        }
+        break;
+      }
     }
   }
 

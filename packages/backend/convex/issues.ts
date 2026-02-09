@@ -1,8 +1,11 @@
+import type { Id } from "./_generated/dataModel";
+
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { parseTemplateSchema, validateTemplateData } from "./lib/templateSchema";
 
 const issueValidator = v.object({
   _id: v.id("issues"),
@@ -145,6 +148,43 @@ export const create = mutation({
       throw new ConvexError("Title is required");
     }
 
+    let parsedTemplateData: Record<string, unknown> | null = null;
+    if (args.templateData !== undefined) {
+      try {
+        const parsed = JSON.parse(args.templateData) as unknown;
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new ConvexError("Template data must be an object");
+        }
+        parsedTemplateData = parsed as Record<string, unknown>;
+      } catch (error) {
+        if (error instanceof ConvexError) {
+          throw error;
+        }
+        throw new ConvexError("Invalid template data");
+      }
+    }
+
+    if (args.templateId) {
+      const template = await ctx.db.get(args.templateId);
+      if (!template) throw new ConvexError("Template not found");
+
+      let schema;
+      try {
+        schema = parseTemplateSchema(template.schema);
+      } catch (error) {
+        throw new ConvexError(
+          `Invalid template schema: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+
+      const validation = validateTemplateData(schema, parsedTemplateData ?? {});
+      if (!validation.valid) {
+        throw new ConvexError(validation.errors.join(", "));
+      }
+    } else if (parsedTemplateData !== null) {
+      throw new ConvexError("Template data provided without template");
+    }
+
     const existingIssues = await ctx.db
       .query("issues")
       .withIndex("by_org_and_number", (q) => q.eq("organizationId", args.organizationId))
@@ -249,6 +289,58 @@ export const remove = mutation({
 
     const issue = await ctx.db.get(args.issueId);
     if (!issue) throw new ConvexError("Issue not found");
+
+    if (issue.templateId && issue.templateData) {
+      const template = await ctx.db.get(issue.templateId);
+      if (template) {
+        try {
+          const parsedTemplateData = JSON.parse(issue.templateData) as Record<string, unknown>;
+          if (
+            parsedTemplateData &&
+            typeof parsedTemplateData === "object" &&
+            !Array.isArray(parsedTemplateData)
+          ) {
+            const schema = parseTemplateSchema(template.schema);
+            const storageIds: Id<"_storage">[] = [];
+
+            const addStorageId = (candidate: unknown) => {
+              if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+                return;
+              }
+              const record = candidate as { storageId?: unknown };
+              if (typeof record.storageId === "string") {
+                storageIds.push(record.storageId as Id<"_storage">);
+              }
+            };
+
+            for (const field of schema.fields) {
+              if (field.type !== "file") continue;
+              const rawValue = parsedTemplateData[field.key];
+              const allowsMultiple = field.multiple !== false;
+              if (allowsMultiple) {
+                if (Array.isArray(rawValue)) {
+                  rawValue.forEach(addStorageId);
+                }
+              } else {
+                addStorageId(rawValue);
+              }
+            }
+
+            await Promise.allSettled(
+              storageIds.map(async (storageId) => {
+                try {
+                  await ctx.storage.delete(storageId);
+                } catch {
+                  return;
+                }
+              }),
+            );
+          }
+        } catch {
+          // Best-effort cleanup; ignore parse or delete failures.
+        }
+      }
+    }
 
     await ctx.db.delete(args.issueId);
   },

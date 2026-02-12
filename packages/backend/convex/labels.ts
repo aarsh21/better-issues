@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { requireOrgMembership, requirePermission } from "./lib/permissions";
 
 const labelValidator = v.object({
   _id: v.id("labels"),
@@ -20,6 +21,7 @@ export const list = query({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
 
     return await ctx.db
       .query("labels")
@@ -39,6 +41,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requirePermission(ctx, user._id, args.organizationId, "label", "create");
 
     if (!args.name.trim()) {
       throw new ConvexError("Label name is required");
@@ -80,6 +83,7 @@ export const update = mutation({
 
     const label = await ctx.db.get(args.labelId);
     if (!label) throw new ConvexError("Label not found");
+    await requirePermission(ctx, user._id, label.organizationId, "label", "update");
 
     const updates: Record<string, unknown> = {};
     if (args.name !== undefined) {
@@ -90,6 +94,7 @@ export const update = mutation({
     if (args.description !== undefined) updates.description = args.description?.trim();
 
     await ctx.db.patch(args.labelId, updates);
+    return null;
   },
 });
 
@@ -104,7 +109,9 @@ export const remove = mutation({
 
     const label = await ctx.db.get(args.labelId);
     if (!label) throw new ConvexError("Label not found");
+    await requirePermission(ctx, user._id, label.organizationId, "label", "delete");
 
     await ctx.db.delete(args.labelId);
+    return null;
   },
 });

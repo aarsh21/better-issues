@@ -97,42 +97,43 @@ export function TemplateFieldRenderer({
 
     setUploading(true);
     try {
-      const uploadedFiles: TemplateFileValue[] = [];
+      // Generate upload URLs and upload files in parallel
+      const uploadResults = await Promise.all(
+        filesToUpload.map(async (file) => {
+          const uploadUrl = await generateUploadUrl({ organizationId: organizationId! });
+          const response = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": file.type || "application/octet-stream",
+            },
+            body: file,
+          });
 
-      for (const file of filesToUpload) {
-        const uploadUrl = await generateUploadUrl({ organizationId: organizationId! });
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": file.type || "application/octet-stream",
-          },
-          body: file,
-        });
+          if (!response.ok) {
+            throw new Error(`Upload failed for ${file.name}`);
+          }
 
-        if (!response.ok) {
-          throw new Error("Upload failed");
-        }
+          const result = (await response.json()) as { storageId?: string };
+          if (!result.storageId) {
+            throw new Error(`Upload failed for ${file.name}`);
+          }
 
-        const result = (await response.json()) as { storageId?: string };
-        if (!result.storageId) {
-          throw new Error("Upload failed");
-        }
+          return {
+            storageId: result.storageId as Id<"_storage">,
+            fileName: file.name,
+            fileType: file.type || "application/octet-stream",
+            fileSize: file.size,
+          } satisfies TemplateFileValue;
+        }),
+      );
 
-        uploadedFiles.push({
-          storageId: result.storageId as Id<"_storage">,
-          fileName: file.name,
-          fileType: file.type || "application/octet-stream",
-          fileSize: file.size,
-        });
-      }
-
-      if (uploadedFiles.length > 0) {
+      if (uploadResults.length > 0) {
         const existingFiles = normalizeFileValues(value, allowMultiple);
         if (allowMultiple) {
-          onChange([...existingFiles, ...uploadedFiles]);
+          onChange([...existingFiles, ...uploadResults]);
         } else {
           const previousFile = existingFiles[0];
-          onChange(uploadedFiles[0]);
+          onChange(uploadResults[0]);
           if (previousFile) {
             try {
               await removeFile({

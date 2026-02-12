@@ -1,3 +1,5 @@
+"use client";
+
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";

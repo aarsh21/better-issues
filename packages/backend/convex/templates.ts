@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { requireOrgMembership, requirePermission } from "./lib/permissions";
 import { parseTemplateSchema } from "./lib/templateSchema";
 
 const templateValidator = v.object({
@@ -23,6 +24,7 @@ export const list = query({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
 
     return await ctx.db
       .query("issueTemplates")
@@ -40,7 +42,10 @@ export const get = query({
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
 
-    return await ctx.db.get(args.templateId);
+    const template = await ctx.db.get(args.templateId);
+    if (!template) return null;
+    await requireOrgMembership(ctx, user._id, template.organizationId);
+    return template;
   },
 });
 
@@ -55,6 +60,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requirePermission(ctx, user._id, args.organizationId, "template", "create");
 
     if (!args.name.trim()) {
       throw new ConvexError("Template name is required");
@@ -93,6 +99,7 @@ export const update = mutation({
 
     const template = await ctx.db.get(args.templateId);
     if (!template) throw new ConvexError("Template not found");
+    await requirePermission(ctx, user._id, template.organizationId, "template", "update");
 
     const updates: Record<string, unknown> = {};
     if (args.name !== undefined) {
@@ -112,6 +119,7 @@ export const update = mutation({
     }
 
     await ctx.db.patch(args.templateId, updates);
+    return null;
   },
 });
 
@@ -126,7 +134,9 @@ export const remove = mutation({
 
     const template = await ctx.db.get(args.templateId);
     if (!template) throw new ConvexError("Template not found");
+    await requirePermission(ctx, user._id, template.organizationId, "template", "delete");
 
     await ctx.db.delete(args.templateId);
+    return null;
   },
 });

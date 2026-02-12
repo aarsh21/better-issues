@@ -44,4 +44,4 @@ fi
 
 # ── Start Next.js ──────────────────────────────────────────────
 echo "==> Starting Next.js on port ${PORT:-4100}"
-exec node server.js
+exec node apps/web/server.js

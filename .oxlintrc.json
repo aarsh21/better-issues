@@ -35,5 +35,8 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": []
+  "ignorePatterns": [
+    "packages/backend/convex/_generated",
+    "packages/backend/convex/betterAuth/_generated"
+  ]
 }

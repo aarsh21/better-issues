@@ -4,8 +4,8 @@ node_modules
 .pnp.js
 
 # Convex generated files (should not be linted/formatted)
-packages/backend/convex/_generated
-packages/backend/convex/betterAuth/_generated
+# NOTE: these are tracked in git so Docker builds work without a running backend
+# Re-run `npx convex dev` locally to regenerate after schema/function changes
 
 # Build outputs
 dist

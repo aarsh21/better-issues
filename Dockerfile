@@ -51,10 +51,10 @@ RUN npm install -g convex && \
     npm init -y > /dev/null 2>&1 && \
     npm install --save convex@1.31.2 better-auth@1.4.9 @convex-dev/better-auth@0.10.9 zod dotenv > /dev/null 2>&1
 
-# Next.js standalone output
+# Next.js standalone output (monorepo nests at apps/web/)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 # Convex source for deployment
 COPY --from=builder /app/packages/backend/convex /convex-deploy/convex

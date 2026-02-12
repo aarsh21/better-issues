@@ -79,6 +79,7 @@ bun run dev
 ```
 
 This starts both:
+
 - **Convex local backend** on `http://127.0.0.1:3210` (internal) and `http://127.0.0.1:3211` (HTTP/site)
 - **Next.js app** on `http://localhost:3001`
 
@@ -123,32 +124,32 @@ better-issues/
 
 ## Available Scripts
 
-| Command | Description |
-|---|---|
-| `bun run dev` | Start all dev servers (Next.js + Convex) |
-| `bun run dev:web` | Start only the Next.js app |
-| `bun run dev:server` | Start only the Convex backend |
-| `bun run dev:setup` | First-time Convex project setup |
-| `bun run build` | Production build |
-| `bun run check-types` | TypeScript type checking |
-| `bun run check` | Lint and format (Oxlint + Oxfmt) |
-| `bun run prepare` | Initialize git hooks (Husky) |
+| Command               | Description                              |
+| --------------------- | ---------------------------------------- |
+| `bun run dev`         | Start all dev servers (Next.js + Convex) |
+| `bun run dev:web`     | Start only the Next.js app               |
+| `bun run dev:server`  | Start only the Convex backend            |
+| `bun run dev:setup`   | First-time Convex project setup          |
+| `bun run build`       | Production build                         |
+| `bun run check-types` | TypeScript type checking                 |
+| `bun run check`       | Lint and format (Oxlint + Oxfmt)         |
+| `bun run prepare`     | Initialize git hooks (Husky)             |
 
 ## Docker Compose Deployment (Dokploy)
 
 Environment variables required for `docker-compose.yml`:
 
-| Variable | Required | Description |
-|---|---|---|
-| `INSTANCE_SECRET` | Yes | Convex instance secret |
-| `DOMAIN` | Yes | Convex public domain (e.g. `convex.example.com`) |
-| `APP_DOMAIN` | Yes | Web app domain (e.g. `issues.example.com`) |
-| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Yes | Admin key for the Convex CLI |
-| `BETTER_AUTH_SECRET` | Yes | Better Auth secret |
-| `SITE_URL` | Yes | Public URL of the web app |
-| `CONVEX_DASHBOARD_DOMAIN` | No | Only if exposing the dashboard |
-| `INSTANCE_NAME` | No | Defaults to `convex-prod` |
-| `DOKPLOY_NETWORK` | No | Defaults to `dokploy-network` |
+| Variable                       | Required | Description                                      |
+| ------------------------------ | -------- | ------------------------------------------------ |
+| `INSTANCE_SECRET`              | Yes      | Convex instance secret                           |
+| `DOMAIN`                       | Yes      | Convex public domain (e.g. `convex.example.com`) |
+| `APP_DOMAIN`                   | Yes      | Web app domain (e.g. `issues.example.com`)       |
+| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Yes      | Admin key for the Convex CLI                     |
+| `BETTER_AUTH_SECRET`           | Yes      | Better Auth secret                               |
+| `SITE_URL`                     | Yes      | Public URL of the web app                        |
+| `CONVEX_DASHBOARD_DOMAIN`      | No       | Only if exposing the dashboard                   |
+| `INSTANCE_NAME`                | No       | Defaults to `convex-prod`                        |
+| `DOKPLOY_NETWORK`              | No       | Defaults to `dokploy-network`                    |
 
 ```bash
 docker compose up -d --build

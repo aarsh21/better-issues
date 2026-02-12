@@ -3,9 +3,21 @@
 import type { Route } from "next";
 
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, FileText, Plus, Tag, Trash2, UserPlus, Users, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ClipboardCopy,
+  Clock,
+  FileText,
+  Plus,
+  Tag,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/convex";
@@ -21,10 +33,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/components/ui/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabelBadge } from "@/components/issues/label-badge";
+import {
+  useActiveOrganization,
+  useCancelInvitation,
+  useInvitations,
+  useInviteMember,
+  useMembers,
+  useRemoveMember,
+} from "@/hooks/use-organization";
 import { authClient } from "@/lib/auth-client";
 import { TEMPLATE_PRESETS } from "@/lib/template-presets";
 
@@ -43,7 +70,7 @@ const LABEL_COLORS = [
 
 export default function SettingsPage() {
   const params = useParams<{ slug: string }>();
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   return (
     <div className="flex h-full flex-col">
@@ -414,130 +441,225 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
 // ─── Members Tab ─────────────────────────────────────────────
 
 function MembersTab() {
-  const { data: activeOrg } = authClient.useActiveOrganization();
-  const [members, setMembers] = useState<
-    Array<{
-      id: string;
-      role: string;
-      user: { id: string; name: string; email: string; image?: string | null };
-    }>
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviting, setInviting] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
+  const { data: activeOrg } = useActiveOrganization();
+  const { data: session } = authClient.useSession();
+  const { data: members, isPending: loading } = useMembers(activeOrg?.id);
+  const { data: invitations, isPending: invitationsLoading } = useInvitations(activeOrg?.id);
+  const inviteMember = useInviteMember();
+  const removeMember = useRemoveMember(activeOrg?.id);
+  const cancelInvitation = useCancelInvitation(activeOrg?.id);
 
-  // Fetch members when org is active
-  useEffect(() => {
-    if (!activeOrg) return;
-    authClient.organization
-      .listMembers()
-      .then(({ data }) => {
-        if (data) setMembers(data.members as unknown as typeof members);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [activeOrg]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
+  const [showInvite, setShowInvite] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const currentUserId = session?.user?.id;
+  const currentMember = (members ?? []).find((m) => m.user.id === currentUserId);
+  const isAdmin = currentMember?.role === "admin" || currentMember?.role === "owner";
+
+  const pendingInvitations = (invitations ?? []).filter((inv) => inv.status === "pending");
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) return;
-    setInviting(true);
     try {
-      const { error } = await authClient.organization.inviteMember({
+      const result = await inviteMember.mutateAsync({
         email: inviteEmail.trim(),
-        role: "member",
+        role: inviteRole,
       });
-      if (error) {
-        toast.error(error.message ?? "Failed to send invitation");
+      // Build and copy link automatically if we got an invitation ID back
+      const invitationId = result?.id ?? (result as Record<string, unknown>)?.invitationId;
+      if (invitationId) {
+        const link = `${window.location.origin}/invite/${invitationId}`;
+        await navigator.clipboard.writeText(link);
+        toast.success("Invitation created — link copied to clipboard");
       } else {
         toast.success("Invitation sent");
-        setInviteEmail("");
-        setShowInvite(false);
       }
-    } catch {
-      toast.error("Failed to send invitation");
-    } finally {
-      setInviting(false);
+      setInviteEmail("");
+      setInviteRole("member");
+      setShowInvite(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send invitation";
+      toast.error(message);
+    }
+  };
+
+  const handleCopyLink = async (invitationId: string) => {
+    const link = `${window.location.origin}/invite/${invitationId}`;
+    await navigator.clipboard.writeText(link);
+    setCopiedId(invitationId);
+    toast.success("Invite link copied");
+    setTimeout(() => setCopiedId(null), 2_000);
+  };
+
+  const handleCancelInvitation = async (invitationId: string, email: string) => {
+    if (!confirm(`Cancel the invitation to ${email}?`)) return;
+    try {
+      await cancelInvitation.mutateAsync({ invitationId });
+      toast.success("Invitation cancelled");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to cancel invitation";
+      toast.error(message);
     }
   };
 
   const handleRemoveMember = async (memberEmail: string) => {
     if (!confirm(`Remove ${memberEmail} from the team?`)) return;
     try {
-      const { error } = await authClient.organization.removeMember({
+      await removeMember.mutateAsync({
         memberIdOrEmail: memberEmail,
       });
-      if (error) {
-        toast.error(error.message ?? "Failed to remove member");
-      } else {
-        setMembers((prev) => prev.filter((m) => m.user.email !== memberEmail));
-        toast.success("Member removed");
-      }
-    } catch {
-      toast.error("Failed to remove member");
+      toast.success("Member removed");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to remove member";
+      toast.error(message);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-medium">Members</h2>
-          <p className="text-xs text-muted-foreground">
-            Manage your team&apos;s members and invite new ones.
-          </p>
+    <div className="space-y-6">
+      {/* ── Members section ── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-medium">Members</h2>
+            <p className="text-xs text-muted-foreground">
+              Manage your team&apos;s members and invite new ones.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setShowInvite(true)}
+            className="gap-1.5"
+            disabled={!isAdmin}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Invite
+          </Button>
         </div>
-        <Button size="sm" onClick={() => setShowInvite(true)} className="gap-1.5">
-          <UserPlus className="h-3.5 w-3.5" />
-          Invite
-        </Button>
-      </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {members.map((member) => (
-            <div key={member.id} className="flex items-center justify-between border px-3 py-2">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs font-medium uppercase">
-                  {member.user.name?.charAt(0) ?? member.user.email.charAt(0)}
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {(members ?? []).map((member) => (
+              <div key={member.id} className="flex items-center justify-between border px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs font-medium uppercase">
+                    {member.user.name?.charAt(0) ?? member.user.email.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{member.user.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.user.email}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{member.user.name}</p>
-                  <p className="text-xs text-muted-foreground">{member.user.email}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs border px-2 py-0.5 font-mono text-muted-foreground">
+                    {member.role}
+                  </span>
+                  {isAdmin && member.role !== "owner" && member.user.id !== currentUserId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveMember(member.user.email)}
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs border px-2 py-0.5 font-mono text-muted-foreground">
-                  {member.role}
-                </span>
-                {member.role !== "owner" && (
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Pending invitations section ── */}
+      <Separator />
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-sm font-medium">Pending Invitations</h2>
+          <p className="text-xs text-muted-foreground">
+            Share the invite link with the person you&apos;re inviting.
+          </p>
+        </div>
+
+        {invitationsLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : pendingInvitations.length === 0 ? (
+          <div className="border border-dashed p-6 text-center">
+            <p className="text-sm text-muted-foreground">No pending invitations.</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {pendingInvitations.map((invitation) => (
+              <div
+                key={invitation.id}
+                className="flex items-center justify-between border px-3 py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{invitation.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Invited as {invitation.role}
+                      {invitation.expiresAt &&
+                        ` · expires ${new Date(invitation.expiresAt).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemoveMember(member.user.email)}
+                    onClick={() => handleCopyLink(invitation.id)}
+                    className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+                  >
+                    {copiedId === invitation.id ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardCopy className="h-3 w-3" />
+                        Copy link
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCancelInvitation(invitation.id, invitation.email)}
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
+      {/* ── Invite dialog ── */}
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Invite member</DialogTitle>
             <DialogDescription>
-              Send an invitation to add a new member to the team.
+              Send an invitation and share the invite link with the person.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -551,13 +673,28 @@ function MembersTab() {
                 autoFocus
               />
             </div>
+            <div className="grid gap-2">
+              <Label>Role</Label>
+              <Select
+                value={inviteRole}
+                onValueChange={(v) => setInviteRole(v as "member" | "admin")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInvite(false)}>
               Cancel
             </Button>
-            <Button onClick={handleInvite} disabled={inviting || !inviteEmail.trim()}>
-              {inviting ? "Sending..." : "Send Invitation"}
+            <Button onClick={handleInvite} disabled={inviteMember.isPending || !inviteEmail.trim()}>
+              {inviteMember.isPending ? "Sending..." : "Send Invitation"}
             </Button>
           </DialogFooter>
         </DialogContent>

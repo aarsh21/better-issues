@@ -25,14 +25,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
-import { authClient } from "@/lib/auth-client";
+import { useActiveOrganization } from "@/hooks/use-organization";
 
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 
 export default function NewIssuePage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   const templates = useQuery(
     api.templates.list,

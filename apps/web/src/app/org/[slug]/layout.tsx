@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProjectSidebar } from "@/components/project-sidebar";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserMenu } from "@/components/user-menu";
-import { authClient } from "@/lib/auth-client";
+import { useActiveOrganization, useSetActiveOrganization } from "@/hooks/use-organization";
 
 const SearchCommand = dynamic(
   () => import("@/components/search-command").then((m) => ({ default: m.SearchCommand })),
@@ -20,11 +20,22 @@ const SearchCommand = dynamic(
 export default function OrgSlugLayout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ slug: string }>();
   const [searchOpen, setSearchOpen] = useState(false);
+  const { data: activeOrg } = useActiveOrganization();
+  const setActive = useSetActiveOrganization();
+  const lastSyncedSlug = useRef<string | null>(null);
 
-  // Set active org on mount
+  // Only call setActive when the slug actually changes AND
+  // the cached active org doesn't already match
   useEffect(() => {
-    authClient.organization.setActive({ organizationSlug: params.slug });
-  }, [params.slug]);
+    const slug = params.slug;
+    if (lastSyncedSlug.current === slug) return;
+    if (activeOrg && activeOrg.slug === slug) {
+      lastSyncedSlug.current = slug;
+      return;
+    }
+    lastSyncedSlug.current = slug;
+    setActive.mutate({ organizationSlug: slug });
+  }, [params.slug, activeOrg?.slug]);
 
   // Cmd+K shortcut
   useEffect(() => {

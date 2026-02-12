@@ -1,8 +1,10 @@
 "use client";
 
+import type { Route } from "next";
+
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import SignInForm from "@/components/sign-in-form";
@@ -12,9 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function AuthenticatedRedirect() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+
   useEffect(() => {
-    router.replace("/org");
-  }, [router]);
+    router.replace((returnTo ?? "/org") as Route);
+  }, [router, returnTo]);
   return null;
 }
 
@@ -31,7 +36,9 @@ export default function SignInPage() {
         </div>
       </AuthLoading>
       <Authenticated>
-        <AuthenticatedRedirect />
+        <Suspense fallback={null}>
+          <AuthenticatedRedirect />
+        </Suspense>
       </Authenticated>
       <Unauthenticated>
         <div className="w-full max-w-sm p-8">

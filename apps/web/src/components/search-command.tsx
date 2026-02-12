@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/command";
 import { StatusIcon } from "@/components/issues/status-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
-import { authClient } from "@/lib/auth-client";
+import { useActiveOrganization } from "@/hooks/use-organization";
 
 export function SearchCommand({
   open,
@@ -30,7 +30,7 @@ export function SearchCommand({
   const [searchQuery, setSearchQuery] = useState("");
   const deferredQuery = useDeferredValue(searchQuery);
   const isStale = searchQuery !== deferredQuery;
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   const results = useQuery(
     api.issues.search,

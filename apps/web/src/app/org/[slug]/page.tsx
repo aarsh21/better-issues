@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { FilterBar } from "@/components/issues/filter-bar";
 import { IssueRow } from "@/components/issues/issue-row";
-import { authClient } from "@/lib/auth-client";
+import { useActiveOrganization } from "@/hooks/use-organization";
 
 type IssueStatus = "open" | "in_progress" | "closed";
 
@@ -53,7 +53,7 @@ export default function IssueListPage() {
 function IssueListContent() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   const statusParam = searchParams.get("status") as IssueStatus | null;
   const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>(

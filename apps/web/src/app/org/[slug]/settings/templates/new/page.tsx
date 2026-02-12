@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
-import { authClient } from "@/lib/auth-client";
+import { useActiveOrganization } from "@/hooks/use-organization";
 
 const EMPTY_FIELD: TemplateField = {
   key: "",
@@ -36,7 +36,7 @@ const EMPTY_FIELD: TemplateField = {
 export default function NewTemplatePage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: activeOrg } = useActiveOrganization();
   const createTemplate = useMutation(api.templates.create);
 
   const [name, setName] = useState("");

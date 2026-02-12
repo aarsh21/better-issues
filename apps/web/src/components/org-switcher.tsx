@@ -16,18 +16,25 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { authClient } from "@/lib/auth-client";
+import {
+  useOrganizations,
+  useActiveOrganization,
+  useSetActiveOrganization,
+} from "@/hooks/use-organization";
 
 export function OrgSwitcher({ onCreateOrg }: { onCreateOrg?: () => void }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const { data: orgs } = authClient.useListOrganizations();
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: orgs } = useOrganizations();
+  const { data: activeOrg } = useActiveOrganization();
+  const setActive = useSetActiveOrganization();
 
-  const handleSelect = async (orgSlug: string) => {
-    await authClient.organization.setActive({ organizationSlug: orgSlug });
+  const handleSelect = (orgSlug: string) => {
     setOpen(false);
-    router.push(`/org/${orgSlug}`);
+    setActive.mutate(
+      { organizationSlug: orgSlug },
+      { onSuccess: () => router.push(`/org/${orgSlug}`) },
+    );
   };
 
   return (

@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth-client";
+import { useCreateOrganization, useSetActiveOrganization } from "@/hooks/use-organization";
 
 function slugify(text: string): string {
   return text
@@ -33,8 +33,11 @@ export function CreateOrgDialog({
 }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const createOrg = useCreateOrganization();
+  const setActive = useSetActiveOrganization();
+
+  const loading = createOrg.isPending || setActive.isPending;
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -45,20 +48,14 @@ export function CreateOrgDialog({
     e.preventDefault();
     if (!name.trim() || !slug.trim()) return;
 
-    setLoading(true);
     try {
-      const { data, error } = await authClient.organization.create({
+      const data = await createOrg.mutateAsync({
         name: name.trim(),
         slug: slug.trim(),
       });
 
-      if (error) {
-        toast.error(error.message ?? "Failed to create team");
-        return;
-      }
-
       if (data) {
-        await authClient.organization.setActive({
+        await setActive.mutateAsync({
           organizationId: data.id,
         });
         toast.success("Team created");
@@ -67,10 +64,9 @@ export function CreateOrgDialog({
         setSlug("");
         router.push(`/org/${data.slug}`);
       }
-    } catch {
-      toast.error("Failed to create team");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create team";
+      toast.error(message);
     }
   };
 

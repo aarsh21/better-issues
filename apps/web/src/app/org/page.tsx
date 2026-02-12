@@ -2,27 +2,30 @@
 
 import { Plus, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ModeToggle } from "@/components/mode-toggle";
 import { CreateOrgDialog } from "@/components/create-org-dialog";
-import { authClient } from "@/lib/auth-client";
+import { useOrganizations, useSetActiveOrganization } from "@/hooks/use-organization";
 
 export default function OrgListPage() {
-  const { data: orgs, isPending } = authClient.useListOrganizations();
+  const { data: orgs, isPending } = useOrganizations();
   const [createOpen, setCreateOpen] = useState(false);
   const router = useRouter();
+  const setActive = useSetActiveOrganization();
+  const autoRedirected = useRef(false);
 
-  const handleTeamClick = async (slug: string) => {
-    await authClient.organization.setActive({ organizationSlug: slug });
-    router.push(`/org/${slug}`);
+  const handleTeamClick = (slug: string) => {
+    setActive.mutate({ organizationSlug: slug }, { onSuccess: () => router.push(`/org/${slug}`) });
   };
 
-  // If user has exactly one team, auto-redirect
+  // If user has exactly one team, auto-redirect (once)
   useEffect(() => {
+    if (autoRedirected.current) return;
     if (orgs && orgs.length === 1 && orgs[0]) {
+      autoRedirected.current = true;
       handleTeamClick(orgs[0].slug);
     }
   }, [orgs]);

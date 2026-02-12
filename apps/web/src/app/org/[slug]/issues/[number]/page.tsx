@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LabelBadge } from "@/components/issues/label-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { StatusBadge } from "@/components/issues/status-badge";
-import { authClient } from "@/lib/auth-client";
+import { useActiveOrganization } from "@/hooks/use-organization";
 import { formatDate, formatFileSize } from "@/lib/utils";
 
 type IssueStatus = "open" | "in_progress" | "closed";
@@ -126,7 +126,7 @@ function TemplateFileList({ field, value }: { field: TemplateField; value: unkno
 export default function IssueDetailPage() {
   const params = useParams<{ slug: string; number: string }>();
   const router = useRouter();
-  const { data: activeOrg } = authClient.useActiveOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   const issueNumber = parseInt(params.number, 10);
 

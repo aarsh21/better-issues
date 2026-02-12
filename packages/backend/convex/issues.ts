@@ -49,9 +49,21 @@ export const list = query({
     if (!user) throw new ConvexError("Not authenticated");
     await requireOrgMembership(ctx, user._id, args.organizationId);
 
+    // Choose the best index based on which filters are provided.
+    // Priority: assignee filter (uses by_assignee index) > status filter > org-only.
+    // Note: labelId filtering must remain in-memory because labelIds is an array field
+    // and cannot be indexed. When labelId is the only filter, we paginate by org and
+    // post-filter — callers should be aware pages may contain fewer results than numItems.
     let issueQuery;
 
-    if (args.status) {
+    if (args.assigneeId) {
+      // by_assignee index: ["organizationId", "assigneeId"]
+      issueQuery = ctx.db
+        .query("issues")
+        .withIndex("by_assignee", (q) =>
+          q.eq("organizationId", args.organizationId).eq("assigneeId", args.assigneeId!),
+        );
+    } else if (args.status) {
       issueQuery = ctx.db
         .query("issues")
         .withIndex("by_org_and_status", (q) =>
@@ -67,10 +79,12 @@ export const list = query({
 
     let filteredPage = result.page;
 
-    if (args.assigneeId) {
-      filteredPage = filteredPage.filter((i) => i.assigneeId === args.assigneeId);
+    // When using the assignee index, we may still need to post-filter by status
+    if (args.assigneeId && args.status) {
+      filteredPage = filteredPage.filter((i) => i.status === args.status);
     }
 
+    // Label filtering is always in-memory (array field)
     if (args.labelId) {
       filteredPage = filteredPage.filter((i) => i.labelIds.includes(args.labelId!));
     }

@@ -5,6 +5,7 @@ import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { requireOrgMembership, requirePermission } from "./lib/permissions";
 import { parseTemplateSchema, validateTemplateData } from "./lib/templateSchema";
 
 const issueValidator = v.object({
@@ -46,6 +47,7 @@ export const list = query({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
 
     let issueQuery;
 
@@ -87,6 +89,7 @@ export const search = query({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
 
     if (!args.searchQuery.trim()) return [];
 
@@ -111,6 +114,7 @@ export const getByNumber = query({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
 
     const issue = await ctx.db
       .query("issues")
@@ -143,6 +147,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    await requirePermission(ctx, user._id, args.organizationId, "issue", "create");
 
     if (!args.title.trim()) {
       throw new ConvexError("Title is required");
@@ -232,6 +237,7 @@ export const update = mutation({
 
     const issue = await ctx.db.get(args.issueId);
     if (!issue) throw new ConvexError("Issue not found");
+    await requirePermission(ctx, user._id, issue.organizationId, "issue", "update");
 
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
 
@@ -247,6 +253,7 @@ export const update = mutation({
     if (args.labelIds !== undefined) updates.labelIds = args.labelIds;
 
     await ctx.db.patch(args.issueId, updates);
+    return null;
   },
 });
 
@@ -263,6 +270,15 @@ export const updateStatus = mutation({
     const issue = await ctx.db.get(args.issueId);
     if (!issue) throw new ConvexError("Issue not found");
 
+    // Closing requires "close" permission; reopening/other transitions require "update"
+    const action = args.status === "closed" ? "close" : "update";
+    await requirePermission(ctx, user._id, issue.organizationId, "issue", action);
+
+    // Idempotent: skip if status is already the requested value
+    if (issue.status === args.status) {
+      return null;
+    }
+
     const updates: Record<string, unknown> = {
       status: args.status,
       updatedAt: Date.now(),
@@ -275,6 +291,7 @@ export const updateStatus = mutation({
     }
 
     await ctx.db.patch(args.issueId, updates);
+    return null;
   },
 });
 
@@ -289,6 +306,7 @@ export const remove = mutation({
 
     const issue = await ctx.db.get(args.issueId);
     if (!issue) throw new ConvexError("Issue not found");
+    await requirePermission(ctx, user._id, issue.organizationId, "issue", "delete");
 
     if (issue.templateId && issue.templateData) {
       const template = await ctx.db.get(issue.templateId);
@@ -343,5 +361,6 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.issueId);
+    return null;
   },
 });

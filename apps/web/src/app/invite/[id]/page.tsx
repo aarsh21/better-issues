@@ -4,6 +4,7 @@ import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { CheckCircle, Loader2, Mail, XCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +44,7 @@ function InviteContent({ inviteId }: { inviteId: string }) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to accept invitation";
       setOutcome(null);
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -54,7 +55,7 @@ function InviteContent({ inviteId }: { inviteId: string }) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to reject invitation";
       setOutcome(null);
-      alert(message);
+      toast.error(message);
     }
   };
 

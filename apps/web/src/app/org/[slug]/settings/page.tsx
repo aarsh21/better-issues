@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 import { api } from "@/convex";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -453,6 +454,11 @@ function MembersTab() {
   const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
   const [showInvite, setShowInvite] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const currentUserId = session?.user?.id;
   const currentMember = (members ?? []).find((m) => m.user.id === currentUserId);
@@ -493,28 +499,38 @@ function MembersTab() {
     setTimeout(() => setCopiedId(null), 2_000);
   };
 
-  const handleCancelInvitation = async (invitationId: string, email: string) => {
-    if (!confirm(`Cancel the invitation to ${email}?`)) return;
-    try {
-      await cancelInvitation.mutateAsync({ invitationId });
-      toast.success("Invitation cancelled");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to cancel invitation";
-      toast.error(message);
-    }
+  const handleCancelInvitation = (invitationId: string, email: string) => {
+    setConfirmAction({
+      title: "Cancel invitation",
+      description: `Cancel the invitation to ${email}?`,
+      onConfirm: async () => {
+        try {
+          await cancelInvitation.mutateAsync({ invitationId });
+          toast.success("Invitation cancelled");
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to cancel invitation";
+          toast.error(message);
+        }
+      },
+    });
   };
 
-  const handleRemoveMember = async (memberEmail: string) => {
-    if (!confirm(`Remove ${memberEmail} from the team?`)) return;
-    try {
-      await removeMember.mutateAsync({
-        memberIdOrEmail: memberEmail,
-      });
-      toast.success("Member removed");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to remove member";
-      toast.error(message);
-    }
+  const handleRemoveMember = (memberEmail: string) => {
+    setConfirmAction({
+      title: "Remove member",
+      description: `Remove ${memberEmail} from the team?`,
+      onConfirm: async () => {
+        try {
+          await removeMember.mutateAsync({
+            memberIdOrEmail: memberEmail,
+          });
+          toast.success("Member removed");
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to remove member";
+          toast.error(message);
+        }
+      },
+    });
   };
 
   return (
@@ -699,6 +715,18 @@ function MembersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmAction(null);
+        }}
+        title={confirmAction?.title ?? ""}
+        description={confirmAction?.description ?? ""}
+        confirmLabel="Confirm"
+        variant="destructive"
+        onConfirm={() => confirmAction?.onConfirm()}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 import { api } from "@/convex";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/components/ui/link";
@@ -203,6 +204,7 @@ export default function IssueDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!activeOrg || issue === undefined) {
     return (
@@ -302,7 +304,6 @@ export default function IssueDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this issue?")) return;
     try {
       await removeIssue({ issueId: issue._id });
       toast.success("Issue deleted");
@@ -332,7 +333,7 @@ export default function IssueDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             className="gap-1.5 text-destructive hover:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -513,6 +514,16 @@ export default function IssueDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete issue"
+        description="Are you sure you want to delete this issue? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

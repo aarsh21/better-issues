@@ -69,11 +69,22 @@ const normalizeFileValues = (value: unknown, allowMultiple: boolean) => {
   return [];
 };
 
-function TemplateFileList({ field, value }: { field: TemplateField; value: unknown }) {
+function TemplateFileList({
+  field,
+  value,
+  organizationId,
+}: {
+  field: TemplateField;
+  value: unknown;
+  organizationId: string;
+}) {
   const allowMultiple = field.multiple !== false;
   const files = normalizeFileValues(value, allowMultiple);
   const storageIds = files.map((file) => file.storageId);
-  const resolvedUrls = useQuery(api.files.getUrls, storageIds.length > 0 ? { storageIds } : "skip");
+  const resolvedUrls = useQuery(
+    api.files.getUrls,
+    storageIds.length > 0 ? { organizationId, storageIds } : "skip",
+  );
 
   if (files.length === 0) return null;
 
@@ -391,7 +402,11 @@ export default function IssueDetailPage() {
                             <p className="text-xs font-medium text-muted-foreground">
                               {field.label}
                             </p>
-                            <TemplateFileList field={field} value={value} />
+                            <TemplateFileList
+                              field={field}
+                              value={value}
+                              organizationId={activeOrg!.id}
+                            />
                           </div>
                         );
                       }

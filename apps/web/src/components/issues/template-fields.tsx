@@ -69,11 +69,13 @@ export function TemplateFieldRenderer({
   value,
   onChange,
   readOnly = false,
+  organizationId,
 }: {
   field: TemplateField;
   value: unknown;
   onChange: (value: unknown) => void;
   readOnly?: boolean;
+  organizationId?: string;
 }) {
   const id = `template-field-${field.key}`;
   const allowMultiple = field.type === "file" ? field.multiple !== false : false;
@@ -98,7 +100,7 @@ export function TemplateFieldRenderer({
       const uploadedFiles: TemplateFileValue[] = [];
 
       for (const file of filesToUpload) {
-        const uploadUrl = await generateUploadUrl();
+        const uploadUrl = await generateUploadUrl({ organizationId: organizationId! });
         const response = await fetch(uploadUrl, {
           method: "POST",
           headers: {
@@ -133,7 +135,10 @@ export function TemplateFieldRenderer({
           onChange(uploadedFiles[0]);
           if (previousFile) {
             try {
-              await removeFile({ storageId: previousFile.storageId });
+              await removeFile({
+                organizationId: organizationId!,
+                storageId: previousFile.storageId,
+              });
             } catch {
               // Best-effort cleanup.
             }
@@ -155,7 +160,7 @@ export function TemplateFieldRenderer({
     onChange(allowMultiple ? nextFiles : undefined);
 
     try {
-      await removeFile({ storageId });
+      await removeFile({ organizationId: organizationId!, storageId });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to remove file");
     }

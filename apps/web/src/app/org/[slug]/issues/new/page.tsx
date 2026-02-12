@@ -279,6 +279,7 @@ export default function NewIssuePage() {
                     key={field.key}
                     field={field}
                     value={templateData[field.key]}
+                    organizationId={activeOrg?.id}
                     onChange={(value) =>
                       setTemplateData((prev) => ({
                         ...prev,

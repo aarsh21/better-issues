@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import {
-  useLocation,
-  useNavigate,
-  useParams as useTanStackParams,
-  useRouter as useTanStackRouter,
-} from "@tanstack/react-router";
+import { useLocation, useNavigate, useRouter as useTanStackRouter } from "@tanstack/react-router";
 
 type Router = {
   push: (to: string) => void;
@@ -40,20 +35,4 @@ export function usePathname() {
   return useLocation({
     select: (location) => location.pathname,
   });
-}
-
-export function useSearchParams() {
-  const location = useLocation();
-
-  return useMemo(() => {
-    if (typeof window === "undefined") {
-      return new URLSearchParams();
-    }
-    return new URLSearchParams(window.location.search);
-  }, [location]);
-}
-
-export function useParams<T extends Record<string, string>>() {
-  const params = useTanStackParams({ strict: false });
-  return params as T;
 }

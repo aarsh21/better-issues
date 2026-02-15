@@ -1,6 +1,6 @@
 "use client";
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
@@ -10,8 +10,6 @@ import { api } from "@/convex";
 import { usePaginatedQuery } from "convex/react";
 import { Plus } from "lucide-react";
 import { Link } from "@/components/ui/link";
-import { useParams, useSearchParams } from "@/lib/navigation";
-import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,8 +20,15 @@ import { IssueRow } from "@/components/issues/issue-row";
 import { useActiveOrganization } from "@/hooks/use-organization";
 
 type IssueStatus = "open" | "in_progress" | "closed";
+const ISSUE_STATUSES = new Set<IssueStatus>(["open", "in_progress", "closed"]);
 
 export const Route = createFileRoute("/org/$slug/")({
+  validateSearch: (search) => ({
+    status:
+      typeof search.status === "string" && ISSUE_STATUSES.has(search.status as IssueStatus)
+        ? (search.status as IssueStatus)
+        : undefined,
+  }),
   component: IssueListPage,
 });
 
@@ -57,18 +62,11 @@ export default function IssueListPage() {
 }
 
 function IssueListContent() {
-  const params = useParams<{ slug: string }>();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const params = Route.useParams();
+  const search = Route.useSearch();
   const { data: activeOrg } = useActiveOrganization();
-
-  const statusParam = searchParams.get("status") as IssueStatus | null;
-  const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>(
-    statusParam ?? undefined,
-  );
-
-  useEffect(() => {
-    setStatusFilter(statusParam ?? undefined);
-  }, [statusParam]);
+  const statusFilter = search.status;
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.issues.list,
@@ -86,6 +84,16 @@ function IssueListContent() {
   );
 
   const isLoading = !activeOrg || results === undefined;
+  const handleStatusChange = (nextStatus: IssueStatus | undefined) => {
+    void navigate({
+      to: ".",
+      replace: true,
+      search: (prev) => ({
+        ...prev,
+        status: nextStatus,
+      }),
+    });
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -99,7 +107,7 @@ function IssueListContent() {
               {status === "CanLoadMore" ? "+" : ""}
             </span>
           )}
-          <FilterBar activeStatus={statusFilter} onStatusChange={setStatusFilter} />
+          <FilterBar activeStatus={statusFilter} onStatusChange={handleStatusChange} />
         </div>
         <Link href={`/org/${params.slug}/issues/new`}>
           <Button size="sm" className="gap-1.5">

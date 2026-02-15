@@ -126,16 +126,16 @@ better-issues/
 
 ## Available Scripts
 
-| Command               | Description                              |
-| --------------------- | ---------------------------------------- |
+| Command               | Description                                     |
+| --------------------- | ----------------------------------------------- |
 | `bun run dev`         | Start all dev servers (TanStack Start + Convex) |
-| `bun run dev:web`     | Start only the TanStack Start app        |
-| `bun run dev:server`  | Start only the Convex backend            |
-| `bun run dev:setup`   | First-time Convex project setup          |
-| `bun run build`       | Production build                         |
-| `bun run check-types` | TypeScript type checking                 |
-| `bun run check`       | Lint and format (Oxlint + Oxfmt)         |
-| `bun run prepare`     | Initialize git hooks (Husky)             |
+| `bun run dev:web`     | Start only the TanStack Start app               |
+| `bun run dev:server`  | Start only the Convex backend                   |
+| `bun run dev:setup`   | First-time Convex project setup                 |
+| `bun run build`       | Production build                                |
+| `bun run check-types` | TypeScript type checking                        |
+| `bun run check`       | Lint and format (Oxlint + Oxfmt)                |
+| `bun run prepare`     | Initialize git hooks (Husky)                    |
 
 ## Docker Compose Deployment (Dokploy)
 

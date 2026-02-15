@@ -9,7 +9,7 @@ import { api } from "@/convex";
 import { useMutation } from "convex/react";
 import { ArrowLeft, FileText, Search } from "lucide-react";
 import { Link } from "@/components/ui/link";
-import { useParams, useRouter } from "@/lib/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/org/$slug/issues/new")({
 });
 
 export default function NewIssuePage() {
-  const params = useParams<{ slug: string }>();
+  const params = Route.useParams();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
 

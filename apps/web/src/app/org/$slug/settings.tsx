@@ -18,7 +18,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useParams } from "@/lib/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -76,7 +75,7 @@ export const Route = createFileRoute("/org/$slug/settings")({
 });
 
 export default function SettingsPage() {
-  const params = useParams<{ slug: string }>();
+  const params = Route.useParams();
   const { data: activeOrg } = useActiveOrganization();
 
   return (

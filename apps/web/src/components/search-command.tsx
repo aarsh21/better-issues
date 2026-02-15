@@ -2,7 +2,8 @@
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter, useParams } from "@/lib/navigation";
+import { getRouteApi } from "@tanstack/react-router";
+import { useRouter } from "@/lib/navigation";
 import { useState, useEffect, useDeferredValue } from "react";
 import { api } from "@/convex";
 
@@ -19,6 +20,8 @@ import { StatusIcon } from "@/components/issues/status-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { useActiveOrganization } from "@/hooks/use-organization";
 
+const orgRouteApi = getRouteApi("/org/$slug");
+
 export function SearchCommand({
   open,
   onOpenChange,
@@ -26,7 +29,7 @@ export function SearchCommand({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const params = useParams<{ slug: string }>();
+  const { slug } = orgRouteApi.useParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const deferredQuery = useDeferredValue(searchQuery);
@@ -52,7 +55,7 @@ export function SearchCommand({
 
   const handleSelect = (issueNumber: number) => {
     onOpenChange(false);
-    router.push(`/org/${params.slug}/issues/${issueNumber}`);
+    router.push(`/org/${slug}/issues/${issueNumber}`);
   };
 
   return (

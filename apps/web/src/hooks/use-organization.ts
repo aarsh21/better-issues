@@ -8,9 +8,10 @@ export const orgKeys = {
   all: ["organization"] as const,
   lists: () => [...orgKeys.all, "list"] as const,
   active: () => [...orgKeys.all, "active"] as const,
-  members: (organizationId?: string) => [...orgKeys.all, "members", organizationId] as const,
-  invitations: (organizationId?: string) =>
-    [...orgKeys.all, "invitations", organizationId] as const,
+  membersRoot: () => [...orgKeys.all, "members"] as const,
+  members: (organizationId?: string) => [...orgKeys.membersRoot(), organizationId] as const,
+  invitationsRoot: () => [...orgKeys.all, "invitations"] as const,
+  invitations: (organizationId?: string) => [...orgKeys.invitationsRoot(), organizationId] as const,
   invitation: (invitationId: string) => [...orgKeys.all, "invitation", invitationId] as const,
   userInvitations: () => [...orgKeys.all, "userInvitations"] as const,
 };
@@ -152,8 +153,8 @@ export function useInviteMember() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: orgKeys.members() });
-      queryClient.invalidateQueries({ queryKey: orgKeys.all });
+      queryClient.invalidateQueries({ queryKey: orgKeys.membersRoot() });
+      queryClient.invalidateQueries({ queryKey: orgKeys.invitationsRoot() });
     },
   });
 }
@@ -273,7 +274,10 @@ export function useAcceptInvitation() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: orgKeys.all });
+      queryClient.invalidateQueries({ queryKey: orgKeys.userInvitations() });
+      queryClient.invalidateQueries({ queryKey: orgKeys.membersRoot() });
+      queryClient.invalidateQueries({ queryKey: orgKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: orgKeys.active() });
     },
   });
 }

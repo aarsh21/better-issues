@@ -1,10 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { getRouteApi, useLocation } from "@tanstack/react-router";
+import { Suspense, useState } from "react";
 import { CircleDot, Settings, Plus, Search, Tag, LayoutList } from "lucide-react";
 import { Link } from "@/components/ui/link";
-import { useParams, usePathname, useSearchParams } from "@/lib/navigation";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -14,10 +13,13 @@ import { cn } from "@/lib/utils";
 import { OrgSwitcher } from "./org-switcher";
 import { CreateOrgDialog } from "./create-org-dialog";
 
+const orgRouteApi = getRouteApi("/org/$slug");
+
 export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) {
-  const params = useParams<{ slug: string }>();
-  const pathname = usePathname();
-  const slug = params.slug;
+  const { slug } = orgRouteApi.useParams();
+  const pathname = useLocation({
+    select: (location) => location.pathname,
+  });
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
 
   const navItems = [
@@ -144,7 +146,7 @@ function QuickFilterLink({
 }) {
   return (
     <Link
-      href={href as never}
+      href={href}
       className={cn(
         "flex items-center gap-2 px-2 py-1.5 text-sm transition-colors",
         active
@@ -159,8 +161,10 @@ function QuickFilterLink({
 }
 
 function QuickFilters({ slug, pathname }: { slug: string; pathname: string }) {
-  const searchParams = useSearchParams();
-  const activeStatus = searchParams.get("status");
+  const searchString = useLocation({
+    select: (location) => location.searchStr,
+  });
+  const activeStatus = new URLSearchParams(searchString).get("status");
   const isOnIssuesPage = pathname === `/org/${slug}`;
 
   return (

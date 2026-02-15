@@ -52,8 +52,10 @@ RUN npm install -g convex && \
     npm install --save convex@1.31.2 better-auth@1.4.9 @convex-dev/better-auth@0.10.9 zod dotenv > /dev/null 2>&1
 
 # TanStack Start output
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/dist ./apps/web/dist
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 # Convex source for deployment
 COPY --from=builder /app/packages/backend/convex /convex-deploy/convex

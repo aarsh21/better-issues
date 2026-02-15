@@ -5,7 +5,7 @@ import type { TemplateField, TemplateSchema } from "@/convex";
 
 import { useMutation } from "convex/react";
 import { ArrowLeft, GripVertical, Plus, Trash2 } from "lucide-react";
-import { useParams, useRouter } from "@/lib/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/org/$slug/settings/templates/new")({
 });
 
 export default function NewTemplatePage() {
-  const params = useParams<{ slug: string }>();
+  const params = Route.useParams();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
   const createTemplate = useMutation(api.templates.create);

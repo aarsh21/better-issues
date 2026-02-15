@@ -19,6 +19,7 @@ const queryClient = new QueryClient({
       queryKeyHashFn: convexQueryClient.hashFn(),
       queryFn: convexQueryClient.queryFn(),
       staleTime: 30_000,
+      gcTime: 10 * 60 * 1_000,
       refetchOnWindowFocus: false,
       retry: 1,
     },

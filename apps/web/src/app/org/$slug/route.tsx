@@ -1,7 +1,6 @@
 "use client";
 
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { useParams } from "@/lib/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Menu } from "lucide-react";
 
@@ -26,7 +25,7 @@ function OrgSlugRoute() {
 }
 
 export default function OrgSlugLayout({ children }: { children: React.ReactNode }) {
-  const params = useParams<{ slug: string }>();
+  const params = Route.useParams();
   const [searchOpen, setSearchOpen] = useState(false);
   const { data: activeOrg } = useActiveOrganization();
   const setActive = useSetActiveOrganization();

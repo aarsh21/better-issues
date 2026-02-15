@@ -3,7 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { CheckCircle, Loader2, Mail, XCircle } from "lucide-react";
-import { useParams, useRouter } from "@/lib/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -178,7 +178,7 @@ function InviteContent({ inviteId }: { inviteId: string }) {
 }
 
 export default function InvitePage() {
-  const params = useParams<{ id: string }>();
+  const params = Route.useParams();
 
   return (
     <div className="flex h-svh flex-col items-center justify-center bg-background px-4">

@@ -2,9 +2,9 @@
 
 import type { Doc } from "@/convex";
 
+import { getRouteApi } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { Link } from "@/components/ui/link";
-import { useParams } from "@/lib/navigation";
 
 import { cn } from "@/lib/utils";
 
@@ -14,14 +14,15 @@ import { LabelBadge } from "./label-badge";
 
 type Issue = Doc<"issues">;
 type Label = Doc<"labels">;
+const orgRouteApi = getRouteApi("/org/$slug");
 
 export function IssueRow({ issue, labels }: { issue: Issue; labels: Label[] }) {
-  const params = useParams<{ slug: string }>();
+  const { slug } = orgRouteApi.useParams();
   const issueLabels = labels.filter((l) => issue.labelIds.includes(l._id));
 
   return (
     <Link
-      href={`/org/${params.slug}/issues/${issue.number}`}
+      href={`/org/${slug}/issues/${issue.number}`}
       className={cn(
         "flex items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-accent cursor-pointer group",
         issue.status === "closed" && "opacity-60",

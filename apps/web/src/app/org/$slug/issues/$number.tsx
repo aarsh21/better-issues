@@ -7,7 +7,7 @@ import type { Id, TemplateField, TemplateSchema } from "@/convex";
 
 import { useMutation } from "convex/react";
 import { ArrowLeft, Clock, ExternalLink, FileText, Pencil, Trash2 } from "lucide-react";
-import { useParams, useRouter } from "@/lib/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -141,7 +141,7 @@ function TemplateFileList({
 }
 
 export default function IssueDetailPage() {
-  const params = useParams<{ slug: string; number: string }>();
+  const params = Route.useParams();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
 

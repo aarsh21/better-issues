@@ -3,7 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { useRouter, useSearchParams } from "@/lib/navigation";
+import { useRouter } from "@/lib/navigation";
 import { Suspense, useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
@@ -13,13 +13,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/sign-in")({
+  validateSearch: (search) => ({
+    returnTo:
+      typeof search.returnTo === "string" && search.returnTo.startsWith("/")
+        ? search.returnTo
+        : undefined,
+  }),
   component: SignInPage,
 });
 
 function AuthenticatedRedirect() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const { returnTo } = Route.useSearch();
 
   useEffect(() => {
     router.replace(returnTo ?? "/org");

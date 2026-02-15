@@ -1,16 +1,3 @@
-# ── better-issues (Turbo + TanStack Start) ───────────────────
-#
-# Build args (both baked into JS):
-#   NEXT_PUBLIC_CONVEX_URL       - Convex backend URL
-#   NEXT_PUBLIC_CONVEX_SITE_URL  - Convex HTTP/site URL (for auth proxy; defaults to CONVEX_URL)
-#
-# Runtime env vars (for self-hosted Convex deploy on startup):
-#   CONVEX_SELF_HOSTED_URL       - Convex backend URL (for CLI)
-#   CONVEX_SELF_HOSTED_ADMIN_KEY - Admin key
-#   BETTER_AUTH_SECRET           - Auth secret
-#   SITE_URL                     - Public URL of this app
-# ──────────────────────────────────────────────────────────────
-
 FROM node:20-alpine AS builder
 WORKDIR /app
 
@@ -33,7 +20,6 @@ ENV NEXT_PUBLIC_CONVEX_SITE_URL=${NEXT_PUBLIC_CONVEX_SITE_URL}
 
 RUN bun run build
 
-# ── Production runner ─────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -41,30 +27,36 @@ ENV NODE_ENV=production
 ENV PORT=4100
 ENV HOSTNAME="0.0.0.0"
 
+ARG CONVEX_CLI_VERSION=latest
+
+RUN apk add --no-cache wget
+
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Convex CLI for deploying functions at startup
-RUN npm install -g convex && \
+# Convex CLI + Convex function deps for startup deploys.
+RUN npm install -g convex@${CONVEX_CLI_VERSION} && \
     mkdir -p /convex-deploy && \
     cd /convex-deploy && \
     npm init -y > /dev/null 2>&1 && \
-    npm install --save convex@1.31.2 better-auth@1.4.9 @convex-dev/better-auth@0.10.9 zod dotenv > /dev/null 2>&1
+    npm install --save \
+      convex@${CONVEX_CLI_VERSION} \
+      better-auth@1.4.9 \
+      @convex-dev/better-auth@0.10.9 \
+      zod@4.1.13 \
+      dotenv@17.2.2 > /dev/null 2>&1
 
-# TanStack Start output
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/dist ./apps/web/dist
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
-# Convex source for deployment
 COPY --from=builder /app/packages/backend/convex /convex-deploy/convex
-COPY --from=builder /app/packages/backend/package.json /convex-deploy/package.json
 
-# Entrypoint
 COPY scripts/entrypoint.sh /entrypoint.sh
 COPY scripts/start-web.mjs /app/scripts/start-web.mjs
-RUN chmod +x /entrypoint.sh && chown -R nextjs:nodejs /convex-deploy /app/scripts
+RUN chmod +x /entrypoint.sh && \
+    chown -R nextjs:nodejs /convex-deploy /app/scripts
 
 USER nextjs
 EXPOSE 4100

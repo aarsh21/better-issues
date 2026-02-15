@@ -19,6 +19,7 @@ if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; t
   cd /convex-deploy
 
   convex deploy \
+    -y \
     --url "$CONVEX_SELF_HOSTED_URL" \
     --admin-key "$CONVEX_SELF_HOSTED_ADMIN_KEY" \
     2>&1 || echo "!!! Convex deploy failed (backend may not be ready yet)"
@@ -40,6 +41,8 @@ if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; t
 
   echo "==> Convex deploy complete"
   cd /app
+else
+  echo "!!! Skipping Convex deploy. Set CONVEX_SELF_HOSTED_URL and CONVEX_SELF_HOSTED_ADMIN_KEY."
 fi
 
 # ── Start TanStack Start server ───────────────────────────────

@@ -139,20 +139,33 @@ better-issues/
 
 ## Docker Compose Deployment (Dokploy)
 
-Environment variables required for `docker-compose.yml`:
+1. Copy the deployment env template:
+
+```bash
+cp .env.dokploy.example .env.dokploy
+```
+
+2. Fill required values in `.env.dokploy`.
+
+Required variables:
 
 | Variable                       | Required | Description                                      |
 | ------------------------------ | -------- | ------------------------------------------------ |
 | `INSTANCE_SECRET`              | Yes      | Convex instance secret                           |
 | `DOMAIN`                       | Yes      | Convex public domain (e.g. `convex.example.com`) |
 | `APP_DOMAIN`                   | Yes      | Web app domain (e.g. `issues.example.com`)       |
-| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Yes      | Admin key for the Convex CLI                     |
+| `CONVEX_SELF_HOSTED_ADMIN_KEY` | No       | Admin key used to deploy Convex functions        |
 | `BETTER_AUTH_SECRET`           | Yes      | Better Auth secret                               |
 | `SITE_URL`                     | Yes      | Public URL of the web app                        |
-| `CONVEX_DASHBOARD_DOMAIN`      | No       | Only if exposing the dashboard                   |
+| `CONVEX_DASHBOARD_DOMAIN`      | No       | Only if exposing the dashboard through Traefik   |
 | `INSTANCE_NAME`                | No       | Defaults to `convex-prod`                        |
 | `DOKPLOY_NETWORK`              | No       | Defaults to `dokploy-network`                    |
+| `CONVEX_BACKEND_TAG`           | No       | Defaults to `latest`                             |
+| `CONVEX_RUST_LOG`              | No       | Defaults to `info`                               |
+
+3. Deploy with one command. This command starts the backend, generates an admin key
+with Convex's official `generate_admin_key.sh`, then deploys the full stack.
 
 ```bash
-docker compose up -d --build
+docker compose --env-file .env.dokploy up -d backend && CONVEX_SELF_HOSTED_ADMIN_KEY="$(docker compose --env-file .env.dokploy exec -T backend ./generate_admin_key.sh)" docker compose --env-file .env.dokploy up -d --build
 ```

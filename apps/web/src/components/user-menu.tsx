@@ -1,8 +1,9 @@
 "use client";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/convex";
-import { useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 
 import {
   DropdownMenu,
@@ -19,7 +20,7 @@ import { Button } from "./ui/button";
 
 export function UserMenu() {
   const router = useRouter();
-  const user = useQuery(api.auth.getCurrentUser);
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
 
   if (!user) return null;
 

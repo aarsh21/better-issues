@@ -4,7 +4,9 @@ A premium issue tracker with best-in-market UI and UX, built with the [Better-T-
 
 ## Tech Stack
 
-- **Next.js** — App Router, React Server Components, TypeScript
+- **TanStack Start** — Vite-powered SSR app runtime
+- **TanStack Router** — File-based routing and navigation
+- **TanStack Query** — Client-side server-state management
 - **Convex** — Reactive backend (self-hosted local dev)
 - **Better Auth** — Authentication via Convex HTTP actions
 - **TailwindCSS + shadcn/ui** — Styling and components
@@ -81,7 +83,7 @@ bun run dev
 This starts both:
 
 - **Convex local backend** on `http://127.0.0.1:3210` (internal) and `http://127.0.0.1:3211` (HTTP/site)
-- **Next.js app** on `http://localhost:3001`
+- **TanStack Start app** on `http://localhost:3001`
 
 Open [http://localhost:3001](http://localhost:3001) in your browser.
 
@@ -92,7 +94,7 @@ Open [http://localhost:3001](http://localhost:3001) in your browser.
 If you see repeated `[INFO] Client disconnected` messages every few seconds:
 
 1. **Make sure the Convex backend is running.** Run `bun run dev:server` in a separate terminal to verify the backend starts without errors.
-2. **Check `NEXT_PUBLIC_CONVEX_URL`** in `apps/web/.env.local` — it must point to `http://127.0.0.1:3211` (port `3211`, not `3210`).
+2. **Check `NEXT_PUBLIC_CONVEX_URL`** in `apps/web/.env.local` — it must point to `http://127.0.0.1:3210` (port `3210`, not `3211`).
 3. **Check that `SITE_URL` and `BETTER_AUTH_SECRET`** are set in the Convex environment (step 4 above). Missing auth config can cause connection issues.
 4. **Restart both servers** after any env changes — env vars are read at startup.
 
@@ -106,9 +108,9 @@ If you see repeated `[INFO] Client disconnected` messages every few seconds:
 ```
 better-issues/
 ├── apps/
-│   └── web/                  # Next.js app (App Router)
+│   └── web/                  # TanStack Start app
 │       ├── src/
-│       │   ├── app/          # Routes and pages
+│       │   ├── app/          # TanStack file routes
 │       │   ├── components/   # React components
 │       │   ├── hooks/        # Custom hooks
 │       │   └── lib/          # Utilities, auth, env
@@ -117,7 +119,7 @@ better-issues/
 │   ├── backend/
 │   │   └── convex/           # Convex schema, functions, auth, HTTP
 │   │       └── .env.local    # Backend env vars (generated)
-│   └── env/                  # Shared env validation (t3-env + Zod)
+│   └── env/                  # Shared env validation (Zod)
 ├── turbo.json
 └── package.json
 ```
@@ -126,8 +128,8 @@ better-issues/
 
 | Command               | Description                              |
 | --------------------- | ---------------------------------------- |
-| `bun run dev`         | Start all dev servers (Next.js + Convex) |
-| `bun run dev:web`     | Start only the Next.js app               |
+| `bun run dev`         | Start all dev servers (TanStack Start + Convex) |
+| `bun run dev:web`     | Start only the TanStack Start app        |
 | `bun run dev:server`  | Start only the Convex backend            |
 | `bun run dev:setup`   | First-time Convex project setup          |
 | `bun run build`       | Production build                         |

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter, useParams } from "@/lib/navigation";
 import { useState, useEffect, useDeferredValue } from "react";
 import { api } from "@/convex";
-import { useQuery } from "convex/react";
 
 import {
   Command,
@@ -32,14 +33,16 @@ export function SearchCommand({
   const isStale = searchQuery !== deferredQuery;
   const { data: activeOrg } = useActiveOrganization();
 
-  const results = useQuery(
-    api.issues.search,
-    activeOrg && deferredQuery.trim()
-      ? {
-          organizationId: activeOrg.id,
-          searchQuery: deferredQuery,
-        }
-      : "skip",
+  const { data: results } = useQuery(
+    convexQuery(
+      api.issues.search,
+      activeOrg && deferredQuery.trim()
+        ? {
+            organizationId: activeOrg.id,
+            searchQuery: deferredQuery,
+          }
+        : "skip",
+    ),
   );
 
   // Reset search on close

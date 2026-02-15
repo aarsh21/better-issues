@@ -1,15 +1,8 @@
 import { env } from "@better-issues/env/web";
-import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
+import { convexBetterAuthReactStart } from "@convex-dev/better-auth/react-start";
 
-export const {
-  handler,
-  preloadAuthQuery,
-  isAuthenticated,
-  getToken,
-  fetchAuthQuery,
-  fetchAuthMutation,
-  fetchAuthAction,
-} = convexBetterAuthNextJs({
-  convexUrl: env.NEXT_PUBLIC_CONVEX_URL,
-  convexSiteUrl: env.NEXT_PUBLIC_CONVEX_SITE_URL ?? env.NEXT_PUBLIC_CONVEX_URL,
-});
+export const { handler, getToken, fetchAuthQuery, fetchAuthMutation, fetchAuthAction } =
+  convexBetterAuthReactStart({
+    convexUrl: env.NEXT_PUBLIC_CONVEX_URL,
+    convexSiteUrl: env.NEXT_PUBLIC_CONVEX_SITE_URL ?? env.NEXT_PUBLIC_CONVEX_URL,
+  });

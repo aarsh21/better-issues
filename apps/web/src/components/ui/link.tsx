@@ -1,9 +1,9 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentPropsWithoutRef, MouseEvent } from "react";
 
-import NextLink from "next/link";
-import { useRouter } from "next/navigation";
+import { Link as TanStackLink } from "@tanstack/react-router";
+import { useRouter } from "@/lib/navigation";
 import { useEffect, useMemo, useRef } from "react";
 
 /**
@@ -25,11 +25,15 @@ export const Link = ({
   prefetch,
   onMouseEnter,
   onMouseDown,
+  href,
   ...props
-}: ComponentProps<typeof NextLink>) => {
+}: ComponentPropsWithoutRef<"a"> & {
+  href: string;
+  prefetch?: boolean;
+}) => {
   const linkRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
-  const hrefString = useMemo(() => String(props.href), [props.href]);
+  const hrefString = useMemo(() => String(href), [href]);
   const isHashOnly = hrefString.startsWith("#");
 
   useEffect(() => {
@@ -45,8 +49,7 @@ export const Link = ({
         const entry = entries[0];
         if (entry?.isIntersecting) {
           prefetchTimeout = setTimeout(() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed routes generate RouteImpl at build time
-            router.prefetch(hrefString as any);
+            router.prefetch(hrefString);
             observer.unobserve(entry.target);
           }, 300);
         } else if (prefetchTimeout) {
@@ -67,46 +70,63 @@ export const Link = ({
     };
   }, [hrefString, isHashOnly, prefetch, router]);
 
+  const handleMouseEnter = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!isHashOnly) {
+      router.prefetch(hrefString);
+    }
+    if (typeof onMouseEnter === "function") {
+      onMouseEnter(e);
+    }
+  };
+
+  const handleMouseDown = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (isHashOnly) {
+      if (typeof onMouseDown === "function") {
+        onMouseDown(e);
+      }
+      return;
+    }
+    const url = new URL(hrefString, window.location.href);
+    if (
+      url.origin === window.location.origin &&
+      e.button === 0 &&
+      !e.altKey &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.shiftKey
+    ) {
+      e.preventDefault();
+      router.push(hrefString);
+    }
+    if (typeof onMouseDown === "function") {
+      onMouseDown(e);
+    }
+  };
+
+  if (isHashOnly) {
+    return (
+      <a
+        ref={linkRef}
+        href={hrefString}
+        onMouseEnter={handleMouseEnter}
+        onMouseDown={handleMouseDown}
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <NextLink
+    <TanStackLink
       ref={linkRef}
-      prefetch={false}
-      onMouseEnter={(e) => {
-        if (!isHashOnly) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed routes generate RouteImpl at build time
-          router.prefetch(hrefString as any);
-        }
-        if (typeof onMouseEnter === "function") {
-          onMouseEnter(e);
-        }
-      }}
-      onMouseDown={(e) => {
-        if (isHashOnly) {
-          if (typeof onMouseDown === "function") {
-            onMouseDown(e);
-          }
-          return;
-        }
-        const url = new URL(hrefString, window.location.href);
-        if (
-          url.origin === window.location.origin &&
-          e.button === 0 &&
-          !e.altKey &&
-          !e.ctrlKey &&
-          !e.metaKey &&
-          !e.shiftKey
-        ) {
-          e.preventDefault();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed routes generate RouteImpl at build time
-          router.push(hrefString as any);
-        }
-        if (typeof onMouseDown === "function") {
-          onMouseDown(e);
-        }
-      }}
+      to={hrefString as never}
+      preload={false}
+      onMouseEnter={handleMouseEnter}
+      onMouseDown={handleMouseDown}
       {...props}
     >
       {children}
-    </NextLink>
+    </TanStackLink>
   );
 };

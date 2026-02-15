@@ -42,6 +42,6 @@ if [ -n "$CONVEX_SELF_HOSTED_URL" ] && [ -n "$CONVEX_SELF_HOSTED_ADMIN_KEY" ]; t
   cd /app
 fi
 
-# ── Start Next.js ──────────────────────────────────────────────
-echo "==> Starting Next.js on port ${PORT:-4100}"
-exec node apps/web/server.js
+# ── Start TanStack Start server ───────────────────────────────
+echo "==> Starting TanStack Start on port ${PORT:-4100}"
+exec node dist/server/server.js

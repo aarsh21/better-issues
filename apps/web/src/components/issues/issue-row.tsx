@@ -1,11 +1,10 @@
 "use client";
 
-import type { Route } from "next";
 import type { Doc } from "@/convex";
 
 import { ChevronRight } from "lucide-react";
 import { Link } from "@/components/ui/link";
-import { useParams } from "next/navigation";
+import { useParams } from "@/lib/navigation";
 
 import { cn } from "@/lib/utils";
 
@@ -22,7 +21,7 @@ export function IssueRow({ issue, labels }: { issue: Issue; labels: Label[] }) {
 
   return (
     <Link
-      href={`/org/${params.slug}/issues/${issue.number}` as Route}
+      href={`/org/${params.slug}/issues/${issue.number}`}
       className={cn(
         "flex items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-accent cursor-pointer group",
         issue.status === "closed" && "opacity-60",

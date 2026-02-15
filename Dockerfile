@@ -63,7 +63,8 @@ COPY --from=builder /app/packages/backend/package.json /convex-deploy/package.js
 
 # Entrypoint
 COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && chown -R nextjs:nodejs /convex-deploy
+COPY scripts/start-web.mjs /app/scripts/start-web.mjs
+RUN chmod +x /entrypoint.sh && chown -R nextjs:nodejs /convex-deploy /app/scripts
 
 USER nextjs
 EXPOSE 4100

@@ -44,4 +44,4 @@ fi
 
 # ── Start TanStack Start server ───────────────────────────────
 echo "==> Starting TanStack Start on port ${PORT:-4100}"
-exec node apps/web/dist/server/server.js
+exec node /app/scripts/start-web.mjs

@@ -11,6 +11,20 @@ import authConfig from "../auth.config";
 import { ac, admin, member, owner } from "../lib/permissions";
 import schema from "./schema";
 
+const isSignupsEnabled = (value: string | undefined) => {
+  if (!value) {
+    return true;
+  }
+
+  return !["false", "0", "no", "off"].includes(value.trim().toLowerCase());
+};
+
+const signupsEnabled = isSignupsEnabled(process.env.ALLOWED_SIGNUPS);
+
+console.info(
+  `[better-issues] Sign ups ${signupsEnabled ? "enabled" : "disabled"} via ALLOWED_SIGNUPS`,
+);
+
 // Better Auth Component
 export const authComponent = createClient<DataModel, typeof schema>(components.betterAuth, {
   local: { schema },
@@ -25,6 +39,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
+      disableSignUp: !signupsEnabled,
       requireEmailVerification: false,
     },
     plugins: [

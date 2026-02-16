@@ -164,7 +164,7 @@ Required variables:
 | `CONVEX_RUST_LOG`              | No       | Defaults to `info`                               |
 
 3. Deploy with one command. This command starts the backend, generates an admin key
-with Convex's official `generate_admin_key.sh`, then deploys the full stack.
+   with Convex's official `generate_admin_key.sh`, then deploys the full stack.
 
 ```bash
 docker compose --env-file .env.dokploy up -d backend && CONVEX_SELF_HOSTED_ADMIN_KEY="$(docker compose --env-file .env.dokploy exec -T backend ./generate_admin_key.sh)" docker compose --env-file .env.dokploy up -d --build

@@ -3,6 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   NEXT_PUBLIC_CONVEX_URL: z.url(),
   NEXT_PUBLIC_CONVEX_SITE_URL: z.url(),
+  NEXT_PUBLIC_ALLOWED_SIGNUPS: z.enum(["true", "false"]).optional(),
 });
 
 const viteEnv: Record<string, string | undefined> =
@@ -17,4 +18,6 @@ export const env = envSchema.parse({
     process.env.NEXT_PUBLIC_CONVEX_SITE_URL ??
     viteEnv.NEXT_PUBLIC_CONVEX_URL ??
     process.env.NEXT_PUBLIC_CONVEX_URL,
+  NEXT_PUBLIC_ALLOWED_SIGNUPS:
+    viteEnv.NEXT_PUBLIC_ALLOWED_SIGNUPS ?? process.env.NEXT_PUBLIC_ALLOWED_SIGNUPS,
 });

@@ -8,9 +8,11 @@ import { Suspense, useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { env } from "@better-issues/env/web";
+
+import SignUpForm from "@/components/sign-up-form";
 
 export const Route = createFileRoute("/sign-in")({
   validateSearch: (search) => ({
@@ -33,6 +35,12 @@ function AuthenticatedRedirect() {
 }
 
 export default function SignInPage() {
+  const isSignupsEnabled = env.NEXT_PUBLIC_ALLOWED_SIGNUPS !== "false";
+
+  console.info(
+    `[better-issues] Sign ups ${isSignupsEnabled ? "enabled" : "disabled"} via NEXT_PUBLIC_ALLOWED_SIGNUPS`,
+  );
+
   return (
     <div className="flex h-svh items-center justify-center bg-background">
       <AuthLoading>
@@ -61,14 +69,21 @@ export default function SignInPage() {
           <Tabs defaultValue="sign-in">
             <TabsList className="w-full">
               <TabsTrigger value="sign-in">Sign In</TabsTrigger>
-              <TabsTrigger value="sign-up">Sign Up</TabsTrigger>
+              {isSignupsEnabled ? <TabsTrigger value="sign-up">Sign Up</TabsTrigger> : null}
             </TabsList>
+            {!isSignupsEnabled ? (
+              <p className="pt-3 text-xs text-muted-foreground">
+                Sign ups are disabled by the admin.
+              </p>
+            ) : null}
             <TabsContent value="sign-in" className="pt-4">
               <SignInForm />
             </TabsContent>
-            <TabsContent value="sign-up" className="pt-4">
-              <SignUpForm />
-            </TabsContent>
+            {isSignupsEnabled ? (
+              <TabsContent value="sign-up" className="pt-4">
+                <SignUpForm />
+              </TabsContent>
+            ) : null}
           </Tabs>
         </div>
       </Unauthenticated>

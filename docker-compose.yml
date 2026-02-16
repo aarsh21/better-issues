@@ -31,6 +31,7 @@ services:
       INSTANCE_SECRET: ${INSTANCE_SECRET}
       CONVEX_CLOUD_ORIGIN: https://${DOMAIN}
       CONVEX_SITE_ORIGIN: https://${DOMAIN}/http
+      ALLOWED_SIGNUPS: ${ALLOWED_SIGNUPS:-true}
       DATABASE_URL: ${DATABASE_URL:-}
       POSTGRES_URL: ${POSTGRES_URL:-}
       MYSQL_URL: ${MYSQL_URL:-}
@@ -67,6 +68,7 @@ services:
       args:
         NEXT_PUBLIC_CONVEX_URL: https://${DOMAIN}
         NEXT_PUBLIC_CONVEX_SITE_URL: https://${DOMAIN}/http
+        NEXT_PUBLIC_ALLOWED_SIGNUPS: ${NEXT_PUBLIC_ALLOWED_SIGNUPS:-true}
     restart: unless-stopped
     networks:
       - dokploy
@@ -84,6 +86,7 @@ services:
       PORT: 4100
       NEXT_PUBLIC_CONVEX_URL: https://${DOMAIN}
       NEXT_PUBLIC_CONVEX_SITE_URL: https://${DOMAIN}/http
+      NEXT_PUBLIC_ALLOWED_SIGNUPS: ${NEXT_PUBLIC_ALLOWED_SIGNUPS:-true}
       CONVEX_SELF_HOSTED_URL: http://backend:3210
       CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_SELF_HOSTED_ADMIN_KEY:-}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}

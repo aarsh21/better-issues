@@ -55,6 +55,12 @@
       "name": "vite",
       "package": "vite",
       "version": "7.3.1"
+    },
+    {
+      "type": "git",
+      "name": "convexDocs",
+      "url": "https://github.com/get-convex/convex-docs",
+      "branch": "main"
     }
   ],
   "model": "claude-haiku-4-5",

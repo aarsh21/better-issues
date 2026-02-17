@@ -169,7 +169,7 @@ export default function IssueDetailPage() {
       number: issueNumber,
     });
     if (current !== undefined && current !== null) {
-      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      const updates: Record<string, unknown> = { updatedAt: current.updatedAt };
       if (args.title !== undefined) updates.title = args.title;
       if (args.description !== undefined) updates.description = args.description;
       if (args.priority !== undefined) updates.priority = args.priority;
@@ -195,13 +195,6 @@ export default function IssueDetailPage() {
           {
             ...current,
             status: args.status,
-            updatedAt: Date.now(),
-            closedAt:
-              args.status === "closed"
-                ? Date.now()
-                : current.status === "closed"
-                  ? undefined
-                  : current.closedAt,
           },
         );
       }
@@ -243,24 +236,10 @@ export default function IssueDetailPage() {
   }
 
   const parsedTemplateData: Record<string, unknown> = issue.templateData
-    ? (() => {
-        try {
-          return JSON.parse(issue.templateData) as Record<string, unknown>;
-        } catch {
-          return {};
-        }
-      })()
+    ? JSON.parse(issue.templateData)
     : {};
 
-  const parsedSchema: TemplateSchema | null = template
-    ? (() => {
-        try {
-          return JSON.parse(template.schema) as TemplateSchema;
-        } catch {
-          return null;
-        }
-      })()
-    : null;
+  const parsedSchema: TemplateSchema | null = template ? JSON.parse(template.schema) : null;
 
   const handleStartEdit = () => {
     setEditTitle(issue.title);
@@ -269,33 +248,46 @@ export default function IssueDetailPage() {
   };
 
   const handleSaveEdit = async () => {
-    try {
-      await updateIssue({
-        issueId: issue._id,
-        title: editTitle,
-        description: editDescription || undefined,
-      });
+    const result = await updateIssue({
+      issueId: issue._id,
+      title: editTitle,
+      description: editDescription || undefined,
+    }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       setEditing(false);
       toast.success("Issue updated");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update");
+    } else {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to update");
     }
   };
 
   const handleStatusChange = async (status: IssueStatus) => {
-    try {
-      await updateStatus({ issueId: issue._id, status });
+    const result = await updateStatus({ issueId: issue._id, status }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success(`Status changed to ${status.replace("_", " ")}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update status");
+    } else {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to update status");
     }
   };
 
   const handlePriorityChange = async (priority: IssuePriority) => {
-    try {
-      await updateIssue({ issueId: issue._id, priority });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update priority");
+    const result = await updateIssue({ issueId: issue._id, priority }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (!result.ok) {
+      toast.error(
+        result.error instanceof Error ? result.error.message : "Failed to update priority",
+      );
     }
   };
 
@@ -304,20 +296,27 @@ export default function IssueDetailPage() {
       ? issue.labelIds.filter((id: Id<"labels">) => id !== labelId)
       : [...issue.labelIds, labelId];
 
-    try {
-      await updateIssue({ issueId: issue._id, labelIds: newLabels });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update labels");
+    const result = await updateIssue({ issueId: issue._id, labelIds: newLabels }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (!result.ok) {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to update labels");
     }
   };
 
   const handleDelete = async () => {
-    try {
-      await removeIssue({ issueId: issue._id });
+    const result = await removeIssue({ issueId: issue._id }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success("Issue deleted");
       router.push(`/org/${params.slug}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete");
+    } else {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to delete");
     }
   };
 
@@ -361,7 +360,6 @@ export default function IssueDetailPage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="text-lg font-bold"
-                    autoFocus
                   />
                   <Textarea
                     value={editDescription}
@@ -436,14 +434,17 @@ export default function IssueDetailPage() {
             {/* Sidebar */}
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                <Label
+                  htmlFor="issue-status"
+                  className="text-xs text-muted-foreground uppercase tracking-wider"
+                >
                   Status
                 </Label>
                 <Select
                   value={issue.status}
                   onValueChange={(v) => handleStatusChange(v as IssueStatus)}
                 >
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger id="issue-status" className="h-8">
                     <StatusBadge status={issue.status} />
                   </SelectTrigger>
                   <SelectContent>
@@ -455,14 +456,17 @@ export default function IssueDetailPage() {
               </div>
 
               <div className="space-y-3">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                <Label
+                  htmlFor="issue-priority"
+                  className="text-xs text-muted-foreground uppercase tracking-wider"
+                >
                   Priority
                 </Label>
                 <Select
                   value={issue.priority}
                   onValueChange={(v) => handlePriorityChange(v as IssuePriority)}
                 >
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger id="issue-priority" className="h-8">
                     <PriorityIndicator priority={issue.priority} showLabel />
                   </SelectTrigger>
                   <SelectContent>

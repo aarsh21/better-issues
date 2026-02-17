@@ -3,8 +3,9 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
+import { useDeferredValue, useState } from "react";
+
 import { useRouter } from "@/lib/navigation";
-import { useState, useEffect, useDeferredValue } from "react";
 import { api } from "@/convex";
 
 import {
@@ -48,10 +49,10 @@ export function SearchCommand({
     ),
   );
 
-  // Reset search on close
-  useEffect(() => {
-    if (!open) setSearchQuery("");
-  }, [open]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) setSearchQuery("");
+  };
 
   const handleSelect = (issueNumber: number) => {
     onOpenChange(false);
@@ -59,7 +60,7 @@ export function SearchCommand({
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={handleOpenChange}>
       <Command>
         <CommandInput
           placeholder="Search issues..."

@@ -138,7 +138,7 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
         ...current,
         {
           _id: crypto.randomUUID() as any,
-          _creationTime: Date.now(),
+          _creationTime: current.length + 1,
           organizationId: args.organizationId,
           name: args.name,
           color: args.color,
@@ -165,28 +165,36 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
-    try {
-      await createLabel({
-        organizationId,
-        name: newName.trim(),
-        color: newColor,
-        description: newDescription.trim() || undefined,
-      });
+    const result = await createLabel({
+      organizationId,
+      name: newName.trim(),
+      color: newColor,
+      description: newDescription.trim() || undefined,
+    }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success("Label created");
       setShowCreate(false);
       setNewName("");
       setNewDescription("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create label");
+    } else {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to create label");
     }
   };
 
   const handleRemove = async (labelId: string) => {
-    try {
-      await removeLabel({ labelId: labelId as any });
+    const result = await removeLabel({ labelId: labelId as any }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success("Label removed");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove label");
+    } else {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to remove label");
     }
   };
 
@@ -256,21 +264,23 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>Name</Label>
+              <Label htmlFor="label-name">Name</Label>
               <Input
+                id="label-name"
                 placeholder="type: bug"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                autoFocus
               />
             </div>
             <div className="grid gap-2">
-              <Label>Color</Label>
+              <Label htmlFor="label-color">Color</Label>
               <div className="flex gap-2 flex-wrap">
                 {LABEL_COLORS.map((color) => (
                   <button
                     key={color}
+                    type="button"
                     onClick={() => setNewColor(color)}
+                    aria-label={`Select ${color} label color`}
                     className="h-6 w-6 border-2 cursor-pointer transition-transform"
                     style={{
                       backgroundColor: color,
@@ -285,8 +295,9 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Description (optional)</Label>
+              <Label htmlFor="label-description">Description (optional)</Label>
               <Input
+                id="label-description"
                 placeholder="Brief description..."
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
@@ -316,29 +327,41 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
   const [creatingPreset, setCreatingPreset] = useState<string | null>(null);
 
   const handleRemove = async (templateId: string) => {
-    try {
-      await removeTemplate({ templateId: templateId as any });
+    const result = await removeTemplate({ templateId: templateId as any }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success("Template removed");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove template");
+    } else {
+      toast.error(
+        result.error instanceof Error ? result.error.message : "Failed to remove template",
+      );
     }
   };
 
   const handleCreatePreset = async (preset: (typeof TEMPLATE_PRESETS)[number]) => {
     setCreatingPreset(preset.name);
-    try {
-      await createTemplate({
-        organizationId,
-        name: preset.name,
-        description: preset.description,
-        schema: JSON.stringify(preset.schema),
-      });
+    const result = await createTemplate({
+      organizationId,
+      name: preset.name,
+      description: preset.description,
+      schema: JSON.stringify(preset.schema),
+    }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success(`${preset.name} template created`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create template");
-    } finally {
-      setCreatingPreset(null);
+    } else {
+      toast.error(
+        result.error instanceof Error ? result.error.message : "Failed to create template",
+      );
     }
+
+    setCreatingPreset(null);
   };
 
   const templateNameSet = new Set(
@@ -473,27 +496,36 @@ function MembersTab() {
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) return;
-    try {
-      const result = await inviteMember.mutateAsync({
+    const result = await inviteMember
+      .mutateAsync({
         email: inviteEmail.trim(),
         role: inviteRole,
-      });
-      // Build and copy link automatically if we got an invitation ID back
-      const invitationId = result?.id ?? (result as Record<string, unknown>)?.invitationId;
-      if (invitationId) {
-        const link = `${window.location.origin}/invite/${invitationId}`;
-        await navigator.clipboard.writeText(link);
-        toast.success("Invitation created — link copied to clipboard");
-      } else {
-        toast.success("Invitation sent");
-      }
-      setInviteEmail("");
-      setInviteRole("member");
-      setShowInvite(false);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to send invitation";
+      })
+      .then(
+        (value) => ({ ok: true, value }) as const,
+        (error: unknown) => ({ ok: false, error }) as const,
+      );
+
+    if (!result.ok) {
+      const message =
+        result.error instanceof Error ? result.error.message : "Failed to send invitation";
       toast.error(message);
+      return;
     }
+
+    const invitationId =
+      result.value?.id ??
+      (result.value as Record<string, unknown> | null | undefined)?.invitationId;
+    if (invitationId) {
+      const link = `${window.location.origin}/invite/${invitationId}`;
+      await navigator.clipboard.writeText(link);
+      toast.success("Invitation created — link copied to clipboard");
+    } else {
+      toast.success("Invitation sent");
+    }
+    setInviteEmail("");
+    setInviteRole("member");
+    setShowInvite(false);
   };
 
   const handleCopyLink = async (invitationId: string) => {
@@ -509,11 +541,16 @@ function MembersTab() {
       title: "Cancel invitation",
       description: `Cancel the invitation to ${email}?`,
       onConfirm: async () => {
-        try {
-          await cancelInvitation.mutateAsync({ invitationId });
+        const result = await cancelInvitation.mutateAsync({ invitationId }).then(
+          () => ({ ok: true }) as const,
+          (error: unknown) => ({ ok: false, error }) as const,
+        );
+
+        if (result.ok) {
           toast.success("Invitation cancelled");
-        } catch (err) {
-          const message = err instanceof Error ? err.message : "Failed to cancel invitation";
+        } else {
+          const message =
+            result.error instanceof Error ? result.error.message : "Failed to cancel invitation";
           toast.error(message);
         }
       },
@@ -525,13 +562,20 @@ function MembersTab() {
       title: "Remove member",
       description: `Remove ${memberEmail} from the team?`,
       onConfirm: async () => {
-        try {
-          await removeMember.mutateAsync({
+        const result = await removeMember
+          .mutateAsync({
             memberIdOrEmail: memberEmail,
-          });
+          })
+          .then(
+            () => ({ ok: true }) as const,
+            (error: unknown) => ({ ok: false, error }) as const,
+          );
+
+        if (result.ok) {
           toast.success("Member removed");
-        } catch (err) {
-          const message = err instanceof Error ? err.message : "Failed to remove member";
+        } else {
+          const message =
+            result.error instanceof Error ? result.error.message : "Failed to remove member";
           toast.error(message);
         }
       },
@@ -685,22 +729,22 @@ function MembersTab() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>Email address</Label>
+              <Label htmlFor="invite-email">Email address</Label>
               <Input
+                id="invite-email"
                 type="email"
                 placeholder="team@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                autoFocus
               />
             </div>
             <div className="grid gap-2">
-              <Label>Role</Label>
+              <Label htmlFor="invite-role">Role</Label>
               <Select
                 value={inviteRole}
                 onValueChange={(v) => setInviteRole(v as "member" | "admin")}
               >
-                <SelectTrigger>
+                <SelectTrigger id="invite-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

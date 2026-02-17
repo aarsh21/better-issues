@@ -58,15 +58,10 @@ export default function NewIssuePage() {
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const parsedSchema: TemplateSchema | null = selectedTemplate
-    ? (() => {
-        try {
-          return JSON.parse(selectedTemplate.schema) as TemplateSchema;
-        } catch {
-          return null;
-        }
-      })()
-    : null;
+  let parsedSchema: TemplateSchema | null = null;
+  if (selectedTemplate) {
+    parsedSchema = JSON.parse(selectedTemplate.schema);
+  }
 
   const handleTemplateSelect = (template: Doc<"issueTemplates"> | null) => {
     setSelectedTemplate(template);
@@ -79,25 +74,27 @@ export default function NewIssuePage() {
     if (!activeOrg || !title.trim()) return;
 
     setSubmitting(true);
-    try {
-      const result = await createIssue({
-        organizationId: activeOrg.id,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        priority,
-        labelIds: selectedLabels,
-        templateId: selectedTemplate?._id,
-        templateData:
-          Object.keys(templateData).length > 0 ? JSON.stringify(templateData) : undefined,
-      });
+    const result = await createIssue({
+      organizationId: activeOrg.id,
+      title: title.trim(),
+      description: description.trim() || undefined,
+      priority,
+      labelIds: selectedLabels,
+      templateId: selectedTemplate?._id,
+      templateData: Object.keys(templateData).length > 0 ? JSON.stringify(templateData) : undefined,
+    }).then(
+      (value) => ({ ok: true, value }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
 
-      toast.success(`Issue #${result.number} created`);
-      router.push(`/org/${params.slug}/issues/${result.number}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create issue");
-    } finally {
-      setSubmitting(false);
+    if (result.ok) {
+      toast.success(`Issue #${result.value.number} created`);
+      router.push(`/org/${params.slug}/issues/${result.value.number}`);
+    } else {
+      toast.error(result.error instanceof Error ? result.error.message : "Failed to create issue");
     }
+
+    setSubmitting(false);
   };
 
   const toggleLabel = (labelId: Id<"labels">) => {
@@ -144,6 +141,7 @@ export default function NewIssuePage() {
             </div>
 
             <button
+              type="button"
               onClick={() => handleTemplateSelect(null)}
               className="flex w-full items-center gap-3 border p-4 text-left transition-colors hover:bg-accent cursor-pointer"
             >
@@ -165,6 +163,7 @@ export default function NewIssuePage() {
               templates.map((template: Doc<"issueTemplates">) => (
                 <button
                   key={template._id}
+                  type="button"
                   onClick={() => handleTemplateSelect(template)}
                   className="flex w-full items-center gap-3 border p-4 text-left transition-colors hover:bg-accent cursor-pointer"
                 >
@@ -212,7 +211,6 @@ export default function NewIssuePage() {
                 placeholder="Brief summary of the issue"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                autoFocus
               />
             </div>
 
@@ -229,9 +227,9 @@ export default function NewIssuePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Priority</Label>
+                <Label htmlFor="issue-priority">Priority</Label>
                 <Select value={priority} onValueChange={(v) => setPriority(v as IssuePriority)}>
-                  <SelectTrigger>
+                  <SelectTrigger id="issue-priority">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -39,26 +39,36 @@ function InviteContent({ inviteId }: { inviteId: string }) {
   const [outcome, setOutcome] = useState<"accepted" | "rejected" | null>(null);
 
   const handleAccept = async () => {
-    try {
-      await acceptInvitation.mutateAsync({ invitationId: inviteId });
+    const result = await acceptInvitation.mutateAsync({ invitationId: inviteId }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       setOutcome("accepted");
       // Navigate to the org after a brief moment
       setTimeout(() => {
         router.push("/org");
       }, 1_500);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to accept invitation";
+    } else {
+      const message =
+        result.error instanceof Error ? result.error.message : "Failed to accept invitation";
       setOutcome(null);
       toast.error(message);
     }
   };
 
   const handleReject = async () => {
-    try {
-      await rejectInvitation.mutateAsync({ invitationId: inviteId });
+    const result = await rejectInvitation.mutateAsync({ invitationId: inviteId }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       setOutcome("rejected");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to reject invitation";
+    } else {
+      const message =
+        result.error instanceof Error ? result.error.message : "Failed to reject invitation";
       setOutcome(null);
       toast.error(message);
     }

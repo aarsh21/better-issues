@@ -26,12 +26,15 @@ import {
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
 import { useActiveOrganization } from "@/hooks/use-organization";
 
-const EMPTY_FIELD: TemplateField = {
+type TemplateFieldDraft = TemplateField & { id: string };
+
+const createEmptyField = (): TemplateFieldDraft => ({
+  id: crypto.randomUUID(),
   key: "",
   label: "",
   type: "text",
   required: false,
-};
+});
 
 export const Route = createFileRoute("/org/$slug/settings/templates/new")({
   component: NewTemplatePage,
@@ -45,16 +48,16 @@ export default function NewTemplatePage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [fields, setFields] = useState<TemplateField[]>([{ ...EMPTY_FIELD }]);
+  const [fields, setFields] = useState<TemplateFieldDraft[]>([createEmptyField()]);
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const updateField = (index: number, updates: Partial<TemplateField>) => {
+  const updateField = (index: number, updates: Partial<TemplateFieldDraft>) => {
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, ...updates } : f)));
   };
 
   const addField = () => {
-    setFields((prev) => [...prev, { ...EMPTY_FIELD }]);
+    setFields((prev) => [...prev, createEmptyField()]);
   };
 
   const removeField = (index: number) => {
@@ -72,27 +75,35 @@ export default function NewTemplatePage() {
       return;
     }
 
-    const schema: TemplateSchema = { fields: validFields };
+    const schema: TemplateSchema = {
+      fields: validFields.map(({ id, ...field }) => field),
+    };
 
     setSubmitting(true);
-    try {
-      await createTemplate({
-        organizationId: activeOrg.id,
-        name: name.trim(),
-        description: description.trim(),
-        schema: JSON.stringify(schema),
-      });
+    const result = await createTemplate({
+      organizationId: activeOrg.id,
+      name: name.trim(),
+      description: description.trim(),
+      schema: JSON.stringify(schema),
+    }).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
+
+    if (result.ok) {
       toast.success("Template created");
       router.push(`/org/${params.slug}/settings`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create template");
-    } finally {
-      setSubmitting(false);
+    } else {
+      toast.error(
+        result.error instanceof Error ? result.error.message : "Failed to create template",
+      );
     }
+
+    setSubmitting(false);
   };
 
   const previewSchema: TemplateSchema = {
-    fields: fields.filter((f) => f.key && f.label),
+    fields: fields.filter((f) => f.key && f.label).map(({ id, ...field }) => field),
   };
 
   return (
@@ -141,19 +152,20 @@ export default function NewTemplatePage() {
           <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-6">
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label>
+                <Label htmlFor="template-name">
                   Template Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
+                  id="template-name"
                   placeholder="Bug Report"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  autoFocus
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Description</Label>
+                <Label htmlFor="template-description">Description</Label>
                 <Input
+                  id="template-description"
                   placeholder="Standard template for reporting bugs"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -181,7 +193,7 @@ export default function NewTemplatePage() {
               </div>
 
               {fields.map((field, index) => (
-                <div key={index} className="space-y-3 border p-3">
+                <div key={field.id} className="space-y-3 border p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
@@ -203,8 +215,11 @@ export default function NewTemplatePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-1.5">
-                      <Label className="text-xs">Key (camelCase)</Label>
+                      <Label htmlFor={`field-key-${field.id}`} className="text-xs">
+                        Key (camelCase)
+                      </Label>
                       <Input
+                        id={`field-key-${field.id}`}
                         placeholder="stepsToReproduce"
                         value={field.key}
                         onChange={(e) => updateField(index, { key: e.target.value })}
@@ -212,8 +227,11 @@ export default function NewTemplatePage() {
                       />
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-xs">Label</Label>
+                      <Label htmlFor={`field-label-${field.id}`} className="text-xs">
+                        Label
+                      </Label>
                       <Input
+                        id={`field-label-${field.id}`}
                         placeholder="Steps to Reproduce"
                         value={field.label}
                         onChange={(e) => updateField(index, { label: e.target.value })}
@@ -224,7 +242,9 @@ export default function NewTemplatePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-1.5">
-                      <Label className="text-xs">Type</Label>
+                      <Label htmlFor={`field-type-${field.id}`} className="text-xs">
+                        Type
+                      </Label>
                       <Select
                         value={field.type}
                         onValueChange={(v) =>
@@ -233,7 +253,7 @@ export default function NewTemplatePage() {
                           })
                         }
                       >
-                        <SelectTrigger className="h-8 text-sm">
+                        <SelectTrigger id={`field-type-${field.id}`} className="h-8 text-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -248,7 +268,7 @@ export default function NewTemplatePage() {
                     <div className="flex items-end gap-2 pb-0.5">
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          id={`required-${index}`}
+                          id={`required-${field.id}`}
                           checked={field.required}
                           onCheckedChange={(checked) =>
                             updateField(index, {
@@ -256,7 +276,7 @@ export default function NewTemplatePage() {
                             })
                           }
                         />
-                        <Label htmlFor={`required-${index}`} className="text-xs cursor-pointer">
+                        <Label htmlFor={`required-${field.id}`} className="text-xs cursor-pointer">
                           Required
                         </Label>
                       </div>
@@ -265,8 +285,11 @@ export default function NewTemplatePage() {
 
                   {field.type === "select" && (
                     <div className="grid gap-1.5">
-                      <Label className="text-xs">Options (comma-separated)</Label>
+                      <Label htmlFor={`options-${field.id}`} className="text-xs">
+                        Options (comma-separated)
+                      </Label>
                       <Input
+                        id={`options-${field.id}`}
                         placeholder="critical, major, minor, cosmetic"
                         value={field.options?.join(", ") ?? ""}
                         onChange={(e) =>
@@ -286,7 +309,7 @@ export default function NewTemplatePage() {
                     <div className="grid gap-3">
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          id={`multiple-${index}`}
+                          id={`multiple-${field.id}`}
                           checked={field.multiple !== false}
                           onCheckedChange={(checked) =>
                             updateField(index, {
@@ -294,13 +317,16 @@ export default function NewTemplatePage() {
                             })
                           }
                         />
-                        <Label htmlFor={`multiple-${index}`} className="text-xs cursor-pointer">
+                        <Label htmlFor={`multiple-${field.id}`} className="text-xs cursor-pointer">
                           Allow multiple files
                         </Label>
                       </div>
                       <div className="grid gap-1.5">
-                        <Label className="text-xs">Accepted file types (optional)</Label>
+                        <Label htmlFor={`accept-${field.id}`} className="text-xs">
+                          Accepted file types (optional)
+                        </Label>
                         <Input
+                          id={`accept-${field.id}`}
                           placeholder="image/*,.pdf"
                           value={field.accept ?? ""}
                           onChange={(e) =>
@@ -316,8 +342,11 @@ export default function NewTemplatePage() {
 
                   {field.type !== "file" && (
                     <div className="grid gap-1.5">
-                      <Label className="text-xs">Placeholder (optional)</Label>
+                      <Label htmlFor={`placeholder-${field.id}`} className="text-xs">
+                        Placeholder (optional)
+                      </Label>
                       <Input
+                        id={`placeholder-${field.id}`}
                         placeholder="Enter placeholder text..."
                         value={field.placeholder ?? ""}
                         onChange={(e) =>

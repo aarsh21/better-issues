@@ -48,26 +48,51 @@ export function CreateOrgDialog({
     e.preventDefault();
     if (!name.trim() || !slug.trim()) return;
 
-    try {
-      const data = await createOrg.mutateAsync({
+    const createResult = await createOrg
+      .mutateAsync({
         name: name.trim(),
         slug: slug.trim(),
-      });
+      })
+      .then(
+        (value) => ({ ok: true, value }) as const,
+        (error: unknown) => ({ ok: false, error }) as const,
+      );
 
-      if (data) {
-        await setActive.mutateAsync({
-          organizationId: data.id,
-        });
-        toast.success("Team created");
-        onOpenChange(false);
-        setName("");
-        setSlug("");
-        router.push(`/org/${data.slug}`);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create team";
+    if (!createResult.ok) {
+      const message =
+        createResult.error instanceof Error ? createResult.error.message : "Failed to create team";
       toast.error(message);
+      return;
     }
+
+    if (!createResult.value) {
+      toast.error("Failed to create team");
+      return;
+    }
+
+    const activateResult = await setActive
+      .mutateAsync({
+        organizationId: createResult.value.id,
+      })
+      .then(
+        () => ({ ok: true }) as const,
+        (error: unknown) => ({ ok: false, error }) as const,
+      );
+
+    if (!activateResult.ok) {
+      const message =
+        activateResult.error instanceof Error
+          ? activateResult.error.message
+          : "Failed to create team";
+      toast.error(message);
+      return;
+    }
+
+    toast.success("Team created");
+    onOpenChange(false);
+    setName("");
+    setSlug("");
+    router.push(`/org/${createResult.value.slug}`);
   };
 
   return (
@@ -88,7 +113,6 @@ export function CreateOrgDialog({
                 placeholder="Backend"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                autoFocus
               />
             </div>
             <div className="grid gap-2">

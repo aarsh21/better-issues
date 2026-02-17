@@ -49,9 +49,9 @@ export default function SignUpForm() {
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      onSubmit={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
         form.handleSubmit();
       }}
       className="space-y-3"

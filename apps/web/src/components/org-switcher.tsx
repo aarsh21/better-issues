@@ -1,8 +1,9 @@
 "use client";
 
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { useId, useState } from "react";
+
 import { useRouter } from "@/lib/navigation";
-import { useState } from "react";
 
 import {
   Command,
@@ -24,6 +25,7 @@ import {
 
 export function OrgSwitcher({ onCreateOrg }: { onCreateOrg?: () => void }) {
   const [open, setOpen] = useState(false);
+  const listId = useId();
   const router = useRouter();
   const { data: orgs } = useOrganizations();
   const { data: activeOrg } = useActiveOrganization();
@@ -45,6 +47,7 @@ export function OrgSwitcher({ onCreateOrg }: { onCreateOrg?: () => void }) {
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            aria-controls={listId}
             className="w-full justify-between text-left font-mono text-sm"
           />
         }
@@ -55,7 +58,7 @@ export function OrgSwitcher({ onCreateOrg }: { onCreateOrg?: () => void }) {
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search teams..." />
-          <CommandList>
+          <CommandList id={listId}>
             <CommandEmpty>No teams found.</CommandEmpty>
             <CommandGroup>
               {orgs?.map((org) => (

@@ -55,3 +55,6 @@ tmp
 temp
 .next/dev
 .next
+
+# btca local data
+.btca/

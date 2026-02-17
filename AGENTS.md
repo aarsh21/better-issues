@@ -87,3 +87,34 @@ Treat every change as user-facing and keep design quality high.
 - convex-schema-validator
 - convex-security-audit
 - convex-security-check
+
+**btca Research Tool**
+
+Use `btca` for detailed research on project dependencies. Resources are configured in `btca.config.jsonc`.
+
+Configured resources:
+- `tanstack-start` — TanStack Start framework
+- `tanstack-router` — Type-safe React routing
+- `convex` — Backend platform
+- `tanstack-query` — Server state management
+- `tanstack-form` — Form state management
+- `better-auth` — Authentication framework
+- `tailwindcss` — CSS framework
+- `shadcn-ui` — UI component library
+- `turborepo` — Monorepo build system
+- `vite` — Build tool
+
+Example usage:
+```bash
+# Ask about a specific resource
+btca ask -r tanstack-start -q "How do I create a server function?"
+
+# Ask about multiple resources
+btca ask -r tanstack-router -r tanstack-query -q "Best practices for data loading?"
+
+# Ask about a library not in config (one-off)
+btca ask -r npm:react@19.2.3 -q "How does useTransition work?"
+```
+
+See all resources: `btca resources`
+Add new resources: `btca add <url> -n <name> -t <type>`

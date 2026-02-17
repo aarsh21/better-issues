@@ -6,63 +6,63 @@
       "type": "npm",
       "name": "tanstack-start",
       "package": "@tanstack/react-start",
-      "version": "1.160.0"
+      "version": "1.160.0",
     },
     {
       "type": "npm",
       "name": "tanstack-router",
       "package": "@tanstack/react-router",
-      "version": "1.160.0"
+      "version": "1.160.0",
     },
     {
       "type": "git",
       "name": "convex",
       "url": "https://github.com/get-convex/convex",
-      "branch": "main"
+      "branch": "main",
     },
     {
       "type": "npm",
       "name": "tanstack-query",
       "package": "@tanstack/react-query",
-      "version": "5.90.21"
+      "version": "5.90.21",
     },
     {
       "type": "npm",
       "name": "tanstack-form",
       "package": "@tanstack/react-form",
-      "version": "1.27.3"
+      "version": "1.27.3",
     },
     {
       "type": "git",
       "name": "better-auth",
       "url": "https://github.com/better-auth/better-auth",
-      "branch": "main"
+      "branch": "main",
     },
     {
       "type": "git",
       "name": "shadcn-ui",
       "url": "https://github.com/shadcn-ui/ui",
-      "branch": "main"
+      "branch": "main",
     },
     {
       "type": "npm",
       "name": "turborepo",
       "package": "turbo",
-      "version": "2.6.3"
+      "version": "2.6.3",
     },
     {
       "type": "npm",
       "name": "vite",
       "package": "vite",
-      "version": "7.3.1"
+      "version": "7.3.1",
     },
     {
       "type": "git",
       "name": "convexDocs",
       "url": "https://github.com/get-convex/convex-docs",
-      "branch": "main"
-    }
+      "branch": "main",
+    },
   ],
   "model": "claude-haiku-4-5",
-  "provider": "opencode"
+  "provider": "opencode",
 }

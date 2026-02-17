@@ -93,6 +93,7 @@ Treat every change as user-facing and keep design quality high.
 Use `btca` for detailed research on project dependencies. Resources are configured in `btca.config.jsonc`.
 
 Configured resources:
+
 - `tanstack-start` — TanStack Start framework
 - `tanstack-router` — Type-safe React routing
 - `convex` — Backend platform
@@ -105,6 +106,7 @@ Configured resources:
 - `vite` — Build tool
 
 Example usage:
+
 ```bash
 # Ask about a specific resource
 btca ask -r tanstack-start -q "How do I create a server function?"

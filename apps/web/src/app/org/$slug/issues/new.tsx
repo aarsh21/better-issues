@@ -126,7 +126,7 @@ export default function NewIssuePage() {
           <h1 className="text-sm font-bold">New Issue</h1>
         </div>
 
-        <div className="flex-1 p-6">
+        <div className="flex-1 min-h-0 overflow-auto p-6">
           <div className="mx-auto max-w-lg space-y-4">
             <div>
               <h2 className="text-base font-medium">Choose a template</h2>

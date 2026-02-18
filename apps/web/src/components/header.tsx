@@ -2,6 +2,7 @@
 
 import { ModeToggle } from "./mode-toggle";
 import { UserMenu } from "./user-menu";
+import { Separator } from "./ui/separator";
 
 export default function Header() {
   return (
@@ -13,7 +14,7 @@ export default function Header() {
           <UserMenu />
         </div>
       </div>
-      <hr />
+      <Separator />
     </div>
   );
 }

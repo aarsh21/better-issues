@@ -117,7 +117,7 @@ export default function NewIssuePage() {
   if (step === "choose-template") {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center gap-3 border-b px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Link href={`/org/${params.slug}`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -135,7 +135,7 @@ export default function NewIssuePage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 border px-3 py-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 border border-border px-3 py-2 text-sm text-muted-foreground">
               <Search className="h-3.5 w-3.5" />
               <span>Tip: Search existing issues before creating a new one (Cmd+K)</span>
             </div>
@@ -143,7 +143,7 @@ export default function NewIssuePage() {
             <button
               type="button"
               onClick={() => handleTemplateSelect(null)}
-              className="flex w-full items-center gap-3 border p-4 text-left transition-colors hover:bg-accent cursor-pointer"
+              className="flex w-full items-center gap-3 border border-border p-4 text-left transition-colors hover:bg-accent cursor-pointer"
             >
               <FileText className="h-5 w-5 text-muted-foreground" />
               <div>
@@ -165,7 +165,7 @@ export default function NewIssuePage() {
                   key={template._id}
                   type="button"
                   onClick={() => handleTemplateSelect(template)}
-                  className="flex w-full items-center gap-3 border p-4 text-left transition-colors hover:bg-accent cursor-pointer"
+                  className="flex w-full items-center gap-3 border border-border p-4 text-left transition-colors hover:bg-accent cursor-pointer"
                 >
                   <FileText className="h-5 w-5 text-muted-foreground" />
                   <div>
@@ -184,7 +184,7 @@ export default function NewIssuePage() {
   // Step 2: Issue form
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <Button variant="ghost" size="sm" onClick={() => setStep("choose-template")}>
           <ArrowLeft className="h-3.5 w-3.5" />
         </Button>
@@ -243,7 +243,7 @@ export default function NewIssuePage() {
 
               <div className="grid gap-2">
                 <Label>Labels</Label>
-                <div className="flex flex-wrap gap-1.5 min-h-9 items-center border px-3 py-1.5">
+                <div className="flex flex-wrap gap-1.5 min-h-9 items-center border border-border px-3 py-1.5">
                   {labels && labels.length > 0 ? (
                     labels.map((label: { _id: Id<"labels">; name: string; color: string }) => (
                       <button

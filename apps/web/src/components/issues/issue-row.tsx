@@ -24,7 +24,7 @@ export function IssueRow({ issue, labels }: { issue: Issue; labels: Label[] }) {
     <Link
       href={`/org/${slug}/issues/${issue.number}`}
       className={cn(
-        "flex items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-accent cursor-pointer group",
+        "flex items-center gap-3 border-b border-border px-4 py-3 transition-colors hover:bg-accent cursor-pointer group",
         issue.status === "closed" && "opacity-60",
       )}
     >

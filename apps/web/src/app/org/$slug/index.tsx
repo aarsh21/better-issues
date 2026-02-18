@@ -37,7 +37,7 @@ export default function IssueListPage() {
     <Suspense
       fallback={
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="flex items-center gap-4">
               <h1 className="text-sm font-bold">Issues</h1>
             </div>
@@ -45,7 +45,7 @@ export default function IssueListPage() {
           </div>
           <div className="space-y-0">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 border-b px-4 py-3">
+              <div key={i} className="flex items-center gap-3 border-b border-border px-4 py-3">
                 <Skeleton className="h-4 w-4" />
                 <Skeleton className="h-4 w-10" />
                 <Skeleton className="h-4 flex-1" />
@@ -98,7 +98,7 @@ function IssueListContent() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-4">
           <h1 className="text-sm font-bold">Issues</h1>
           {!isLoading && results.length > 0 && (
@@ -122,7 +122,7 @@ function IssueListContent() {
         {isLoading ? (
           <div className="space-y-0">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 border-b px-4 py-3">
+              <div key={i} className="flex items-center gap-3 border-b border-border px-4 py-3">
                 <Skeleton className="h-4 w-4" />
                 <Skeleton className="h-4 w-10" />
                 <Skeleton className="h-4 flex-1" />
@@ -154,7 +154,7 @@ function IssueListContent() {
             ))}
 
             {status === "CanLoadMore" && (
-              <div className="flex justify-center border-b py-3">
+              <div className="flex justify-center border-b border-border py-3">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -167,7 +167,7 @@ function IssueListContent() {
             )}
 
             {status === "LoadingMore" && (
-              <div className="flex justify-center border-b py-3">
+              <div className="flex justify-center border-b border-border py-3">
                 <Spinner className="text-muted-foreground" />
               </div>
             )}

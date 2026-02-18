@@ -25,6 +25,7 @@ import { LabelBadge } from "@/components/issues/label-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { StatusBadge } from "@/components/issues/status-badge";
 import { useActiveOrganization } from "@/hooks/use-organization";
+import { cn } from "@/lib/utils";
 import { formatDate, formatFileSize } from "@/lib/utils";
 
 type IssueStatus = "open" | "in_progress" | "closed";
@@ -106,7 +107,7 @@ function TemplateFileList({
         return (
           <div
             key={file.storageId}
-            className="flex flex-col gap-3 border p-3 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="grid gap-1">
               <div className="flex items-center gap-2">
@@ -131,7 +132,11 @@ function TemplateFileList({
               )}
             </div>
             {url && isImage && (
-              <img src={url} alt={file.fileName} className="h-20 w-20 border object-cover" />
+              <img
+                src={url}
+                alt={file.fileName}
+                className="h-20 w-20 border border-border object-cover"
+              />
             )}
           </div>
         );
@@ -210,7 +215,7 @@ export default function IssueDetailPage() {
   if (!activeOrg || issue === undefined) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center gap-3 border-b px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-5 w-48" />
         </div>
@@ -323,7 +328,7 @@ export default function IssueDetailPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <Link href={`/org/${params.slug}`}>
             <Button variant="ghost" size="sm">
@@ -488,10 +493,10 @@ export default function IssueDetailPage() {
                       <button
                         key={label._id}
                         onClick={() => handleLabelToggle(label._id)}
-                        className="cursor-pointer transition-opacity"
-                        style={{
-                          opacity: issue.labelIds.includes(label._id) ? 1 : 0.4,
-                        }}
+                        className={cn(
+                          "cursor-pointer transition-opacity",
+                          !issue.labelIds.includes(label._id) && "opacity-40",
+                        )}
                       >
                         <LabelBadge name={label.name} color={label.color} />
                       </button>

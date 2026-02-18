@@ -29,7 +29,7 @@ export function UserMenu() {
       <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
         <span className="max-w-24 truncate text-xs">{user.name ?? user.email}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-card" align="end">
+      <DropdownMenuContent align="end">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="text-xs">{user.email}</DropdownMenuLabel>
           <DropdownMenuSeparator />

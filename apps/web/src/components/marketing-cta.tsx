@@ -4,13 +4,16 @@ import { Authenticated, Unauthenticated } from "convex/react";
 import { Link } from "@/components/ui/link";
 import { ArrowRight } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 export function MarketingCTA() {
   return (
     <>
       <Authenticated>
         <Link
           href="/org"
-          className="inline-flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-1.5")}
         >
           Dashboard
           <ArrowRight className="h-3 w-3" />
@@ -19,7 +22,7 @@ export function MarketingCTA() {
       <Unauthenticated>
         <Link
           href="/sign-in"
-          className="inline-flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className={cn(buttonVariants({ variant: "default", size: "sm" }), "gap-1.5")}
         >
           Sign in
           <ArrowRight className="h-3 w-3" />

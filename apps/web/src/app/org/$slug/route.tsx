@@ -2,14 +2,16 @@
 
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Menu } from "lucide-react";
+import { CircleDot, PanelLeftIcon, Search, Settings } from "lucide-react";
 
+import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { useRouter } from "@/lib/navigation";
 import { ProjectSidebar } from "@/components/project-sidebar";
-import { ModeToggle } from "@/components/mode-toggle";
 import { SearchCommand } from "@/components/search-command";
-import { UserMenu } from "@/components/user-menu";
 import { useActiveOrganization, useSetActiveOrganization } from "@/hooks/use-organization";
 
 export const Route = createFileRoute("/org/$slug")({
@@ -59,40 +61,96 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
   const openSearch = useCallback(() => setSearchOpen(true), []);
 
   return (
-    <div className="flex h-full">
-      {/* Desktop sidebar */}
-      <div className="hidden md:block">
+    <TooltipProvider>
+      <SidebarProvider>
         <ProjectSidebar onSearchOpen={openSearch} />
-      </div>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar with mobile menu + controls */}
-        <div className="flex items-center justify-between border-b px-3 py-2 md:justify-end">
-          {/* Mobile hamburger */}
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger render={<Button variant="ghost" size="sm" />}>
-                <Menu className="h-4 w-4" />
-              </SheetTrigger>
-              <SheetContent side="left" className="w-60 p-0">
-                <ProjectSidebar onSearchOpen={openSearch} />
-              </SheetContent>
-            </Sheet>
-          </div>
+        <SidebarInset>
+          {/*TODO: show org name in header, not just slug (need to fetch org data here or lift name up from sidebar)*/}
+          <ContentHeader orgName={""} />
+          <main className="flex-1 overflow-hidden">{children}</main>
+        </SidebarInset>
 
-          {/* Right controls -- always visible, never overlapping */}
-          <div className="flex items-center gap-2">
-            <ModeToggle />
-            <UserMenu />
-          </div>
-        </div>
+        {/* Fixed toolbar: toggle always visible, quick actions when collapsed */}
+        <FloatingToolbar slug={params.slug} onSearchOpen={openSearch} />
 
-        {/* Page content */}
-        <main className="flex-1 overflow-hidden">{children}</main>
-      </div>
+        {searchOpen && <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />}
+      </SidebarProvider>
+    </TooltipProvider>
+  );
+}
 
-      {searchOpen && <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />}
+/* ── Content header — adapts padding when sidebar is collapsed ── */
+
+function ContentHeader({ orgName }: { orgName: string }) {
+  const { state, isMobile } = useSidebar();
+  const isCollapsed = state === "collapsed" && !isMobile;
+
+  return (
+    <header
+      className={cn(
+        "flex h-10 shrink-0 items-center gap-2 border-b border-border transition-[padding] duration-200",
+        isCollapsed ? "pl-40 pr-3" : "px-3",
+      )}
+    >
+      {/* On mobile, keep the trigger in the header (Sheet-based sidebar) */}
+      {isMobile && (
+        <>
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 !h-4" />
+        </>
+      )}
+      <span className="text-xs text-muted-foreground font-mono truncate">{orgName}</span>
+    </header>
+  );
+}
+
+/* ── Fixed toolbar — stays at same position regardless of sidebar state ── */
+
+function FloatingToolbar({ slug, onSearchOpen }: { slug: string; onSearchOpen: () => void }) {
+  const router = useRouter();
+  const { state, isMobile } = useSidebar();
+
+  // On mobile, sidebar uses Sheet overlay — no floating toolbar needed
+  if (isMobile) return null;
+
+  const isCollapsed = state === "collapsed";
+
+  return (
+    <div className="fixed top-0 left-0 z-20 flex h-10 items-center gap-1 px-2">
+      <SidebarTrigger />
+
+      {isCollapsed && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onSearchOpen}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Search className="size-4" />
+            <span className="sr-only">Search</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => router.push(`/org/${slug}`)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <CircleDot className="size-4" />
+            <span className="sr-only">Issues</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => router.push(`/org/${slug}/settings`)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Settings className="size-4" />
+            <span className="sr-only">Settings</span>
+          </Button>
+        </>
+      )}
     </div>
   );
 }

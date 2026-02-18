@@ -108,7 +108,7 @@ export default function NewTemplatePage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <Link href={`/org/${params.slug}/settings`}>
             <Button variant="ghost" size="sm">
@@ -193,7 +193,7 @@ export default function NewTemplatePage() {
               </div>
 
               {fields.map((field, index) => (
-                <div key={field.id} className="space-y-3 border p-3">
+                <div key={field.id} className="space-y-3 border border-border p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
@@ -369,7 +369,7 @@ export default function NewTemplatePage() {
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                 JSON Schema
               </Label>
-              <pre className="overflow-auto border bg-muted p-3 text-xs font-mono">
+              <pre className="overflow-auto border border-border bg-muted p-3 text-xs font-mono">
                 {JSON.stringify({ fields: fields.filter((f) => f.key && f.label) }, null, 2)}
               </pre>
             </div>

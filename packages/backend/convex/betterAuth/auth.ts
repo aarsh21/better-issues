@@ -21,10 +21,6 @@ const isSignupsEnabled = (value: string | undefined) => {
 
 const signupsEnabled = isSignupsEnabled(process.env.ALLOWED_SIGNUPS);
 
-console.info(
-  `[better-issues] Sign ups ${signupsEnabled ? "enabled" : "disabled"} via ALLOWED_SIGNUPS`,
-);
-
 // Better Auth Component
 export const authComponent = createClient<DataModel, typeof schema>(components.betterAuth, {
   local: { schema },

@@ -37,7 +37,7 @@ export default function OrgListPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-6 py-3">
+      <div className="flex items-center justify-between border-b border-border px-6 py-3">
         <h1 className="text-sm font-bold tracking-tight">better-issues</h1>
         <div className="flex items-center gap-2">
           <ModeToggle />
@@ -67,7 +67,7 @@ export default function OrgListPage() {
                 <button
                   key={org.id}
                   onClick={() => handleTeamClick(org.slug)}
-                  className="flex w-full items-center justify-between border bg-card p-4 text-left transition-colors hover:bg-accent cursor-pointer"
+                  className="flex w-full items-center justify-between border border-border bg-card p-4 text-left transition-colors hover:bg-accent cursor-pointer"
                 >
                   <div>
                     <p className="font-medium">{org.name}</p>
@@ -78,7 +78,7 @@ export default function OrgListPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center border border-dashed p-12 text-center">
+            <div className="flex flex-col items-center justify-center border border-dashed border-border p-12 text-center">
               <p className="mb-1 text-sm font-medium">No teams yet</p>
               <p className="mb-4 text-xs text-muted-foreground">
                 Create your first team to start tracking issues.

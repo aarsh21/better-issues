@@ -1,5 +1,7 @@
 import { Link } from "@/components/ui/link";
 
+import { buttonVariants } from "@/components/ui/button";
+
 export default function NotFound() {
   return (
     <div className="flex h-svh items-center justify-center">
@@ -8,10 +10,7 @@ export default function NotFound() {
         <p className="text-xs text-muted-foreground">
           The page you are looking for does not exist.
         </p>
-        <Link
-          href="/"
-          className="inline-flex items-center border border-border bg-card px-4 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
-        >
+        <Link href="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
           Go home
         </Link>
       </div>

@@ -80,7 +80,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <Link href={`/org/${params.slug}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -225,7 +225,7 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
           ))}
         </div>
       ) : labels.length === 0 ? (
-        <div className="border border-dashed p-8 text-center">
+        <div className="border border-dashed border-border p-8 text-center">
           <p className="text-sm text-muted-foreground">
             No labels yet. Create labels to categorize your issues.
           </p>
@@ -233,7 +233,10 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
       ) : (
         <div className="space-y-1">
           {labels.map((label: { _id: any; name: string; color: string; description?: string }) => (
-            <div key={label._id} className="flex items-center justify-between border px-3 py-2">
+            <div
+              key={label._id}
+              className="flex items-center justify-between border border-border px-3 py-2"
+            >
               <div className="flex items-center gap-3">
                 <LabelBadge name={label.name} color={label.color} />
                 {label.description && (
@@ -394,7 +397,7 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
       ) : (
         <div className="space-y-6">
           {templates.length === 0 ? (
-            <div className="border border-dashed p-8 text-center">
+            <div className="border border-dashed border-border p-8 text-center">
               <p className="text-sm text-muted-foreground">
                 No templates yet. Templates help reporters provide structured information.
               </p>
@@ -404,7 +407,7 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
               {templates.map((template: { _id: any; name: string; description: string }) => (
                 <div
                   key={template._id}
-                  className="flex items-center justify-between border px-3 py-3"
+                  className="flex items-center justify-between border border-border px-3 py-3"
                 >
                   <div>
                     <p className="text-sm font-medium">{template.name}</p>
@@ -438,7 +441,7 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
                 return (
                   <div
                     key={preset.name}
-                    className="flex flex-col gap-3 border px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 border border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="text-sm font-medium">{preset.name}</p>
@@ -613,7 +616,10 @@ function MembersTab() {
         ) : (
           <div className="space-y-1">
             {(members ?? []).map((member) => (
-              <div key={member.id} className="flex items-center justify-between border px-3 py-2">
+              <div
+                key={member.id}
+                className="flex items-center justify-between border border-border px-3 py-2"
+              >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs font-medium uppercase">
                     {member.user.name?.charAt(0) ?? member.user.email.charAt(0)}
@@ -624,7 +630,7 @@ function MembersTab() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs border px-2 py-0.5 font-mono text-muted-foreground">
+                  <span className="text-xs border border-border px-2 py-0.5 font-mono text-muted-foreground">
                     {member.role}
                   </span>
                   {isAdmin && member.role !== "owner" && member.user.id !== currentUserId && (
@@ -661,7 +667,7 @@ function MembersTab() {
             ))}
           </div>
         ) : pendingInvitations.length === 0 ? (
-          <div className="border border-dashed p-6 text-center">
+          <div className="border border-dashed border-border p-6 text-center">
             <p className="text-sm text-muted-foreground">No pending invitations.</p>
           </div>
         ) : (
@@ -669,7 +675,7 @@ function MembersTab() {
             {pendingInvitations.map((invitation) => (
               <div
                 key={invitation.id}
-                className="flex items-center justify-between border px-3 py-2"
+                className="flex items-center justify-between border border-border px-3 py-2"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs">

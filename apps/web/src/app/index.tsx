@@ -12,7 +12,9 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
 import { MarketingCTA } from "@/components/marketing-cta";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -22,7 +24,7 @@ export default function HomePage() {
   return (
     <div className="min-h-svh bg-background text-foreground">
       {/* ─── Nav ─────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+      <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="mx-auto flex h-12 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="text-sm font-bold tracking-tight">
             better-issues
@@ -46,7 +48,7 @@ export default function HomePage() {
       </nav>
 
       {/* ─── Hero ────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b">
+      <section className="relative overflow-hidden border-b border-border">
         {/* Grid background */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -59,8 +61,8 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-5xl px-6 py-24 sm:py-32 lg:py-40">
           <div className="max-w-2xl">
-            <div className="mb-6 inline-flex items-center gap-2 border bg-card px-3 py-1">
-              <span className="h-1.5 w-1.5 bg-green-500" />
+            <div className="mb-6 inline-flex items-center gap-2 border border-border bg-card px-3 py-1">
+              <span className="h-1.5 w-1.5 bg-chart-1" />
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Built for small teams
               </span>
@@ -80,14 +82,14 @@ export default function HomePage() {
             <div className="mt-10 flex items-center gap-4">
               <Link
                 href="/sign-in"
-                className="inline-flex items-center gap-2 bg-primary px-5 py-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className={cn(buttonVariants({ variant: "default", size: "default" }), "gap-2")}
               >
                 Start tracking
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
                 href="#features"
-                className="inline-flex items-center gap-2 border px-5 py-2.5 text-xs font-medium transition-colors hover:bg-accent"
+                className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
               >
                 See features
               </Link>
@@ -95,8 +97,8 @@ export default function HomePage() {
           </div>
 
           {/* Terminal preview */}
-          <div className="mt-16 border bg-card sm:mt-20">
-            <div className="flex items-center gap-2 border-b px-4 py-2">
+          <div className="mt-16 border border-border bg-card sm:mt-20">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-2">
               <div className="h-2.5 w-2.5 border border-muted-foreground/30" />
               <div className="h-2.5 w-2.5 border border-muted-foreground/30" />
               <div className="h-2.5 w-2.5 border border-muted-foreground/30" />
@@ -104,26 +106,26 @@ export default function HomePage() {
             </div>
             <div className="p-4 text-xs leading-loose text-muted-foreground sm:p-6">
               <div className="flex items-center gap-3">
-                <CircleDot className="h-3.5 w-3.5 text-green-500" />
+                <CircleDot className="h-3.5 w-3.5 text-chart-1" />
                 <span className="w-10 font-mono text-foreground/40">#42</span>
                 <span className="text-foreground">Fix auth redirect on session expiry</span>
-                <span className="ml-auto hidden border px-1.5 py-0.5 text-[10px] sm:inline">
+                <span className="ml-auto hidden border border-border px-1.5 py-0.5 text-[10px] sm:inline">
                   urgent
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <CircleDot className="h-3.5 w-3.5 text-blue-500" />
+                <CircleDot className="h-3.5 w-3.5 text-chart-4" />
                 <span className="w-10 font-mono text-foreground/40">#41</span>
                 <span className="text-foreground">Add search index for issue titles</span>
-                <span className="ml-auto hidden border px-1.5 py-0.5 text-[10px] sm:inline">
+                <span className="ml-auto hidden border border-border px-1.5 py-0.5 text-[10px] sm:inline">
                   high
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <CircleDot className="h-3.5 w-3.5 text-yellow-500" />
+                <CircleDot className="h-3.5 w-3.5 text-chart-3" />
                 <span className="w-10 font-mono text-foreground/40">#40</span>
                 <span className="text-foreground">Template schema validation edge case</span>
-                <span className="ml-auto hidden border px-1.5 py-0.5 text-[10px] sm:inline">
+                <span className="ml-auto hidden border border-border px-1.5 py-0.5 text-[10px] sm:inline">
                   medium
                 </span>
               </div>
@@ -131,7 +133,7 @@ export default function HomePage() {
                 <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="w-10 font-mono text-foreground/40">#39</span>
                 <span className="text-foreground line-through">Update dependencies to latest</span>
-                <span className="ml-auto hidden border px-1.5 py-0.5 text-[10px] sm:inline">
+                <span className="ml-auto hidden border border-border px-1.5 py-0.5 text-[10px] sm:inline">
                   low
                 </span>
               </div>
@@ -141,7 +143,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── Features ────────────────────────────────────── */}
-      <section id="features" className="border-b">
+      <section id="features" className="border-b border-border">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
           <div className="mb-12">
             <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -154,7 +156,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="grid gap-px border bg-border sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard
               icon={Zap}
               title="Real-time"
@@ -190,7 +192,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── How it works ────────────────────────────────── */}
-      <section id="how-it-works" className="border-b">
+      <section id="how-it-works" className="border-b border-border">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
           <div className="mb-12">
             <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -222,7 +224,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── Tech ────────────────────────────────────────── */}
-      <section className="border-b">
+      <section className="border-b border-border">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
           <div className="flex flex-col items-center text-center">
             <Terminal className="mb-6 h-8 w-8 text-muted-foreground" />
@@ -241,7 +243,7 @@ export default function HomePage() {
                 "Tailwind CSS",
                 "TypeScript",
               ].map((tech) => (
-                <span key={tech} className="border px-3 py-1.5">
+                <span key={tech} className="border border-border px-3 py-1.5">
                   {tech}
                 </span>
               ))}
@@ -251,9 +253,9 @@ export default function HomePage() {
       </section>
 
       {/* ─── CTA ─────────────────────────────────────────── */}
-      <section className="border-b">
+      <section className="border-b border-border">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
-          <div className="border bg-card p-8 text-center sm:p-16">
+          <div className="border border-border bg-card p-8 text-center sm:p-16">
             <h2 className="mb-4 text-2xl font-bold tracking-tight sm:text-3xl">
               Ready to stop losing track?
             </h2>
@@ -262,7 +264,7 @@ export default function HomePage() {
             </p>
             <Link
               href="/sign-in"
-              className="inline-flex items-center gap-2 bg-primary px-6 py-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className={cn(buttonVariants({ variant: "default", size: "default" }), "gap-2")}
             >
               Get started free
               <ArrowRight className="h-3.5 w-3.5" />
@@ -314,7 +316,7 @@ function StepCard({
   description: string;
 }) {
   return (
-    <div className="border p-6">
+    <div className="border border-border p-6">
       <span className="mb-4 block text-3xl font-bold text-muted-foreground/20">{step}</span>
       <h3 className="mb-2 text-sm font-bold">{title}</h3>
       <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>

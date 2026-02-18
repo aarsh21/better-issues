@@ -109,7 +109,7 @@ function InviteContent({ inviteId }: { inviteId: string }) {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           {invitation.status === "accepted" ? (
-            <CheckCircle className="h-8 w-8 text-green-600" />
+            <CheckCircle className="h-8 w-8 text-chart-1" />
           ) : (
             <XCircle className="h-8 w-8 text-muted-foreground" />
           )}

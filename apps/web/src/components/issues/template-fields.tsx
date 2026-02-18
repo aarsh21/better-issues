@@ -278,7 +278,7 @@ export function TemplateFieldRenderer({
               {files.map((file) => (
                 <div
                   key={file.storageId}
-                  className="flex items-center justify-between border px-3 py-2"
+                  className="flex items-center justify-between border border-border px-3 py-2"
                 >
                   <div className="grid gap-0.5">
                     <p className="text-sm font-medium">{file.fileName}</p>

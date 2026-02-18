@@ -3,7 +3,6 @@
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 type IssueStatus = "open" | "in_progress" | "closed";
 
@@ -23,18 +22,14 @@ export function FilterBar({
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {STATUS_OPTIONS.map((option) => (
-        <button
+        <Button
           key={option.value}
+          variant={activeStatus === option.value ? "default" : "outline"}
+          size="sm"
           onClick={() => onStatusChange(activeStatus === option.value ? undefined : option.value)}
-          className={cn(
-            "inline-flex items-center border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
-            activeStatus === option.value
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground",
-          )}
         >
           {option.label}
-        </button>
+        </Button>
       ))}
       {activeStatus && (
         <Button

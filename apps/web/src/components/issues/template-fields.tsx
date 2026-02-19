@@ -70,12 +70,14 @@ export function TemplateFieldRenderer({
   onChange,
   readOnly = false,
   organizationId,
+  issueId,
 }: {
   field: TemplateField;
   value: unknown;
   onChange: (value: unknown) => void;
   readOnly?: boolean;
   organizationId?: string;
+  issueId?: Id<"issues">;
 }) {
   const id = `template-field-${field.key}`;
   const allowMultiple = field.type === "file" ? field.multiple !== false : false;
@@ -89,6 +91,11 @@ export function TemplateFieldRenderer({
   const handleFilesSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (readOnly) return;
     const input = event.currentTarget;
+    if (!organizationId) {
+      toast.error("Organization context is required for file uploads");
+      input.value = "";
+      return;
+    }
     const selectedFiles = Array.from(input.files ?? []);
 
     if (selectedFiles.length === 0) return;
@@ -101,7 +108,7 @@ export function TemplateFieldRenderer({
     // Generate upload URLs and upload files in parallel
     const uploadResults = await Promise.all(
       filesToUpload.map(async (file) => {
-        const uploadUrl = await generateUploadUrl({ organizationId: organizationId! });
+        const uploadUrl = await generateUploadUrl({ organizationId });
         const response = await fetch(uploadUrl, {
           method: "POST",
           headers: {
@@ -143,12 +150,15 @@ export function TemplateFieldRenderer({
         const previousFile = existingFiles[0];
         onChange(uploadResults[0]);
         if (previousFile) {
-          await removeFile({
-            organizationId: organizationId!,
-            storageId: previousFile.storageId,
-          }).catch(() => {
-            // Best-effort cleanup.
-          });
+          if (issueId) {
+            await removeFile({
+              organizationId,
+              issueId,
+              storageId: previousFile.storageId,
+            }).catch(() => {
+              // Best-effort cleanup.
+            });
+          }
         }
       }
     }
@@ -159,11 +169,18 @@ export function TemplateFieldRenderer({
 
   const handleRemoveFile = async (storageId: Id<"_storage">) => {
     if (readOnly) return;
+    if (!organizationId) {
+      toast.error("Organization context is required for file removal");
+      return;
+    }
 
     const nextFiles = files.filter((file) => file.storageId !== storageId);
     onChange(allowMultiple ? nextFiles : undefined);
+    if (!issueId) {
+      return;
+    }
 
-    const result = await removeFile({ organizationId: organizationId!, storageId }).then(
+    const result = await removeFile({ organizationId, issueId, storageId }).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );

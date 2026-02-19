@@ -1,4 +1,5 @@
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
@@ -26,6 +27,35 @@ const issueValidator = v.object({
   updatedAt: v.number(),
   closedAt: v.optional(v.number()),
 });
+
+async function requireTemplateInOrganization(
+  ctx: MutationCtx,
+  templateId: Id<"issueTemplates">,
+  organizationId: string,
+) {
+  const template = await ctx.db.get(templateId);
+  if (!template || template.organizationId !== organizationId) {
+    throw new ConvexError("Template not found");
+  }
+  return template;
+}
+
+async function requireLabelsInOrganization(
+  ctx: MutationCtx,
+  labelIds: Id<"labels">[],
+  organizationId: string,
+): Promise<void> {
+  if (labelIds.length === 0) {
+    return;
+  }
+
+  const labels = await Promise.all(labelIds.map((labelId) => ctx.db.get(labelId)));
+  const hasInvalidLabel = labels.some((label) => !label || label.organizationId !== organizationId);
+
+  if (hasInvalidLabel) {
+    throw new ConvexError("One or more labels are invalid for this organization");
+  }
+}
 
 export const list = query({
   args: {
@@ -166,6 +196,7 @@ export const create = mutation({
     if (!args.title.trim()) {
       throw new ConvexError("Title is required");
     }
+    await requireLabelsInOrganization(ctx, args.labelIds, args.organizationId);
 
     let parsedTemplateData: Record<string, unknown> | null = null;
     if (args.templateData !== undefined) {
@@ -184,8 +215,11 @@ export const create = mutation({
     }
 
     if (args.templateId) {
-      const template = await ctx.db.get(args.templateId);
-      if (!template) throw new ConvexError("Template not found");
+      const template = await requireTemplateInOrganization(
+        ctx,
+        args.templateId,
+        args.organizationId,
+      );
 
       let schema;
       try {
@@ -264,7 +298,10 @@ export const update = mutation({
     if (args.assigneeId !== undefined) {
       updates.assigneeId = args.assigneeId === null ? undefined : args.assigneeId;
     }
-    if (args.labelIds !== undefined) updates.labelIds = args.labelIds;
+    if (args.labelIds !== undefined) {
+      await requireLabelsInOrganization(ctx, args.labelIds, issue.organizationId);
+      updates.labelIds = args.labelIds;
+    }
 
     await ctx.db.patch(args.issueId, updates);
     return null;

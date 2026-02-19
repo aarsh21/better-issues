@@ -34,6 +34,7 @@ type IssuePriority = "low" | "medium" | "high" | "urgent";
 export const Route = createFileRoute("/org/$slug/issues/new")({
   validateSearch: (search) => ({
     template: typeof search.template === "string" ? search.template : undefined,
+    templates: typeof search.templates === "string" ? search.templates : undefined,
   }),
   component: NewIssuePage,
 });
@@ -61,6 +62,7 @@ export default function NewIssuePage() {
   const [selectedLabels, setSelectedLabels] = useState<Id<"labels">[]>([]);
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
+  const templateFromSearchId = search.template ?? search.templates;
 
   let parsedSchema: TemplateSchema | null = null;
   if (selectedTemplate) {
@@ -68,19 +70,26 @@ export default function NewIssuePage() {
   }
 
   useEffect(() => {
-    if (!search.template || !templates || selectedTemplate) {
+    if (!templateFromSearchId || !templates) {
       return;
     }
 
-    const templateFromSearch = templates.find((template) => template._id === search.template);
+    const templateFromSearch = templates.find((template) => template._id === templateFromSearchId);
     if (!templateFromSearch) {
       return;
     }
 
+    const hasChangedTemplate = selectedTemplate?._id !== templateFromSearch._id;
+    if (!hasChangedTemplate && step === "form") {
+      return;
+    }
+
     setSelectedTemplate(templateFromSearch);
-    setTemplateData({});
+    if (hasChangedTemplate) {
+      setTemplateData({});
+    }
     setStep("form");
-  }, [search.template, selectedTemplate, templates]);
+  }, [templateFromSearchId, selectedTemplate?._id, step, templates]);
 
   const handleTemplateSelect = (template: Doc<"issueTemplates"> | null) => {
     setSelectedTemplate(template);

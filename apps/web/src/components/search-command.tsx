@@ -166,7 +166,7 @@ export function SearchCommand({
           <CommandGroup heading="New Issue">
             <CommandItem
               value={`new issue blank ${slug}`}
-              onSelect={() => navigateTo(`/org/${slug}/issues/new`)}
+              onSelect={() => navigateTo(`/org/${slug}/issues/new?template=blank`)}
               className="cursor-pointer"
             >
               <Plus className="size-3.5" />

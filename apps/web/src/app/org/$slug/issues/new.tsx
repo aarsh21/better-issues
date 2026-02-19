@@ -74,6 +74,13 @@ export default function NewIssuePage() {
       return;
     }
 
+    if (templateFromSearchId === "blank") {
+      setSelectedTemplate(null);
+      setTemplateData({});
+      setStep("form");
+      return;
+    }
+
     const templateFromSearch = templates.find((template) => template._id === templateFromSearchId);
     if (!templateFromSearch) {
       return;
@@ -213,7 +220,14 @@ export default function NewIssuePage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Button variant="ghost" size="sm" onClick={() => setStep("choose-template")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setStep("choose-template");
+            router.replace(`/org/${params.slug}/issues/new`);
+          }}
+        >
           <ArrowLeft className="h-3.5 w-3.5" />
         </Button>
         <h1 className="text-sm font-bold">

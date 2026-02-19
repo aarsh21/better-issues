@@ -1,6 +1,6 @@
 "use client";
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
@@ -55,6 +55,7 @@ import {
   useRemoveMember,
 } from "@/hooks/use-organization";
 import { authClient } from "@/lib/auth-client";
+import { usePathname } from "@/lib/navigation";
 import { TEMPLATE_PRESETS } from "@/lib/template-presets";
 
 const LABEL_COLORS = [
@@ -70,13 +71,32 @@ const LABEL_COLORS = [
   "#1e293b",
 ];
 
+type SettingsTab = "labels" | "templates" | "members";
+const SETTINGS_TABS = new Set<SettingsTab>(["labels", "templates", "members"]);
+
 export const Route = createFileRoute("/org/$slug/settings")({
+  validateSearch: (search) => ({
+    tab:
+      typeof search.tab === "string" && SETTINGS_TABS.has(search.tab as SettingsTab)
+        ? (search.tab as SettingsTab)
+        : undefined,
+  }),
   component: SettingsPage,
 });
 
 export default function SettingsPage() {
   const params = Route.useParams();
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const { data: activeOrg } = useActiveOrganization();
+  const pathname = usePathname();
+  const settingsPath = `/org/${params.slug}/settings`;
+  const isSettingsIndex = pathname === settingsPath || pathname === `${settingsPath}/`;
+  const activeTab = search.tab ?? "labels";
+
+  if (!isSettingsIndex) {
+    return <Outlet />;
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -91,7 +111,19 @@ export default function SettingsPage() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-2xl">
-          <Tabs defaultValue="labels">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => {
+              const nextTab = value as SettingsTab;
+              void navigate({
+                to: ".",
+                search: (prev) => ({
+                  ...prev,
+                  tab: nextTab,
+                }),
+              });
+            }}
+          >
             <TabsList>
               <TabsTrigger value="labels" className="gap-1.5">
                 <Tag className="h-3.5 w-3.5" />

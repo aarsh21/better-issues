@@ -81,16 +81,21 @@ function TemplateFileList({
   field,
   value,
   organizationId,
+  issueId,
 }: {
   field: TemplateField;
   value: unknown;
   organizationId: string;
+  issueId: Id<"issues">;
 }) {
   const allowMultiple = field.multiple !== false;
   const files = normalizeFileValues(value, allowMultiple);
   const storageIds = files.map((file) => file.storageId);
   const { data: resolvedUrls } = useQuery(
-    convexQuery(api.files.getUrls, storageIds.length > 0 ? { organizationId, storageIds } : "skip"),
+    convexQuery(
+      api.files.getUrls,
+      storageIds.length > 0 ? { organizationId, issueId, storageIds } : "skip",
+    ),
   );
 
   if (files.length === 0) return null;
@@ -573,7 +578,12 @@ function IssueMainContent({
                 return (
                   <div key={field.key} className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
-                    <TemplateFileList field={field} value={value} organizationId={organizationId} />
+                    <TemplateFileList
+                      field={field}
+                      value={value}
+                      organizationId={organizationId}
+                      issueId={issue._id}
+                    />
                   </div>
                 );
               }

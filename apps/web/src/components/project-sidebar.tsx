@@ -66,6 +66,11 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
   const pathname = useLocation({
     select: (location) => location.pathname,
   });
+  const searchString = useLocation({
+    select: (location) => location.searchStr,
+  });
+  const activeStatus = new URLSearchParams(searchString).get("status");
+  const isOnIssuesPage = pathname === `/org/${slug}`;
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
 
   return (
@@ -114,7 +119,7 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
                   label="Issues"
                   tooltip="Issues"
                   icon={CircleDot}
-                  active={pathname === `/org/${slug}`}
+                  active={isOnIssuesPage && activeStatus === null}
                 />
                 <NavItem
                   href={`/org/${slug}/settings`}

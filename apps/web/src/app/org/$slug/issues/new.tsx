@@ -1,16 +1,16 @@
 "use client";
 
+import type { Doc, Id, TemplateSchema } from "@/convex";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import type { Doc, Id, TemplateSchema } from "@/convex";
-
 import { api } from "@/convex";
 import { useMutation } from "convex/react";
 import { ArrowLeft, FileText, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "@/components/ui/link";
 import { useRouter } from "@/lib/navigation";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,16 @@ import { useActiveOrganization } from "@/hooks/use-organization";
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 
 export const Route = createFileRoute("/org/$slug/issues/new")({
+  validateSearch: (search) => ({
+    template: typeof search.template === "string" ? search.template : undefined,
+    templates: typeof search.templates === "string" ? search.templates : undefined,
+  }),
   component: NewIssuePage,
 });
 
 export default function NewIssuePage() {
   const params = Route.useParams();
+  const search = Route.useSearch();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
 
@@ -57,11 +62,34 @@ export default function NewIssuePage() {
   const [selectedLabels, setSelectedLabels] = useState<Id<"labels">[]>([]);
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
+  const templateFromSearchId = search.template ?? search.templates;
 
   let parsedSchema: TemplateSchema | null = null;
   if (selectedTemplate) {
     parsedSchema = JSON.parse(selectedTemplate.schema);
   }
+
+  useEffect(() => {
+    if (!templateFromSearchId || !templates) {
+      return;
+    }
+
+    const templateFromSearch = templates.find((template) => template._id === templateFromSearchId);
+    if (!templateFromSearch) {
+      return;
+    }
+
+    const hasChangedTemplate = selectedTemplate?._id !== templateFromSearch._id;
+    if (!hasChangedTemplate && step === "form") {
+      return;
+    }
+
+    setSelectedTemplate(templateFromSearch);
+    if (hasChangedTemplate) {
+      setTemplateData({});
+    }
+    setStep("form");
+  }, [templateFromSearchId, selectedTemplate?._id, step, templates]);
 
   const handleTemplateSelect = (template: Doc<"issueTemplates"> | null) => {
     setSelectedTemplate(template);

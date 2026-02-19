@@ -1,16 +1,16 @@
 "use client";
 
+import type { Doc, Id, TemplateSchema } from "@/convex";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import type { Doc, Id, TemplateSchema } from "@/convex";
-
 import { api } from "@/convex";
 import { useMutation } from "convex/react";
 import { ArrowLeft, FileText, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "@/components/ui/link";
 import { useRouter } from "@/lib/navigation";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,15 @@ import { useActiveOrganization } from "@/hooks/use-organization";
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 
 export const Route = createFileRoute("/org/$slug/issues/new")({
+  validateSearch: (search) => ({
+    template: typeof search.template === "string" ? search.template : undefined,
+  }),
   component: NewIssuePage,
 });
 
 export default function NewIssuePage() {
   const params = Route.useParams();
+  const search = Route.useSearch();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
 
@@ -62,6 +66,21 @@ export default function NewIssuePage() {
   if (selectedTemplate) {
     parsedSchema = JSON.parse(selectedTemplate.schema);
   }
+
+  useEffect(() => {
+    if (!search.template || !templates || selectedTemplate) {
+      return;
+    }
+
+    const templateFromSearch = templates.find((template) => template._id === search.template);
+    if (!templateFromSearch) {
+      return;
+    }
+
+    setSelectedTemplate(templateFromSearch);
+    setTemplateData({});
+    setStep("form");
+  }, [search.template, selectedTemplate, templates]);
 
   const handleTemplateSelect = (template: Doc<"issueTemplates"> | null) => {
     setSelectedTemplate(template);

@@ -326,11 +326,100 @@ export default function IssueDetailPage() {
   };
 
   return (
+    <IssueDetailLayout
+      slug={params.slug}
+      issue={issue}
+      labels={labels}
+      parsedSchema={parsedSchema}
+      parsedTemplateData={parsedTemplateData}
+      organizationId={activeOrg.id}
+      templateName={template?.name ?? "Template Data"}
+      editing={editing}
+      editTitle={editTitle}
+      editDescription={editDescription}
+      showDeleteConfirm={showDeleteConfirm}
+      onStartEdit={handleStartEdit}
+      onEditTitleChange={setEditTitle}
+      onEditDescriptionChange={setEditDescription}
+      onSaveEdit={handleSaveEdit}
+      onCancelEdit={() => setEditing(false)}
+      onStatusChange={handleStatusChange}
+      onPriorityChange={handlePriorityChange}
+      onToggleLabel={handleLabelToggle}
+      onDeleteRequest={() => setShowDeleteConfirm(true)}
+      onDeleteConfirm={handleDelete}
+      onDeleteConfirmChange={setShowDeleteConfirm}
+    />
+  );
+}
+
+type IssueDetailIssue = {
+  _id: Id<"issues">;
+  number: number;
+  title: string;
+  description?: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  labelIds: Id<"labels">[];
+  createdAt: number;
+  updatedAt: number;
+  closedAt?: number | null;
+};
+
+type IssueDetailLabel = { _id: Id<"labels">; name: string; color: string };
+
+function IssueDetailLayout({
+  slug,
+  issue,
+  labels,
+  parsedSchema,
+  parsedTemplateData,
+  organizationId,
+  templateName,
+  editing,
+  editTitle,
+  editDescription,
+  showDeleteConfirm,
+  onStartEdit,
+  onEditTitleChange,
+  onEditDescriptionChange,
+  onSaveEdit,
+  onCancelEdit,
+  onStatusChange,
+  onPriorityChange,
+  onToggleLabel,
+  onDeleteRequest,
+  onDeleteConfirm,
+  onDeleteConfirmChange,
+}: {
+  slug: string;
+  issue: IssueDetailIssue;
+  labels: IssueDetailLabel[] | undefined;
+  parsedSchema: TemplateSchema | null;
+  parsedTemplateData: Record<string, unknown>;
+  organizationId: string;
+  templateName: string;
+  editing: boolean;
+  editTitle: string;
+  editDescription: string;
+  showDeleteConfirm: boolean;
+  onStartEdit: () => void;
+  onEditTitleChange: (value: string) => void;
+  onEditDescriptionChange: (value: string) => void;
+  onSaveEdit: () => Promise<void>;
+  onCancelEdit: () => void;
+  onStatusChange: (status: IssueStatus) => Promise<void>;
+  onPriorityChange: (priority: IssuePriority) => Promise<void>;
+  onToggleLabel: (labelId: Id<"labels">) => Promise<void>;
+  onDeleteRequest: () => void;
+  onDeleteConfirm: () => Promise<void>;
+  onDeleteConfirmChange: (open: boolean) => void;
+}) {
+  return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
-          <Link href={`/org/${params.slug}`}>
+          <Link href={`/org/${slug}`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
@@ -338,14 +427,14 @@ export default function IssueDetailPage() {
           <span className="text-sm text-muted-foreground font-mono">#{issue.number}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleStartEdit} className="gap-1.5">
+          <Button variant="ghost" size="sm" onClick={onStartEdit} className="gap-1.5">
             <Pencil className="h-3.5 w-3.5" />
             Edit
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={onDeleteRequest}
             className="gap-1.5 text-destructive hover:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -353,194 +442,266 @@ export default function IssueDetailPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-auto">
         <div className="mx-auto max-w-3xl p-6">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_220px]">
-            {/* Main content */}
-            <div className="space-y-6">
-              {editing ? (
-                <div className="space-y-4">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="text-lg font-bold"
-                  />
-                  <Textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows={6}
-                    placeholder="Description..."
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveEdit}>
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <h1 className="text-lg font-bold">{issue.title}</h1>
-                  {issue.description && (
-                    <p className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                      {issue.description}
-                    </p>
-                  )}
-                </div>
-              )}
+            <IssueMainContent
+              issue={issue}
+              parsedSchema={parsedSchema}
+              parsedTemplateData={parsedTemplateData}
+              organizationId={organizationId}
+              templateName={templateName}
+              editing={editing}
+              editTitle={editTitle}
+              editDescription={editDescription}
+              onEditTitleChange={onEditTitleChange}
+              onEditDescriptionChange={onEditDescriptionChange}
+              onSaveEdit={onSaveEdit}
+              onCancelEdit={onCancelEdit}
+            />
 
-              {/* Template data */}
-              {parsedSchema && Object.keys(parsedTemplateData).length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-4">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {template?.name ?? "Template Data"}
-                    </p>
-                    {parsedSchema.fields.map((field) => {
-                      const value = parsedTemplateData[field.key];
-                      const isEmptyValue =
-                        value === undefined ||
-                        value === null ||
-                        value === "" ||
-                        (Array.isArray(value) && value.length === 0);
-                      if (isEmptyValue) return null;
-                      if (field.type === "file") {
-                        return (
-                          <div key={field.key} className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              {field.label}
-                            </p>
-                            <TemplateFileList
-                              field={field}
-                              value={value}
-                              organizationId={activeOrg!.id}
-                            />
-                          </div>
-                        );
-                      }
-                      return (
-                        <div key={field.key} className="space-y-1">
-                          <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
-                          <p className="text-sm whitespace-pre-wrap">
-                            {field.type === "checkbox" ? (value ? "Yes" : "No") : String(value)}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label
-                  htmlFor="issue-status"
-                  className="text-xs text-muted-foreground uppercase tracking-wider"
-                >
-                  Status
-                </Label>
-                <Select
-                  value={issue.status}
-                  onValueChange={(v) => handleStatusChange(v as IssueStatus)}
-                >
-                  <SelectTrigger id="issue-status" className="h-8">
-                    <StatusBadge status={issue.status} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <Label
-                  htmlFor="issue-priority"
-                  className="text-xs text-muted-foreground uppercase tracking-wider"
-                >
-                  Priority
-                </Label>
-                <Select
-                  value={issue.priority}
-                  onValueChange={(v) => handlePriorityChange(v as IssuePriority)}
-                >
-                  <SelectTrigger id="issue-priority" className="h-8">
-                    <PriorityIndicator priority={issue.priority} showLabel />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Labels
-                </Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {labels && labels.length > 0 ? (
-                    labels.map((label: { _id: Id<"labels">; name: string; color: string }) => (
-                      <button
-                        key={label._id}
-                        onClick={() => handleLabelToggle(label._id)}
-                        className={cn(
-                          "cursor-pointer transition-opacity",
-                          !issue.labelIds.includes(label._id) && "opacity-40",
-                        )}
-                      >
-                        <LabelBadge name={label.name} color={label.color} />
-                      </button>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted-foreground">No labels configured</span>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-3 w-3" />
-                  Created {formatDate(issue.createdAt)}
-                </div>
-                {issue.updatedAt !== issue.createdAt && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" />
-                    Updated {formatDate(issue.updatedAt)}
-                  </div>
-                )}
-                {issue.closedAt && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" />
-                    Closed {formatDate(issue.closedAt)}
-                  </div>
-                )}
-              </div>
-            </div>
+            <IssueSidebar
+              issue={issue}
+              labels={labels}
+              onStatusChange={onStatusChange}
+              onPriorityChange={onPriorityChange}
+              onToggleLabel={onToggleLabel}
+            />
           </div>
         </div>
       </div>
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
+        onOpenChange={onDeleteConfirmChange}
         title="Delete issue"
         description="Are you sure you want to delete this issue? This action cannot be undone."
         confirmLabel="Delete"
         variant="destructive"
-        onConfirm={handleDelete}
+        onConfirm={onDeleteConfirm}
       />
+    </div>
+  );
+}
+
+function IssueMainContent({
+  issue,
+  parsedSchema,
+  parsedTemplateData,
+  organizationId,
+  templateName,
+  editing,
+  editTitle,
+  editDescription,
+  onEditTitleChange,
+  onEditDescriptionChange,
+  onSaveEdit,
+  onCancelEdit,
+}: {
+  issue: IssueDetailIssue;
+  parsedSchema: TemplateSchema | null;
+  parsedTemplateData: Record<string, unknown>;
+  organizationId: string;
+  templateName: string;
+  editing: boolean;
+  editTitle: string;
+  editDescription: string;
+  onEditTitleChange: (value: string) => void;
+  onEditDescriptionChange: (value: string) => void;
+  onSaveEdit: () => Promise<void>;
+  onCancelEdit: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      {editing ? (
+        <div className="space-y-4">
+          <Input
+            value={editTitle}
+            onChange={(event) => onEditTitleChange(event.target.value)}
+            className="text-lg font-bold"
+          />
+          <Textarea
+            value={editDescription}
+            onChange={(event) => onEditDescriptionChange(event.target.value)}
+            rows={6}
+            placeholder="Description..."
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                void onSaveEdit();
+              }}
+            >
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={onCancelEdit}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h1 className="text-lg font-bold">{issue.title}</h1>
+          {issue.description && (
+            <p className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap">
+              {issue.description}
+            </p>
+          )}
+        </div>
+      )}
+
+      {parsedSchema && Object.keys(parsedTemplateData).length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {templateName}
+            </p>
+            {parsedSchema.fields.map((field) => {
+              const value = parsedTemplateData[field.key];
+              const isEmptyValue =
+                value === undefined ||
+                value === null ||
+                value === "" ||
+                (Array.isArray(value) && value.length === 0);
+
+              if (isEmptyValue) {
+                return null;
+              }
+              if (field.type === "file") {
+                return (
+                  <div key={field.key} className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+                    <TemplateFileList field={field} value={value} organizationId={organizationId} />
+                  </div>
+                );
+              }
+
+              return (
+                <div key={field.key} className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {field.type === "checkbox" ? (value ? "Yes" : "No") : String(value)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function IssueSidebar({
+  issue,
+  labels,
+  onStatusChange,
+  onPriorityChange,
+  onToggleLabel,
+}: {
+  issue: IssueDetailIssue;
+  labels: IssueDetailLabel[] | undefined;
+  onStatusChange: (status: IssueStatus) => Promise<void>;
+  onPriorityChange: (priority: IssuePriority) => Promise<void>;
+  onToggleLabel: (labelId: Id<"labels">) => Promise<void>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <Label
+          htmlFor="issue-status"
+          className="text-xs text-muted-foreground uppercase tracking-wider"
+        >
+          Status
+        </Label>
+        <Select
+          value={issue.status}
+          onValueChange={(value) => {
+            void onStatusChange(value as IssueStatus);
+          }}
+        >
+          <SelectTrigger id="issue-status" className="h-8">
+            <StatusBadge status={issue.status} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <Label
+          htmlFor="issue-priority"
+          className="text-xs text-muted-foreground uppercase tracking-wider"
+        >
+          Priority
+        </Label>
+        <Select
+          value={issue.priority}
+          onValueChange={(value) => {
+            void onPriorityChange(value as IssuePriority);
+          }}
+        >
+          <SelectTrigger id="issue-priority" className="h-8">
+            <PriorityIndicator priority={issue.priority} showLabel />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="urgent">Urgent</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Labels</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {labels && labels.length > 0 ? (
+            labels.map((label) => (
+              <button
+                key={label._id}
+                onClick={() => {
+                  void onToggleLabel(label._id);
+                }}
+                className={cn(
+                  "cursor-pointer transition-opacity",
+                  !issue.labelIds.includes(label._id) && "opacity-40",
+                )}
+              >
+                <LabelBadge name={label.name} color={label.color} />
+              </button>
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">No labels configured</span>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <Clock className="h-3 w-3" />
+          Created {formatDate(issue.createdAt)}
+        </div>
+        {issue.updatedAt !== issue.createdAt && (
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3 w-3" />
+            Updated {formatDate(issue.updatedAt)}
+          </div>
+        )}
+        {issue.closedAt && (
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3 w-3" />
+            Closed {formatDate(issue.closedAt)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

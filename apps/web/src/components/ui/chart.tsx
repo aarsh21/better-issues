@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import * as RechartsPrimitive from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -21,6 +20,50 @@ export type ChartConfig = {
 type ChartContextProps = {
   config: ChartConfig;
 };
+
+type RechartsModule = typeof import("recharts");
+type RechartsTooltipProps = React.ComponentProps<RechartsModule["Tooltip"]>;
+type RechartsLegendProps = import("recharts").LegendProps;
+type RechartsLegendWithoutRef = Omit<RechartsLegendProps, "ref">;
+
+let cachedRechartsModule: RechartsModule | null = null;
+let rechartsModulePromise: Promise<RechartsModule> | null = null;
+
+const loadRechartsModule = async () => {
+  if (cachedRechartsModule) {
+    return cachedRechartsModule;
+  }
+  if (!rechartsModulePromise) {
+    rechartsModulePromise = import("recharts").then((module) => {
+      cachedRechartsModule = module;
+      return module;
+    });
+  }
+  return rechartsModulePromise;
+};
+
+function useRechartsModule() {
+  const [rechartsModule, setRechartsModule] = React.useState<RechartsModule | null>(
+    cachedRechartsModule,
+  );
+
+  React.useEffect(() => {
+    if (rechartsModule) {
+      return;
+    }
+    let isMounted = true;
+    void loadRechartsModule().then((module) => {
+      if (isMounted) {
+        setRechartsModule(module);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [rechartsModule]);
+
+  return rechartsModule;
+}
 
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
@@ -42,8 +85,9 @@ function ChartContainer({
   ...props
 }: React.ComponentProps<"div"> & {
   config: ChartConfig;
-  children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
+  children: React.ReactElement;
 }) {
+  const rechartsModule = useRechartsModule();
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
 
@@ -59,7 +103,11 @@ function ChartContainer({
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        {rechartsModule ? (
+          <rechartsModule.ResponsiveContainer>{children}</rechartsModule.ResponsiveContainer>
+        ) : (
+          <div className="h-full w-full" />
+        )}
       </div>
     </ChartContext.Provider>
   );
@@ -90,7 +138,15 @@ ${colorConfig
   return <style>{css}</style>;
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+function ChartTooltip(props: RechartsTooltipProps) {
+  const rechartsModule = useRechartsModule();
+  if (!rechartsModule) {
+    return null;
+  }
+
+  const TooltipComponent = rechartsModule.Tooltip;
+  return <TooltipComponent {...props} />;
+}
 
 function ChartTooltipContent({
   active,
@@ -106,7 +162,7 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+}: RechartsTooltipProps &
   React.ComponentProps<"div"> & {
     hideLabel?: boolean;
     hideIndicator?: boolean;
@@ -228,7 +284,15 @@ function ChartTooltipContent({
   );
 }
 
-const ChartLegend = RechartsPrimitive.Legend;
+function ChartLegend(props: RechartsLegendWithoutRef) {
+  const rechartsModule = useRechartsModule();
+  if (!rechartsModule) {
+    return null;
+  }
+
+  const LegendComponent = rechartsModule.Legend;
+  return <LegendComponent {...props} />;
+}
 
 function ChartLegendContent({
   className,
@@ -237,7 +301,7 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+  Pick<RechartsLegendProps, "payload" | "verticalAlign"> & {
     hideIcon?: boolean;
     nameKey?: string;
   }) {

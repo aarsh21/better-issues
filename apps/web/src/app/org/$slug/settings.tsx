@@ -18,7 +18,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/convex";
@@ -504,6 +504,61 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
 
 // ─── Members Tab ─────────────────────────────────────────────
 
+type MemberItem = NonNullable<ReturnType<typeof useMembers>["data"]>[number];
+type InvitationItem = NonNullable<ReturnType<typeof useInvitations>["data"]>[number];
+
+type MemberConfirmAction = {
+  title: string;
+  description: string;
+  onConfirm: () => Promise<void>;
+};
+
+type MembersTabState = {
+  inviteEmail: string;
+  inviteRole: "member" | "admin";
+  showInvite: boolean;
+  copiedId: string | null;
+  confirmAction: MemberConfirmAction | null;
+};
+
+type MembersTabAction =
+  | { type: "setInviteEmail"; email: string }
+  | { type: "setInviteRole"; role: "member" | "admin" }
+  | { type: "setShowInvite"; show: boolean }
+  | { type: "setCopiedId"; copiedId: string | null }
+  | { type: "setConfirmAction"; confirmAction: MemberConfirmAction | null };
+
+const INITIAL_MEMBERS_TAB_STATE: MembersTabState = {
+  inviteEmail: "",
+  inviteRole: "member",
+  showInvite: false,
+  copiedId: null,
+  confirmAction: null,
+};
+
+function membersTabReducer(state: MembersTabState, action: MembersTabAction): MembersTabState {
+  switch (action.type) {
+    case "setInviteEmail": {
+      return { ...state, inviteEmail: action.email };
+    }
+    case "setInviteRole": {
+      return { ...state, inviteRole: action.role };
+    }
+    case "setShowInvite": {
+      return { ...state, showInvite: action.show };
+    }
+    case "setCopiedId": {
+      return { ...state, copiedId: action.copiedId };
+    }
+    case "setConfirmAction": {
+      return { ...state, confirmAction: action.confirmAction };
+    }
+    default: {
+      return state;
+    }
+  }
+}
+
 function MembersTab() {
   const { data: activeOrg } = useActiveOrganization();
   const { data: session } = authClient.useSession();
@@ -512,29 +567,22 @@ function MembersTab() {
   const inviteMember = useInviteMember();
   const removeMember = useRemoveMember(activeOrg?.id);
   const cancelInvitation = useCancelInvitation(activeOrg?.id);
-
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
-  const [showInvite, setShowInvite] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{
-    title: string;
-    description: string;
-    onConfirm: () => void;
-  } | null>(null);
+  const [state, dispatch] = useReducer(membersTabReducer, INITIAL_MEMBERS_TAB_STATE);
 
   const currentUserId = session?.user?.id;
   const currentMember = (members ?? []).find((m) => m.user.id === currentUserId);
   const isAdmin = currentMember?.role === "admin" || currentMember?.role === "owner";
-
-  const pendingInvitations = (invitations ?? []).filter((inv) => inv.status === "pending");
+  const pendingInvitations = useMemo(
+    () => (invitations ?? []).filter((invitation) => invitation.status === "pending"),
+    [invitations],
+  );
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
+    if (!state.inviteEmail.trim()) return;
     const result = await inviteMember
       .mutateAsync({
-        email: inviteEmail.trim(),
-        role: inviteRole,
+        email: state.inviteEmail.trim(),
+        role: state.inviteRole,
       })
       .then(
         (value) => ({ ok: true, value }) as const,
@@ -558,262 +606,355 @@ function MembersTab() {
     } else {
       toast.success("Invitation sent");
     }
-    setInviteEmail("");
-    setInviteRole("member");
-    setShowInvite(false);
+    dispatch({ type: "setInviteEmail", email: "" });
+    dispatch({ type: "setInviteRole", role: "member" });
+    dispatch({ type: "setShowInvite", show: false });
   };
 
   const handleCopyLink = async (invitationId: string) => {
     const link = `${window.location.origin}/invite/${invitationId}`;
     await navigator.clipboard.writeText(link);
-    setCopiedId(invitationId);
+    dispatch({ type: "setCopiedId", copiedId: invitationId });
     toast.success("Invite link copied");
-    setTimeout(() => setCopiedId(null), 2_000);
+    setTimeout(() => dispatch({ type: "setCopiedId", copiedId: null }), 2_000);
   };
 
   const handleCancelInvitation = (invitationId: string, email: string) => {
-    setConfirmAction({
-      title: "Cancel invitation",
-      description: `Cancel the invitation to ${email}?`,
-      onConfirm: async () => {
-        const result = await cancelInvitation.mutateAsync({ invitationId }).then(
-          () => ({ ok: true }) as const,
-          (error: unknown) => ({ ok: false, error }) as const,
-        );
+    dispatch({
+      type: "setConfirmAction",
+      confirmAction: {
+        title: "Cancel invitation",
+        description: `Cancel the invitation to ${email}?`,
+        onConfirm: async () => {
+          const result = await cancelInvitation.mutateAsync({ invitationId }).then(
+            () => ({ ok: true }) as const,
+            (error: unknown) => ({ ok: false, error }) as const,
+          );
 
-        if (result.ok) {
-          toast.success("Invitation cancelled");
-        } else {
-          const message =
-            result.error instanceof Error ? result.error.message : "Failed to cancel invitation";
-          toast.error(message);
-        }
+          if (result.ok) {
+            toast.success("Invitation cancelled");
+          } else {
+            const message =
+              result.error instanceof Error ? result.error.message : "Failed to cancel invitation";
+            toast.error(message);
+          }
+        },
       },
     });
   };
 
   const handleRemoveMember = (memberEmail: string) => {
-    setConfirmAction({
-      title: "Remove member",
-      description: `Remove ${memberEmail} from the team?`,
-      onConfirm: async () => {
-        const result = await removeMember
-          .mutateAsync({
-            memberIdOrEmail: memberEmail,
-          })
-          .then(
-            () => ({ ok: true }) as const,
-            (error: unknown) => ({ ok: false, error }) as const,
-          );
+    dispatch({
+      type: "setConfirmAction",
+      confirmAction: {
+        title: "Remove member",
+        description: `Remove ${memberEmail} from the team?`,
+        onConfirm: async () => {
+          const result = await removeMember
+            .mutateAsync({
+              memberIdOrEmail: memberEmail,
+            })
+            .then(
+              () => ({ ok: true }) as const,
+              (error: unknown) => ({ ok: false, error }) as const,
+            );
 
-        if (result.ok) {
-          toast.success("Member removed");
-        } else {
-          const message =
-            result.error instanceof Error ? result.error.message : "Failed to remove member";
-          toast.error(message);
-        }
+          if (result.ok) {
+            toast.success("Member removed");
+          } else {
+            const message =
+              result.error instanceof Error ? result.error.message : "Failed to remove member";
+            toast.error(message);
+          }
+        },
       },
     });
   };
 
   return (
     <div className="space-y-6">
-      {/* ── Members section ── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-medium">Members</h2>
-            <p className="text-xs text-muted-foreground">
-              Manage your team&apos;s members and invite new ones.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => setShowInvite(true)}
-            className="gap-1.5"
-            disabled={!isAdmin}
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Invite
-          </Button>
-        </div>
+      <MembersSection
+        loading={loading}
+        members={members ?? []}
+        isAdmin={isAdmin}
+        currentUserId={currentUserId}
+        onInviteClick={() => dispatch({ type: "setShowInvite", show: true })}
+        onRemoveMember={handleRemoveMember}
+      />
 
-        {loading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {(members ?? []).map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between border border-border px-3 py-2"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs font-medium uppercase">
-                    {member.user.name?.charAt(0) ?? member.user.email.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{member.user.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.user.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs border border-border px-2 py-0.5 font-mono text-muted-foreground">
-                    {member.role}
-                  </span>
-                  {isAdmin && member.role !== "owner" && member.user.id !== currentUserId && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveMember(member.user.email)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Pending invitations section ── */}
       <Separator />
-      <div className="space-y-4">
+      <PendingInvitationsSection
+        invitationsLoading={invitationsLoading}
+        pendingInvitations={pendingInvitations}
+        copiedId={state.copiedId}
+        onCopyLink={handleCopyLink}
+        onCancelInvitation={handleCancelInvitation}
+      />
+
+      <InviteMemberDialog
+        open={state.showInvite}
+        inviteEmail={state.inviteEmail}
+        inviteRole={state.inviteRole}
+        isSubmitting={inviteMember.isPending}
+        onOpenChange={(show) => dispatch({ type: "setShowInvite", show })}
+        onInvite={handleInvite}
+        onEmailChange={(email) => dispatch({ type: "setInviteEmail", email })}
+        onRoleChange={(role) => dispatch({ type: "setInviteRole", role })}
+      />
+
+      <ConfirmDialog
+        open={state.confirmAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            dispatch({ type: "setConfirmAction", confirmAction: null });
+          }
+        }}
+        title={state.confirmAction?.title ?? ""}
+        description={state.confirmAction?.description ?? ""}
+        confirmLabel="Confirm"
+        variant="destructive"
+        onConfirm={() => {
+          void state.confirmAction?.onConfirm();
+        }}
+      />
+    </div>
+  );
+}
+
+function MembersSection({
+  loading,
+  members,
+  isAdmin,
+  currentUserId,
+  onInviteClick,
+  onRemoveMember,
+}: {
+  loading: boolean;
+  members: MemberItem[];
+  isAdmin: boolean;
+  currentUserId: string | undefined;
+  onInviteClick: () => void;
+  onRemoveMember: (memberEmail: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-medium">Pending Invitations</h2>
+          <h2 className="text-sm font-medium">Members</h2>
           <p className="text-xs text-muted-foreground">
-            Share the invite link with the person you&apos;re inviting.
+            Manage your team&apos;s members and invite new ones.
           </p>
         </div>
+        <Button size="sm" onClick={onInviteClick} className="gap-1.5" disabled={!isAdmin}>
+          <UserPlus className="h-3.5 w-3.5" />
+          Invite
+        </Button>
+      </div>
 
-        {invitationsLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : pendingInvitations.length === 0 ? (
-          <div className="border border-dashed border-border p-6 text-center">
-            <p className="text-sm text-muted-foreground">No pending invitations.</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {pendingInvitations.map((invitation) => (
-              <div
-                key={invitation.id}
-                className="flex items-center justify-between border border-border px-3 py-2"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{invitation.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Invited as {invitation.role}
-                      {invitation.expiresAt &&
-                        ` · expires ${new Date(invitation.expiresAt).toLocaleDateString()}`}
-                    </p>
-                  </div>
+      {loading ? (
+        <div className="space-y-2">
+          {["member-skeleton-1", "member-skeleton-2", "member-skeleton-3"].map((skeletonKey) => (
+            <Skeleton key={skeletonKey} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {members.map((member) => (
+            <div
+              key={member.id}
+              className="flex items-center justify-between border border-border px-3 py-2"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs font-medium uppercase">
+                  {member.user.name?.charAt(0) ?? member.user.email.charAt(0)}
                 </div>
-                <div className="flex items-center gap-1">
+                <div>
+                  <p className="text-sm font-medium">{member.user.name}</p>
+                  <p className="text-xs text-muted-foreground">{member.user.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs border border-border px-2 py-0.5 font-mono text-muted-foreground">
+                  {member.role}
+                </span>
+                {isAdmin && member.role !== "owner" && member.user.id !== currentUserId && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleCopyLink(invitation.id)}
-                    className="h-7 gap-1 px-2 text-xs text-muted-foreground"
-                  >
-                    {copiedId === invitation.id ? (
-                      <>
-                        <Check className="h-3 w-3" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <ClipboardCopy className="h-3 w-3" />
-                        Copy link
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCancelInvitation(invitation.id, invitation.email)}
+                    onClick={() => onRemoveMember(member.user.email)}
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PendingInvitationsSection({
+  invitationsLoading,
+  pendingInvitations,
+  copiedId,
+  onCopyLink,
+  onCancelInvitation,
+}: {
+  invitationsLoading: boolean;
+  pendingInvitations: InvitationItem[];
+  copiedId: string | null;
+  onCopyLink: (invitationId: string) => Promise<void>;
+  onCancelInvitation: (invitationId: string, email: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-sm font-medium">Pending Invitations</h2>
+        <p className="text-xs text-muted-foreground">
+          Share the invite link with the person you&apos;re inviting.
+        </p>
       </div>
 
-      {/* ── Invite dialog ── */}
-      <Dialog open={showInvite} onOpenChange={setShowInvite}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Invite member</DialogTitle>
-            <DialogDescription>
-              Send an invitation and share the invite link with the person.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="invite-email">Email address</Label>
-              <Input
-                id="invite-email"
-                type="email"
-                placeholder="team@example.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
+      {invitationsLoading ? (
+        <div className="space-y-2">
+          {["invite-skeleton-1", "invite-skeleton-2"].map((skeletonKey) => (
+            <Skeleton key={skeletonKey} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : pendingInvitations.length === 0 ? (
+        <div className="border border-dashed border-border p-6 text-center">
+          <p className="text-sm text-muted-foreground">No pending invitations.</p>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {pendingInvitations.map((invitation) => (
+            <div
+              key={invitation.id}
+              className="flex items-center justify-between border border-border px-3 py-2"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center bg-muted text-xs">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{invitation.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Invited as {invitation.role}
+                    {invitation.expiresAt &&
+                      ` · expires ${new Date(invitation.expiresAt).toLocaleDateString()}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void onCopyLink(invitation.id);
+                  }}
+                  className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+                >
+                  {copiedId === invitation.id ? (
+                    <>
+                      <Check className="h-3 w-3" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCopy className="h-3 w-3" />
+                      Copy link
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onCancelInvitation(invitation.id, invitation.email)}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="invite-role">Role</Label>
-              <Select
-                value={inviteRole}
-                onValueChange={(v) => setInviteRole(v as "member" | "admin")}
-              >
-                <SelectTrigger id="invite-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInvite(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleInvite} disabled={inviteMember.isPending || !inviteEmail.trim()}>
-              {inviteMember.isPending ? "Sending..." : "Send Invitation"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => {
-          if (!open) setConfirmAction(null);
-        }}
-        title={confirmAction?.title ?? ""}
-        description={confirmAction?.description ?? ""}
-        confirmLabel="Confirm"
-        variant="destructive"
-        onConfirm={() => confirmAction?.onConfirm()}
-      />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function InviteMemberDialog({
+  open,
+  inviteEmail,
+  inviteRole,
+  isSubmitting,
+  onOpenChange,
+  onInvite,
+  onEmailChange,
+  onRoleChange,
+}: {
+  open: boolean;
+  inviteEmail: string;
+  inviteRole: "member" | "admin";
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onInvite: () => Promise<void>;
+  onEmailChange: (email: string) => void;
+  onRoleChange: (role: "member" | "admin") => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Invite member</DialogTitle>
+          <DialogDescription>
+            Send an invitation and share the invite link with the person.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="invite-email">Email address</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              placeholder="team@example.com"
+              value={inviteEmail}
+              onChange={(event) => onEmailChange(event.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="invite-role">Role</Label>
+            <Select
+              value={inviteRole}
+              onValueChange={(value) => onRoleChange(value as "member" | "admin")}
+            >
+              <SelectTrigger id="invite-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              void onInvite();
+            }}
+            disabled={isSubmitting || !inviteEmail.trim()}
+          >
+            {isSubmitting ? "Sending..." : "Send Invitation"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

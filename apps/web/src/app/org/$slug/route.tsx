@@ -2,7 +2,7 @@
 
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CircleDot, PanelLeftIcon, Search, Settings } from "lucide-react";
+import { CircleDot, Search, Settings } from "lucide-react";
 
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";

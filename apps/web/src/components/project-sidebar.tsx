@@ -84,8 +84,8 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
                   <SidebarMenuButton tooltip="Search issues" onClick={onSearchOpen}>
                     <Search />
                     <span>Search</span>
-                    <kbd className="ml-auto text-[10px] font-mono text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
-                      <span className="text-[9px]">&#8984;</span>K
+                    <kbd className="ml-auto text-xs font-mono text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
+                      <span className="text-[11px]">&#8984;</span>K
                     </kbd>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

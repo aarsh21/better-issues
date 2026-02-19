@@ -46,10 +46,8 @@ export default function SignInForm() {
 
   return (
     <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        form.handleSubmit();
+      action={async () => {
+        await form.handleSubmit();
       }}
       className="space-y-3"
     >

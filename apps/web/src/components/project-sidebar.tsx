@@ -45,6 +45,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,9 +90,10 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
                   <SidebarMenuButton tooltip="Search issues" onClick={onSearchOpen}>
                     <Search />
                     <span>Search</span>
-                    <kbd className="ml-auto text-xs font-mono text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
-                      <span className="text-[11px]">&#8984;</span>K
-                    </kbd>
+                    <KbdGroup className="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⌘</Kbd>
+                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">K</Kbd>
+                    </KbdGroup>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

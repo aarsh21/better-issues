@@ -5,7 +5,7 @@ import type { BetterAuthOptions } from "better-auth";
 import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins";
 
-import { components } from "../_generated/api";
+import { components, internal } from "../_generated/api";
 import type { DataModel } from "../_generated/dataModel";
 import authConfig from "../auth.config";
 import { ac, admin, member, owner } from "../lib/permissions";
@@ -46,6 +46,17 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       organization({
         ac,
         roles: { owner, admin, member },
+        organizationHooks: {
+          afterCreateOrganization: async ({ organization }) => {
+            if (!("runMutation" in ctx)) {
+              return;
+            }
+
+            await ctx.runMutation(internal.labels.seedDefaultsForOrganization, {
+              organizationId: organization.id,
+            });
+          },
+        },
       }),
     ],
   } satisfies BetterAuthOptions;

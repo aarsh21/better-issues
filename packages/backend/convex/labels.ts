@@ -1,8 +1,93 @@
+import type { MutationCtx } from "./_generated/server";
+
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 import { requireOrgMembership, requirePermission } from "./lib/permissions";
+
+const DEFAULT_LABELS: ReadonlyArray<{
+  readonly name: string;
+  readonly color: string;
+  readonly description?: string;
+}> = [
+  {
+    name: "bug",
+    color: "#ef4444",
+    description: "Something is not working",
+  },
+  {
+    name: "documentation",
+    color: "#3b82f6",
+    description: "Improvements or additions to docs",
+  },
+  {
+    name: "duplicate",
+    color: "#6b7280",
+    description: "This issue or pull request already exists",
+  },
+  {
+    name: "enhancement",
+    color: "#22c55e",
+    description: "New feature or request",
+  },
+  {
+    name: "good first issue",
+    color: "#7057ff",
+    description: "Good for newcomers",
+  },
+  {
+    name: "help wanted",
+    color: "#06b6d4",
+    description: "Extra attention is needed",
+  },
+  {
+    name: "invalid",
+    color: "#eab308",
+    description: "This does not seem right",
+  },
+  {
+    name: "question",
+    color: "#d876e3",
+    description: "Further information is requested",
+  },
+  {
+    name: "wontfix",
+    color: "#1e293b",
+    description: "This will not be worked on",
+  },
+];
+
+const MAX_LABELS_PER_ORGANIZATION = 15;
+
+async function seedDefaultLabelsForOrganization(
+  ctx: MutationCtx,
+  organizationId: string,
+): Promise<number> {
+  const existing = await ctx.db
+    .query("labels")
+    .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))
+    .collect();
+
+  const existingNames = new Set(existing.map((label) => label.name.toLowerCase()));
+  const availableSlots = Math.max(0, MAX_LABELS_PER_ORGANIZATION - existing.length);
+  const labelsToInsert = DEFAULT_LABELS.filter(
+    (label) => !existingNames.has(label.name.toLowerCase()),
+  ).slice(0, availableSlots);
+
+  await Promise.all(
+    labelsToInsert.map((label) =>
+      ctx.db.insert("labels", {
+        organizationId,
+        name: label.name,
+        color: label.color,
+        description: label.description,
+      }),
+    ),
+  );
+
+  return labelsToInsert.length;
+}
 
 const labelValidator = v.object({
   _id: v.id("labels"),
@@ -52,7 +137,7 @@ export const create = mutation({
       .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .collect();
 
-    if (existing.length >= 15) {
+    if (existing.length >= MAX_LABELS_PER_ORGANIZATION) {
       throw new ConvexError("Maximum of 15 labels per organization");
     }
 
@@ -66,6 +151,30 @@ export const create = mutation({
       color: args.color,
       description: args.description?.trim(),
     });
+  },
+});
+
+export const seedDefaultsForOrganization = internalMutation({
+  args: {
+    organizationId: v.string(),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    return await seedDefaultLabelsForOrganization(ctx, args.organizationId);
+  },
+});
+
+export const ensureDefaults = mutation({
+  args: {
+    organizationId: v.string(),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
+
+    return await seedDefaultLabelsForOrganization(ctx, args.organizationId);
   },
 });
 

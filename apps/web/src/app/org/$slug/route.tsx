@@ -3,7 +3,9 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { CircleDot, Search, Settings } from "lucide-react";
+import { useMutation } from "convex/react";
 
+import { api } from "@/convex";
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,7 +33,9 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
   const [searchOpen, setSearchOpen] = useState(false);
   const { data: activeOrg } = useActiveOrganization();
   const setActive = useSetActiveOrganization();
+  const ensureDefaultLabels = useMutation(api.labels.ensureDefaults);
   const lastSyncedSlug = useRef<string | null>(null);
+  const seededOrgIds = useRef(new Set<string>());
 
   // Only call setActive when the slug actually changes AND
   // the cached active org doesn't already match
@@ -45,6 +49,17 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
     lastSyncedSlug.current = slug;
     setActive.mutate({ organizationSlug: slug });
   }, [params.slug, activeOrg?.slug]);
+
+  useEffect(() => {
+    if (!activeOrg?.id || seededOrgIds.current.has(activeOrg.id)) {
+      return;
+    }
+
+    seededOrgIds.current.add(activeOrg.id);
+    void ensureDefaultLabels({ organizationId: activeOrg.id }).catch(() => {
+      seededOrgIds.current.delete(activeOrg.id);
+    });
+  }, [activeOrg?.id, ensureDefaultLabels]);
 
   // Cmd+K shortcut
   useEffect(() => {

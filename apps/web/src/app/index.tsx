@@ -43,10 +43,18 @@ export default function MinimalHomePage() {
           </Link>
           <div className="h-4 w-px bg-border/50"></div>
           <div className="flex items-center gap-6">
-            <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="#features"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Features
             </Link>
-            <a href="https://github.com/aarsh21/better-issues" target="_blank" rel="noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+            <a
+              href="https://github.com/aarsh21/better-issues"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
               <Github className="h-4 w-4" /> GitHub
             </a>
           </div>
@@ -64,13 +72,17 @@ export default function MinimalHomePage() {
         </h1>
 
         <p className="mt-8 max-w-2xl text-lg font-light text-muted-foreground sm:text-xl">
-          An open-source issue tracker. Features real-time updates, structured schemas, and basic team management capabilities.
+          An open-source issue tracker. Features real-time updates, structured schemas, and basic
+          team management capabilities.
         </p>
 
         <div className="mt-12 flex items-center gap-4">
           <Link
             href="/sign-in"
-            className={cn(buttonVariants({ variant: "default", size: "lg" }), "rounded-full px-8 font-medium")}
+            className={cn(
+              buttonVariants({ variant: "default", size: "lg" }),
+              "rounded-full px-8 font-medium",
+            )}
           >
             Open App
           </Link>
@@ -78,7 +90,10 @@ export default function MinimalHomePage() {
             href="https://github.com/aarsh21/better-issues"
             target="_blank"
             rel="noreferrer"
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-8 font-medium")}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "rounded-full px-8 font-medium",
+            )}
           >
             Source Code
           </a>
@@ -89,16 +104,42 @@ export default function MinimalHomePage() {
       <section id="features" className="px-6 py-32 sm:py-48 bg-muted/30">
         <div className="mx-auto max-w-5xl">
           <div className="mb-24 text-center">
-            <h2 className="text-3xl font-light tracking-tight text-foreground sm:text-4xl">Available Features</h2>
+            <h2 className="text-3xl font-light tracking-tight text-foreground sm:text-4xl">
+              Available Features
+            </h2>
           </div>
 
           <div className="grid gap-16 sm:grid-cols-2 lg:grid-cols-3">
-            <FeatureItem icon={CircleDot} title="Real-time Synchronization" description="Data updates across active clients concurrently via websockets." />
-            <FeatureItem icon={FileText} title="JSON Schemas" description="Configure issue templates to require specific fields upon creation." />
-            <FeatureItem icon={Users} title="Workspace Management" description="Create organizations, invite users, and assign basic roles." />
-            <FeatureItem icon={Search} title="Command Menu" description="Keyboard-accessible menu for searching issues and navigating." />
-            <FeatureItem icon={Tag} title="Labels & Filtering" description="Apply custom labels to issues and filter views accordingly." />
-            <FeatureItem icon={Github} title="Open Source" description="The project repository is public for community review and self-hosting." />
+            <FeatureItem
+              icon={CircleDot}
+              title="Real-time Synchronization"
+              description="Data updates across active clients concurrently via websockets."
+            />
+            <FeatureItem
+              icon={FileText}
+              title="JSON Schemas"
+              description="Configure issue templates to require specific fields upon creation."
+            />
+            <FeatureItem
+              icon={Users}
+              title="Workspace Management"
+              description="Create organizations, invite users, and assign basic roles."
+            />
+            <FeatureItem
+              icon={Search}
+              title="Command Menu"
+              description="Keyboard-accessible menu for searching issues and navigating."
+            />
+            <FeatureItem
+              icon={Tag}
+              title="Labels & Filtering"
+              description="Apply custom labels to issues and filter views accordingly."
+            />
+            <FeatureItem
+              icon={Github}
+              title="Open Source"
+              description="The project repository is public for community review and self-hosting."
+            />
           </div>
         </div>
       </section>
@@ -106,7 +147,15 @@ export default function MinimalHomePage() {
   );
 }
 
-function FeatureItem({ icon: Icon, title, description }: { icon: React.ComponentType<{ className?: string, strokeWidth?: number }>; title: string; description: string }) {
+function FeatureItem({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  title: string;
+  description: string;
+}) {
   return (
     <div className="group flex flex-col items-center text-center">
       <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-secondary/50 text-secondary-foreground transition-all duration-300 group-hover:bg-primary/10 group-hover:text-primary">

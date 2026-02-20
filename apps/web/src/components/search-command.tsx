@@ -96,10 +96,13 @@ export function SearchCommand({
 
   const handleSwitchTeam = (organizationSlug: string) => {
     onOpenChange(false);
-    setActiveOrganization.mutate(
-      { organizationSlug },
-      { onSuccess: () => router.push(`/org/${organizationSlug}`) },
-    );
+
+    if (organizationSlug === activeOrg?.slug) {
+      return;
+    }
+
+    router.push(`/org/${organizationSlug}`);
+    setActiveOrganization.mutate({ organizationSlug });
   };
 
   const handleSwitchTheme = (nextTheme: ThemeMode) => {

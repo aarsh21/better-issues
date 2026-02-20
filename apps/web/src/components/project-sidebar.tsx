@@ -18,12 +18,13 @@ import {
   Users,
 } from "lucide-react";
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 
 import { api } from "@/convex";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "@/lib/navigation";
+import { prefetchRouteData } from "@/lib/route-prefetch";
 import { cn } from "@/lib/utils";
 import {
   useOrganizations,
@@ -199,12 +200,19 @@ function NavItem({
   active: boolean;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const handleMouseEnter = () => {
+    router.prefetch(href);
+    void prefetchRouteData(href, queryClient).catch(() => undefined);
+  };
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         tooltip={tooltip}
         isActive={active}
+        onMouseEnter={handleMouseEnter}
         onClick={() => router.push(href)}
         className="cursor-pointer"
       >
@@ -225,10 +233,12 @@ function TeamSwitcher({ onCreateOrg }: { onCreateOrg: () => void }) {
   const setActive = useSetActiveOrganization();
 
   const handleSelect = (orgSlug: string) => {
-    setActive.mutate(
-      { organizationSlug: orgSlug },
-      { onSuccess: () => router.push(`/org/${orgSlug}`) },
-    );
+    if (orgSlug === activeOrg?.slug) {
+      return;
+    }
+
+    router.push(`/org/${orgSlug}`);
+    setActive.mutate({ organizationSlug: orgSlug });
   };
 
   const initial = activeOrg?.name?.charAt(0)?.toUpperCase() ?? "T";

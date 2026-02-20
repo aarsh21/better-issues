@@ -8,10 +8,12 @@ import type { Id, TemplateField, TemplateSchema } from "@/convex";
 import { useMutation } from "convex/react";
 import { ArrowLeft, Clock, ExternalLink, FileText, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "@/lib/navigation";
+import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/convex";
+import { queryClient } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,12 @@ type IssueStatus = "open" | "in_progress" | "closed";
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 
 export const Route = createFileRoute("/org/$slug/issues/$number")({
+  loader: ({ params }) => {
+    void prefetchOrgRouteData(
+      `/org/${encodeURIComponent(params.slug)}/issues/${params.number}`,
+      queryClient,
+    );
+  },
   component: IssueDetailPage,
 });
 

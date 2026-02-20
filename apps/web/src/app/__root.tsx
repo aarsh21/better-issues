@@ -1,4 +1,5 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import appCss from "../index.css?url";
 import Providers from "@/components/providers";
@@ -32,6 +33,7 @@ function RootLayout() {
       <body className="antialiased">
         <Providers>
           <Outlet />
+          {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null}
         </Providers>
         <Scripts />
       </body>

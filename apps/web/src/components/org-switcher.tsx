@@ -33,10 +33,13 @@ export function OrgSwitcher({ onCreateOrg }: { onCreateOrg?: () => void }) {
 
   const handleSelect = (orgSlug: string) => {
     setOpen(false);
-    setActive.mutate(
-      { organizationSlug: orgSlug },
-      { onSuccess: () => router.push(`/org/${orgSlug}`) },
-    );
+
+    if (orgSlug === activeOrg?.slug) {
+      return;
+    }
+
+    router.push(`/org/${orgSlug}`);
+    setActive.mutate({ organizationSlug: orgSlug });
   };
 
   return (

@@ -22,6 +22,7 @@ import { useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/convex";
+import { queryClient } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
@@ -56,6 +57,7 @@ import {
 } from "@/hooks/use-organization";
 import { authClient } from "@/lib/auth-client";
 import { usePathname } from "@/lib/navigation";
+import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 import { TEMPLATE_PRESETS } from "@/lib/template-presets";
 
 const LABEL_COLORS = [
@@ -81,6 +83,9 @@ export const Route = createFileRoute("/org/$slug/settings")({
         ? (search.tab as SettingsTab)
         : undefined,
   }),
+  loader: ({ params }) => {
+    void prefetchOrgRouteData(`/org/${encodeURIComponent(params.slug)}/settings`, queryClient);
+  },
   component: SettingsPage,
 });
 

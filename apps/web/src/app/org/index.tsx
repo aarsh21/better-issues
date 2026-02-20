@@ -23,7 +23,8 @@ export default function OrgListPage() {
   const autoRedirected = useRef(false);
 
   const handleTeamClick = (slug: string) => {
-    setActive.mutate({ organizationSlug: slug }, { onSuccess: () => router.push(`/org/${slug}`) });
+    router.push(`/org/${slug}`);
+    setActive.mutate({ organizationSlug: slug });
   };
 
   // If user has exactly one team, auto-redirect (once)

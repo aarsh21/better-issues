@@ -16,6 +16,26 @@ export const orgKeys = {
   userInvitations: () => [...orgKeys.all, "userInvitations"] as const,
 };
 
+export const organizationsQueryOptions = () => ({
+  queryKey: orgKeys.lists(),
+  queryFn: async () => {
+    const { data, error } = await authClient.organization.list();
+    if (error) throw error;
+    return data ?? [];
+  },
+  staleTime: 30_000,
+});
+
+export const activeOrganizationQueryOptions = () => ({
+  queryKey: orgKeys.active(),
+  queryFn: async () => {
+    const { data, error } = await authClient.organization.getFullOrganization();
+    if (error) throw error;
+    return data ?? null;
+  },
+  staleTime: 60_000,
+});
+
 // ─── Types ───────────────────────────────────────────────────────
 
 type Member = {
@@ -46,15 +66,7 @@ type Invitation = {
  * Uses a 30s stale time so navigating between pages doesn't re-fetch.
  */
 export function useOrganizations() {
-  return useQuery({
-    queryKey: orgKeys.lists(),
-    queryFn: async () => {
-      const { data, error } = await authClient.organization.list();
-      if (error) throw error;
-      return data ?? [];
-    },
-    staleTime: 30_000,
-  });
+  return useQuery(organizationsQueryOptions());
 }
 
 /**
@@ -63,15 +75,7 @@ export function useOrganizations() {
  * triggering additional network requests.
  */
 export function useActiveOrganization() {
-  return useQuery({
-    queryKey: orgKeys.active(),
-    queryFn: async () => {
-      const { data, error } = await authClient.organization.getFullOrganization();
-      if (error) throw error;
-      return data ?? null;
-    },
-    staleTime: 60_000,
-  });
+  return useQuery(activeOrganizationQueryOptions());
 }
 
 /**
@@ -110,8 +114,32 @@ export function useSetActiveOrganization() {
       if (error) throw error;
       return data;
     },
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: orgKeys.active() });
+
+      const previousActiveOrganization = queryClient.getQueryData(orgKeys.active());
+      const organizations =
+        queryClient.getQueryData<Array<{ id: string; slug: string; name: string }>>(
+          orgKeys.lists(),
+        ) ?? [];
+
+      const optimisticActiveOrganization =
+        "organizationId" in params
+          ? organizations.find((organization) => organization.id === params.organizationId)
+          : organizations.find((organization) => organization.slug === params.organizationSlug);
+
+      if (optimisticActiveOrganization) {
+        queryClient.setQueryData(orgKeys.active(), optimisticActiveOrganization);
+      }
+
+      return { previousActiveOrganization };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousActiveOrganization !== undefined) {
+        queryClient.setQueryData(orgKeys.active(), context.previousActiveOrganization);
+      }
+    },
     onSuccess: () => {
-      // Invalidate the active org cache so it refetches
       queryClient.invalidateQueries({ queryKey: orgKeys.active() });
     },
   });

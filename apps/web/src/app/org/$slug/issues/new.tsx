@@ -11,6 +11,7 @@ import { useMemo, useReducer } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/convex";
+import { queryClient } from "@/components/providers";
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useActiveOrganization } from "@/hooks/use-organization";
 import { useRouter } from "@/lib/navigation";
+import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 type IssueStep = "choose-template" | "form";
@@ -119,6 +121,9 @@ export const Route = createFileRoute("/org/$slug/issues/new")({
     template: typeof search.template === "string" ? search.template : undefined,
     templates: typeof search.templates === "string" ? search.templates : undefined,
   }),
+  loader: ({ params }) => {
+    void prefetchOrgRouteData(`/org/${encodeURIComponent(params.slug)}/issues/new`, queryClient);
+  },
   component: NewIssuePage,
 });
 

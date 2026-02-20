@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@better-issues/env": "workspace:*",
+    "@tanstack/react-query-devtools": "^5.91.3",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },

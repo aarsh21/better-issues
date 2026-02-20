@@ -2,18 +2,21 @@
 
 import type { ComponentPropsWithoutRef, MouseEvent } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Link as TanStackLink } from "@tanstack/react-router";
-import { useRouter } from "@/lib/navigation";
 import { useEffect, useMemo, useRef } from "react";
+
+import { useRouter } from "@/lib/navigation";
+import { prefetchRouteData } from "@/lib/route-prefetch";
 
 /**
  * Custom Link component with performance optimizations inspired by NextFaster:
  *
- * 1. IntersectionObserver-based prefetch: Routes are prefetched when the link
- *    enters the viewport and stays visible for 300ms (debounced to avoid wasting
- *    bandwidth during fast scrolling).
+ * 1. IntersectionObserver-based prefetch: Routes (and important route data)
+ *    are prefetched when the link enters the viewport and stays visible for
+ *    300ms (debounced to avoid wasting bandwidth during fast scrolling).
  *
- * 2. Mouse hover prefetch: Calls router.prefetch() on hover for freshness.
+ * 2. Mouse hover prefetch: Re-runs route + data prefetch right before click.
  *
  * 3. mouseDown navigation: Navigation begins on mouseDown instead of click
  *    (click = mouseDown + mouseUp), saving ~100-200ms per navigation. Only
@@ -33,8 +36,14 @@ export const Link = ({
 }) => {
   const linkRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const hrefString = useMemo(() => String(href), [href]);
   const isHashOnly = hrefString.startsWith("#");
+
+  const runPrefetch = () => {
+    router.prefetch(hrefString);
+    void prefetchRouteData(hrefString, queryClient).catch(() => undefined);
+  };
 
   useEffect(() => {
     if (prefetch === false || isHashOnly) return;
@@ -49,7 +58,7 @@ export const Link = ({
         const entry = entries[0];
         if (entry?.isIntersecting) {
           prefetchTimeout = setTimeout(() => {
-            router.prefetch(hrefString);
+            runPrefetch();
             observer.unobserve(entry.target);
           }, 300);
         } else if (prefetchTimeout) {
@@ -68,11 +77,11 @@ export const Link = ({
         clearTimeout(prefetchTimeout);
       }
     };
-  }, [hrefString, isHashOnly, prefetch, router]);
+  }, [hrefString, isHashOnly, prefetch, queryClient, router]);
 
   const handleMouseEnter = (e: MouseEvent<HTMLAnchorElement>) => {
     if (!isHashOnly) {
-      router.prefetch(hrefString);
+      runPrefetch();
     }
     if (typeof onMouseEnter === "function") {
       onMouseEnter(e);

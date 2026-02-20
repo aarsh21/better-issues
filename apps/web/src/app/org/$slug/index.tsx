@@ -7,9 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 
 import { api } from "@/convex";
+import { queryClient } from "@/components/providers";
 import { usePaginatedQuery } from "convex/react";
 import { Plus } from "lucide-react";
 import { Link } from "@/components/ui/link";
+import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +31,9 @@ export const Route = createFileRoute("/org/$slug/")({
         ? (search.status as IssueStatus)
         : undefined,
   }),
+  loader: ({ params }) => {
+    void prefetchOrgRouteData(`/org/${encodeURIComponent(params.slug)}`, queryClient);
+  },
   component: IssueListPage,
 });
 

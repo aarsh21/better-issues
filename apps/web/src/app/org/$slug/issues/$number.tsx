@@ -9,6 +9,7 @@ import { useMutation } from "convex/react";
 import { ArrowLeft, Clock, ExternalLink, FileText, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "@/lib/navigation";
 import { prefetchOrgRouteData } from "@/lib/route-prefetch";
+import { getIssueSnapshot } from "@/lib/issue-snapshot-cache";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -26,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LabelBadge } from "@/components/issues/label-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { StatusBadge } from "@/components/issues/status-badge";
-import { useActiveOrganization } from "@/hooks/use-organization";
+import { useActiveOrganization, useOrganizations } from "@/hooks/use-organization";
 import { cn } from "@/lib/utils";
 import { formatDate, formatFileSize } from "@/lib/utils";
 
@@ -162,18 +163,25 @@ export default function IssueDetailPage() {
   const params = Route.useParams();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations } = useOrganizations();
 
   const issueNumber = parseInt(params.number, 10);
+  const organizationId =
+    activeOrg?.slug === params.slug
+      ? activeOrg.id
+      : organizations?.find((organization) => organization.slug === params.slug)?.id;
+  const cachedIssue = organizationId ? getIssueSnapshot(organizationId, issueNumber) : undefined;
 
-  const { data: issue } = useQuery(
+  const { data: issueData } = useQuery(
     convexQuery(
       api.issues.getByNumber,
-      activeOrg ? { organizationId: activeOrg.id, number: issueNumber } : "skip",
+      organizationId ? { organizationId, number: issueNumber } : "skip",
     ),
   );
+  const issue = issueData === undefined ? cachedIssue : issueData;
 
   const { data: labels } = useQuery(
-    convexQuery(api.labels.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
+    convexQuery(api.labels.list, organizationId ? { organizationId } : "skip"),
   );
 
   const { data: template } = useQuery(
@@ -181,9 +189,9 @@ export default function IssueDetailPage() {
   );
 
   const updateIssue = useMutation(api.issues.update).withOptimisticUpdate((localStore, args) => {
-    if (!activeOrg) return;
+    if (!organizationId) return;
     const current = localStore.getQuery(api.issues.getByNumber, {
-      organizationId: activeOrg.id,
+      organizationId,
       number: issueNumber,
     });
     if (current !== undefined && current !== null) {
@@ -194,22 +202,22 @@ export default function IssueDetailPage() {
       if (args.labelIds !== undefined) updates.labelIds = args.labelIds;
       localStore.setQuery(
         api.issues.getByNumber,
-        { organizationId: activeOrg.id, number: issueNumber },
+        { organizationId, number: issueNumber },
         { ...current, ...updates },
       );
     }
   });
   const updateStatus = useMutation(api.issues.updateStatus).withOptimisticUpdate(
     (localStore, args) => {
-      if (!activeOrg) return;
+      if (!organizationId) return;
       const current = localStore.getQuery(api.issues.getByNumber, {
-        organizationId: activeOrg.id,
+        organizationId,
         number: issueNumber,
       });
       if (current !== undefined && current !== null) {
         localStore.setQuery(
           api.issues.getByNumber,
-          { organizationId: activeOrg.id, number: issueNumber },
+          { organizationId, number: issueNumber },
           {
             ...current,
             status: args.status,
@@ -225,7 +233,7 @@ export default function IssueDetailPage() {
   const [editDescription, setEditDescription] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  if (!activeOrg || issue === undefined) {
+  if (!organizationId || issue === undefined) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -345,7 +353,7 @@ export default function IssueDetailPage() {
       labels={labels}
       parsedSchema={parsedSchema}
       parsedTemplateData={parsedTemplateData}
-      organizationId={activeOrg.id}
+      organizationId={organizationId}
       templateName={template?.name ?? "Template Data"}
       editing={editing}
       editTitle={editTitle}

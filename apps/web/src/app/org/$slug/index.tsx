@@ -4,7 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 import { api } from "@/convex";
 import { queryClient } from "@/components/providers";
@@ -12,6 +12,7 @@ import { usePaginatedQuery } from "convex/react";
 import { Plus } from "lucide-react";
 import { Link } from "@/components/ui/link";
 import { prefetchOrgRouteData } from "@/lib/route-prefetch";
+import { getIssueListSnapshot, setIssueListSnapshot } from "@/lib/issue-snapshot-cache";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { FilterBar } from "@/components/issues/filter-bar";
 import { IssueRow } from "@/components/issues/issue-row";
-import { useActiveOrganization } from "@/hooks/use-organization";
+import { useActiveOrganization, useOrganizations } from "@/hooks/use-organization";
 
 type IssueStatus = "open" | "in_progress" | "closed";
 const ISSUE_STATUSES = new Set<IssueStatus>(["open", "in_progress", "closed"]);
@@ -71,13 +72,18 @@ function IssueListContent() {
   const params = Route.useParams();
   const search = Route.useSearch();
   const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations } = useOrganizations();
   const statusFilter = search.status;
+  const organizationId =
+    activeOrg?.slug === params.slug
+      ? activeOrg.id
+      : organizations?.find((organization) => organization.slug === params.slug)?.id;
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.issues.list,
-    activeOrg
+    organizationId
       ? {
-          organizationId: activeOrg.id,
+          organizationId,
           status: statusFilter,
         }
       : "skip",
@@ -85,10 +91,23 @@ function IssueListContent() {
   );
 
   const { data: labels } = useQuery(
-    convexQuery(api.labels.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
+    convexQuery(api.labels.list, organizationId ? { organizationId } : "skip"),
   );
 
-  const isLoading = !activeOrg || results === undefined;
+  const cachedResults = organizationId
+    ? getIssueListSnapshot(organizationId, statusFilter)
+    : undefined;
+  const displayResults = status === "LoadingFirstPage" ? (cachedResults ?? results) : results;
+  const isInitialLoading = !organizationId || (status === "LoadingFirstPage" && !cachedResults);
+
+  useEffect(() => {
+    if (!organizationId || status === "LoadingFirstPage") {
+      return;
+    }
+
+    setIssueListSnapshot(organizationId, statusFilter, results);
+  }, [organizationId, results, status, statusFilter]);
+
   const handleStatusChange = (nextStatus: IssueStatus | undefined) => {
     void navigate({
       to: ".",
@@ -106,9 +125,9 @@ function IssueListContent() {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-4">
           <h1 className="text-sm font-bold">Issues</h1>
-          {!isLoading && results.length > 0 && (
+          {!isInitialLoading && displayResults.length > 0 && (
             <span className="text-xs text-muted-foreground font-mono">
-              {results.length}
+              {displayResults.length}
               {status === "CanLoadMore" ? "+" : ""}
             </span>
           )}
@@ -124,7 +143,7 @@ function IssueListContent() {
 
       {/* Issue list */}
       <ScrollArea className="flex-1">
-        {isLoading ? (
+        {isInitialLoading ? (
           <div className="space-y-0">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -135,7 +154,7 @@ function IssueListContent() {
               </div>
             ))}
           </div>
-        ) : results.length === 0 ? (
+        ) : displayResults.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-16 text-center">
             <p className="mb-1 text-sm font-medium">No issues yet</p>
             <p className="mb-4 text-xs text-muted-foreground">
@@ -154,7 +173,7 @@ function IssueListContent() {
           </div>
         ) : (
           <div>
-            {results.map((issue) => (
+            {displayResults.map((issue) => (
               <IssueRow key={issue._id} issue={issue} labels={labels ?? []} />
             ))}
 

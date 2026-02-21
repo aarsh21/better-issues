@@ -1,8 +1,9 @@
 "use client";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/convex";
+import { clearIssueSnapshots } from "@/lib/issue-snapshot-cache";
 import { useRouter } from "@/lib/navigation";
 
 import {
@@ -20,6 +21,7 @@ import { Button } from "./ui/button";
 
 export function UserMenu() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
 
   if (!user) return null;
@@ -41,6 +43,8 @@ export function UserMenu() {
               authClient.signOut({
                 fetchOptions: {
                   onSuccess: () => {
+                    queryClient.clear();
+                    clearIssueSnapshots();
                     router.push("/");
                   },
                 },

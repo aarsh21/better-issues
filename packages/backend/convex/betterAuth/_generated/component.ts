@@ -32,12 +32,14 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             | {
                 data: {
                   createdAt: number;
+                  displayUsername?: null | string;
                   email: string;
                   emailVerified: boolean;
                   image?: null | string;
                   name: string;
                   updatedAt: number;
                   userId?: null | string;
+                  username?: null | string;
                 };
                 model: "user";
               }
@@ -144,6 +146,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "userId"
+                    | "username"
+                    | "displayUsername"
                     | "_id";
                   operator?:
                     | "lt"
@@ -430,6 +434,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "userId"
+                    | "username"
+                    | "displayUsername"
                     | "_id";
                   operator?:
                     | "lt"
@@ -794,12 +800,14 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 model: "user";
                 update: {
                   createdAt?: number;
+                  displayUsername?: null | string;
                   email?: string;
                   emailVerified?: boolean;
                   image?: null | string;
                   name?: string;
                   updatedAt?: number;
                   userId?: null | string;
+                  username?: null | string;
                 };
                 where?: Array<{
                   connector?: "AND" | "OR";
@@ -811,6 +819,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "userId"
+                    | "username"
+                    | "displayUsername"
                     | "_id";
                   operator?:
                     | "lt"
@@ -1148,12 +1158,14 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 model: "user";
                 update: {
                   createdAt?: number;
+                  displayUsername?: null | string;
                   email?: string;
                   emailVerified?: boolean;
                   image?: null | string;
                   name?: string;
                   updatedAt?: number;
                   userId?: null | string;
+                  username?: null | string;
                 };
                 where?: Array<{
                   connector?: "AND" | "OR";
@@ -1165,6 +1177,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | "createdAt"
                     | "updatedAt"
                     | "userId"
+                    | "username"
+                    | "displayUsername"
                     | "_id";
                   operator?:
                     | "lt"

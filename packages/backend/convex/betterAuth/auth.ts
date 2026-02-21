@@ -3,7 +3,8 @@ import { convex } from "@convex-dev/better-auth/plugins";
 import type { GenericCtx } from "@convex-dev/better-auth/utils";
 import type { BetterAuthOptions } from "better-auth";
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins";
+import { APIError, createAuthMiddleware } from "better-auth/api";
+import { haveIBeenPwned, organization, username } from "better-auth/plugins";
 
 import { components, internal } from "../_generated/api";
 import type { DataModel } from "../_generated/dataModel";
@@ -38,6 +39,22 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       disableSignUp: !signupsEnabled,
       requireEmailVerification: false,
     },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/sign-up/email") {
+          return;
+        }
+
+        const body = ctx.body as Record<string, unknown> | undefined;
+        const usernameValue = body?.username;
+
+        if (typeof usernameValue !== "string" || usernameValue.trim().length === 0) {
+          throw new APIError("BAD_REQUEST", {
+            message: "Username is required",
+          });
+        }
+      }),
+    },
     plugins: [
       convex({
         authConfig,
@@ -57,6 +74,11 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
             });
           },
         },
+      }),
+      username(),
+      haveIBeenPwned({
+        customPasswordCompromisedMessage:
+          "This password appears in known breaches. Please choose a more secure password.",
       }),
     ],
   } satisfies BetterAuthOptions;

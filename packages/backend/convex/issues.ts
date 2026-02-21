@@ -76,7 +76,15 @@ export const list = query({
   }),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
-    if (!user) throw new ConvexError("Not authenticated");
+    if (!user) {
+      return {
+        page: [],
+        isDone: true,
+        continueCursor: args.paginationOpts.cursor ?? "",
+        splitCursor: null,
+        pageStatus: null,
+      };
+    }
     await requireOrgMembership(ctx, user._id, args.organizationId);
 
     // Choose the best index based on which filters are provided.

@@ -36,3 +36,7 @@ export const getIssueSnapshot = (organizationId: string, issueNumber: number) =>
 
   return undefined;
 };
+
+export const clearIssueSnapshots = () => {
+  issueListSnapshots.clear();
+};

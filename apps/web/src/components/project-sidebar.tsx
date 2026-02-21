@@ -23,6 +23,7 @@ import { useTheme } from "next-themes";
 
 import { api } from "@/convex";
 import { authClient } from "@/lib/auth-client";
+import { clearIssueSnapshots } from "@/lib/issue-snapshot-cache";
 import { useRouter } from "@/lib/navigation";
 import { prefetchRouteData } from "@/lib/route-prefetch";
 import { cn } from "@/lib/utils";
@@ -309,6 +310,7 @@ function TeamSwitcher({ onCreateOrg }: { onCreateOrg: () => void }) {
 
 function UserNavMenu() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isMobile } = useSidebar();
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
   const { setTheme, theme } = useTheme();
@@ -401,6 +403,8 @@ function UserNavMenu() {
                 authClient.signOut({
                   fetchOptions: {
                     onSuccess: () => {
+                      queryClient.clear();
+                      clearIssueSnapshots();
                       router.push("/");
                     },
                   },

@@ -20,10 +20,13 @@ export const tables = {
     createdAt: v.number(),
     updatedAt: v.number(),
     userId: v.optional(v.union(v.null(), v.string())),
+    username: v.optional(v.union(v.null(), v.string())),
+    displayUsername: v.optional(v.union(v.null(), v.string())),
   })
     .index("email_name", ["email", "name"])
     .index("name", ["name"])
-    .index("userId", ["userId"]),
+    .index("userId", ["userId"])
+    .index("username", ["username"]),
   session: defineTable({
     expiresAt: v.number(),
     token: v.string(),
@@ -89,7 +92,7 @@ export const tables = {
     .index("organizationId", ["organizationId"])
     .index("userId", ["userId"])
     .index("role", ["role"])
-    .index("organizationId_userId", ["organizationId", "userId"]),
+    .index("by_organization_user_lookup", ["organizationId", "userId"]),
   invitation: defineTable({
     organizationId: v.string(),
     email: v.string(),

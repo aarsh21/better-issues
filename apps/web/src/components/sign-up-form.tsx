@@ -1,21 +1,29 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@/lib/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { clearIssueSnapshots } from "@/lib/issue-snapshot-cache";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
-export default function SignUpForm() {
+type SignUpFormProps = {
+  readonly redirectTo?: string;
+};
+
+export default function SignUpForm({ redirectTo }: SignUpFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const form = useForm({
     defaultValues: {
+      username: "",
       email: "",
       password: "",
       name: "",
@@ -26,10 +34,13 @@ export default function SignUpForm() {
           email: value.email,
           password: value.password,
           name: value.name,
+          username: value.username,
         },
         {
           onSuccess: () => {
-            router.replace("/org");
+            queryClient.clear();
+            clearIssueSnapshots();
+            router.replace(redirectTo ?? "/org");
             toast.success("Account created");
           },
           onError: (error) => {
@@ -41,6 +52,11 @@ export default function SignUpForm() {
     validators: {
       onSubmit: z.object({
         name: z.string().min(2, "Name must be at least 2 characters"),
+        username: z
+          .string()
+          .min(3, "Username must be at least 3 characters")
+          .max(30, "Username must be at most 30 characters")
+          .regex(/^[a-zA-Z0-9_.]+$/, "Only letters, numbers, underscores, and dots are allowed"),
         email: z.email("Invalid email address"),
         password: z.string().min(8, "Password must be at least 8 characters"),
       }),
@@ -65,6 +81,30 @@ export default function SignUpForm() {
               name={field.name}
               placeholder="Jane Doe"
               autoComplete="name"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            {field.state.meta.errors.map((error) => (
+              <p key={error?.message} className="text-xs text-destructive">
+                {error?.message}
+              </p>
+            ))}
+          </div>
+        )}
+      </form.Field>
+
+      <form.Field name="username">
+        {(field) => (
+          <div className="space-y-1.5">
+            <Label htmlFor={field.name} className="text-xs">
+              Username
+            </Label>
+            <Input
+              id={field.name}
+              name={field.name}
+              placeholder="jane_doe"
+              autoComplete="username"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}

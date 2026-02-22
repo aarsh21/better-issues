@@ -1,44 +1,77 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@/lib/navigation";
 import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { clearIssueSnapshots } from "@/lib/issue-snapshot-cache";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
-export default function SignInForm() {
+type SignInFormProps = {
+  readonly redirectTo?: string;
+};
+
+export default function SignInForm({ redirectTo }: SignInFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const form = useForm({
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signIn.email(
+      const identifier = value.identifier.trim();
+      const callbacks = {
+        onSuccess: () => {
+          queryClient.clear();
+          clearIssueSnapshots();
+          router.replace(redirectTo ?? "/org");
+          toast.success("Signed in");
+        },
+        onError: (error: { error: { message?: string; statusText?: string } }) => {
+          toast.error(error.error.message || error.error.statusText);
+        },
+      };
+
+      if (identifier.includes("@")) {
+        await authClient.signIn.email(
+          {
+            email: identifier,
+            password: value.password,
+          },
+          callbacks,
+        );
+        return;
+      }
+
+      await authClient.signIn.username(
         {
-          email: value.email,
+          username: identifier,
           password: value.password,
         },
-        {
-          onSuccess: () => {
-            router.replace("/org");
-            toast.success("Signed in");
-          },
-          onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
-          },
-        },
+        callbacks,
       );
     },
     validators: {
       onSubmit: z.object({
-        email: z.email("Invalid email address"),
+        identifier: z
+          .string()
+          .trim()
+          .min(1, "Email or username is required")
+          .refine((value) => {
+            if (value.includes("@")) {
+              return z.email().safeParse(value).success;
+            }
+
+            return value.length >= 3;
+          }, "Enter a valid email or username"),
         password: z.string().min(8, "Password must be at least 8 characters"),
       }),
     },
@@ -51,18 +84,17 @@ export default function SignInForm() {
       }}
       className="space-y-3"
     >
-      <form.Field name="email">
+      <form.Field name="identifier">
         {(field) => (
           <div className="space-y-1.5">
             <Label htmlFor={field.name} className="text-xs">
-              Email
+              Email or Username
             </Label>
             <Input
               id={field.name}
               name={field.name}
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
+              placeholder="you@example.com or jane_doe"
+              autoComplete="username"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}

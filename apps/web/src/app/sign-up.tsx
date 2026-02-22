@@ -7,19 +7,19 @@ import { useRouter } from "@/lib/navigation";
 import { Suspense, useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
-import SignInForm from "@/components/sign-in-form";
+import SignUpForm from "@/components/sign-up-form";
 import { Link } from "@/components/ui/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { env } from "@better-issues/env/web";
 
-export const Route = createFileRoute("/sign-in")({
+export const Route = createFileRoute("/sign-up")({
   validateSearch: (search) => ({
     returnTo:
       typeof search.returnTo === "string" && search.returnTo.startsWith("/")
         ? search.returnTo
         : undefined,
   }),
-  component: SignInPage,
+  component: SignUpPage,
 });
 
 function AuthenticatedRedirect() {
@@ -32,14 +32,10 @@ function AuthenticatedRedirect() {
   return null;
 }
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const isSignupsEnabled = env.NEXT_PUBLIC_ALLOWED_SIGNUPS !== "false";
   const { returnTo } = Route.useSearch();
-  const signUpHref = returnTo ? `/sign-up?returnTo=${encodeURIComponent(returnTo)}` : "/sign-up";
-
-  console.info(
-    `[better-issues] Sign ups ${isSignupsEnabled ? "enabled" : "disabled"} via NEXT_PUBLIC_ALLOWED_SIGNUPS`,
-  );
+  const signInHref = returnTo ? `/sign-in?returnTo=${encodeURIComponent(returnTo)}` : "/sign-in";
 
   return (
     <div className="flex h-svh items-center justify-center bg-background">
@@ -66,17 +62,19 @@ export default function SignInPage() {
             </div>
             <ModeToggle />
           </div>
-          <SignInForm redirectTo={returnTo} />
-          {!isSignupsEnabled ? (
-            <p className="pt-3 text-center text-xs text-muted-foreground">
-              Sign ups are disabled by the admin.
-            </p>
+          {isSignupsEnabled ? (
+            <>
+              <SignUpForm redirectTo={returnTo} />
+              <p className="pt-3 text-center text-xs text-muted-foreground">
+                Already have an account?{" "}
+                <Link href={signInHref} className="text-foreground underline underline-offset-4">
+                  Sign in
+                </Link>
+              </p>
+            </>
           ) : (
-            <p className="pt-3 text-center text-xs text-muted-foreground">
-              Need an account?{" "}
-              <Link href={signUpHref} className="text-foreground underline underline-offset-4">
-                Create one
-              </Link>
+            <p className="text-center text-xs text-muted-foreground">
+              Sign ups are disabled by the admin.
             </p>
           )}
         </div>

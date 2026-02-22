@@ -105,7 +105,9 @@ export const list = query({
   returns: v.array(labelValidator),
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
-    if (!user) throw new ConvexError("Not authenticated");
+    if (!user) {
+      return [];
+    }
     await requireOrgMembership(ctx, user._id, args.organizationId);
 
     return await ctx.db

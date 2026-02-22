@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './app/__root'
+import { Route as SignUpRouteImport } from './app/sign-up'
 import { Route as SignInRouteImport } from './app/sign-in'
 import { Route as OrgRouteRouteImport } from './app/org/route'
 import { Route as IndexRouteImport } from './app/index'
@@ -24,6 +25,11 @@ import { Route as OrgSlugIssuesNewRouteImport } from './app/org/$slug/issues/new
 import { Route as OrgSlugIssuesNumberRouteImport } from './app/org/$slug/issues/$number'
 import { Route as OrgSlugSettingsTemplatesNewRouteImport } from './app/org/$slug/settings/templates/new'
 
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/org': typeof OrgRouteRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/org/$slug': typeof OrgSlugRouteRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/invite/$id': typeof InviteIdRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/api/health': typeof ApiHealthRoute
   '/invite/$id': typeof InviteIdRoute
   '/org': typeof OrgIndexRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/org': typeof OrgRouteRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/org/$slug': typeof OrgSlugRouteRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/invite/$id': typeof InviteIdRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/'
     | '/org'
     | '/sign-in'
+    | '/sign-up'
     | '/org/$slug'
     | '/api/health'
     | '/invite/$id'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/sign-in'
+    | '/sign-up'
     | '/api/health'
     | '/invite/$id'
     | '/org'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/'
     | '/org'
     | '/sign-in'
+    | '/sign-up'
     | '/org/$slug'
     | '/api/health'
     | '/invite/$id'
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OrgRouteRoute: typeof OrgRouteRouteWithChildren
   SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
   ApiHealthRoute: typeof ApiHealthRoute
   InviteIdRoute: typeof InviteIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -204,6 +217,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
@@ -353,6 +373,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OrgRouteRoute: OrgRouteRouteWithChildren,
   SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
   ApiHealthRoute: ApiHealthRoute,
   InviteIdRoute: InviteIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

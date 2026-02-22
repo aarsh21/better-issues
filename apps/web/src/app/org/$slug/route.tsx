@@ -14,7 +14,11 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "@/lib/navigation";
 import { ProjectSidebar } from "@/components/project-sidebar";
 import { SearchCommand } from "@/components/search-command";
-import { useActiveOrganization, useSetActiveOrganization } from "@/hooks/use-organization";
+import {
+  useActiveOrganization,
+  useOrganizations,
+  useSetActiveOrganization,
+} from "@/hooks/use-organization";
 
 export const Route = createFileRoute("/org/$slug")({
   component: OrgSlugRoute,
@@ -31,7 +35,9 @@ function OrgSlugRoute() {
 export default function OrgSlugLayout({ children }: { children: React.ReactNode }) {
   const params = Route.useParams();
   const [searchOpen, setSearchOpen] = useState(false);
+  const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations } = useOrganizations();
   const setActive = useSetActiveOrganization();
   const ensureDefaultLabels = useMutation(api.labels.ensureDefaults);
   const lastSyncedSlug = useRef<string | null>(null);
@@ -41,6 +47,12 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
   // the cached active org doesn't already match
   useEffect(() => {
     const slug = params.slug;
+    const canResolveSlug =
+      !organizations || organizations.some((organization) => organization.slug === slug);
+    if (!canResolveSlug) {
+      return;
+    }
+
     if (lastSyncedSlug.current === slug) return;
     if (activeOrg && activeOrg.slug === slug) {
       lastSyncedSlug.current = slug;
@@ -48,7 +60,18 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
     }
     lastSyncedSlug.current = slug;
     setActive.mutate({ organizationSlug: slug });
-  }, [params.slug, activeOrg?.slug]);
+  }, [params.slug, activeOrg?.slug, organizations, setActive]);
+
+  useEffect(() => {
+    if (!organizations) {
+      return;
+    }
+
+    const hasOrganization = organizations.some((organization) => organization.slug === params.slug);
+    if (!hasOrganization) {
+      router.replace("/org");
+    }
+  }, [organizations, params.slug, router]);
 
   useEffect(() => {
     if (!activeOrg?.id || seededOrgIds.current.has(activeOrg.id)) {

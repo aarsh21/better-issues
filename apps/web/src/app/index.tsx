@@ -184,13 +184,21 @@ export default function HomePage() {
               <Search className="mb-3 h-4 w-4 text-muted-foreground" />
               <h3 className="mb-1.5 text-xs font-bold">Command palette</h3>
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Hit Cmd+K to search issues, switch teams, or jump to any action. Full-text search
-                across everything.
+                Use Cmd/Ctrl+K to search all issues instantly. Use Cmd/Ctrl+Shift+P for workspace
+                actions like switching teams, creating issues, and changing mode.
               </p>
-              <div className="mt-4 inline-flex items-center gap-1 border border-border bg-card px-2 py-1 text-[10px] text-muted-foreground">
-                <span className="border border-border px-1 text-[9px]">&#8984;</span>
-                <span className="border border-border px-1 text-[9px]">K</span>
-                <span className="ml-1">to search</span>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="inline-flex items-center gap-1 border border-border bg-card px-2 py-1">
+                  <span className="border border-border px-1 text-[9px]">&#8984;/Ctrl</span>
+                  <span className="border border-border px-1 text-[9px]">K</span>
+                  <span className="ml-1">search issues</span>
+                </div>
+                <div className="inline-flex items-center gap-1 border border-border bg-card px-2 py-1">
+                  <span className="border border-border px-1 text-[9px]">&#8984;/Ctrl</span>
+                  <span className="border border-border px-1 text-[9px]">&#8679;</span>
+                  <span className="border border-border px-1 text-[9px]">P</span>
+                  <span className="ml-1">open options</span>
+                </div>
               </div>
             </div>
 

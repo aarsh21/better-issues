@@ -4,6 +4,7 @@ import { getRouteApi, useLocation } from "@tanstack/react-router";
 import { Suspense, useState } from "react";
 import {
   CircleDot,
+  Command,
   Settings,
   Plus,
   Search,
@@ -63,7 +64,13 @@ import { CreateOrgDialog } from "./create-org-dialog";
 
 const orgRouteApi = getRouteApi("/org/$slug");
 
-export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) {
+export function ProjectSidebar({
+  onSearchOpen,
+  onActionCommandOpen,
+}: {
+  onSearchOpen?: () => void;
+  onActionCommandOpen?: () => void;
+}) {
   const router = useRouter();
   const { slug } = orgRouteApi.useParams();
   const pathname = useLocation({
@@ -93,8 +100,19 @@ export function ProjectSidebar({ onSearchOpen }: { onSearchOpen?: () => void }) 
                     <Search />
                     <span>Search</span>
                     <KbdGroup className="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⌘</Kbd>
+                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⌘/Ctrl</Kbd>
                       <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">K</Kbd>
+                    </KbdGroup>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Command options" onClick={onActionCommandOpen}>
+                    <Command />
+                    <span>Commands</span>
+                    <KbdGroup className="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⌘/Ctrl</Kbd>
+                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⇧</Kbd>
+                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">P</Kbd>
                     </KbdGroup>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -5,18 +5,30 @@ import type { Doc } from "@/convex";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Check, Monitor, Moon, Plus, Settings, Sun } from "lucide-react";
+import {
+  Check,
+  CircleDot,
+  Loader2,
+  Monitor,
+  Moon,
+  Plus,
+  Search,
+  Settings,
+  Sun,
+} from "lucide-react";
 import { useTheme } from "next-themes";
-import { useDeferredValue, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { useRouter } from "@/lib/navigation";
 import { api } from "@/convex";
 import {
   useActiveOrganization,
   useOrganizations,
   useSetActiveOrganization,
 } from "@/hooks/use-organization";
+import { useRouter } from "@/lib/navigation";
 
+import { PriorityIndicator } from "@/components/issues/priority-indicator";
+import { StatusIcon } from "@/components/issues/status-badge";
 import {
   Command,
   CommandDialog,
@@ -25,38 +37,52 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandShortcut,
 } from "@/components/ui/command";
-import { StatusIcon } from "@/components/issues/status-badge";
-import { PriorityIndicator } from "@/components/issues/priority-indicator";
 
 const orgRouteApi = getRouteApi("/org/$slug");
 type ThemeMode = "light" | "dark" | "system";
+const SEARCH_DEBOUNCE_MS = 250;
 
-export function SearchCommand({
-  open,
-  onOpenChange,
-}: {
+type CommandDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}) {
+};
+
+export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
   const { slug } = orgRouteApi.useParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const deferredQuery = useDeferredValue(searchQuery);
-  const isStale = searchQuery !== deferredQuery;
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [isDebouncing, setIsDebouncing] = useState(false);
   const { data: activeOrg } = useActiveOrganization();
-  const { data: organizations } = useOrganizations();
-  const setActiveOrganization = useSetActiveOrganization();
-  const { theme, setTheme } = useTheme();
-  const hasSearchQuery = deferredQuery.trim().length > 0;
+  const hasTypedQuery = searchQuery.trim().length > 0;
+  const hasSearchQuery = debouncedQuery.trim().length > 0;
 
-  const { data: issueResults } = useQuery(
+  useEffect(() => {
+    const trimmedSearchQuery = searchQuery.trim();
+    if (trimmedSearchQuery.length === 0) {
+      setDebouncedQuery("");
+      setIsDebouncing(false);
+      return;
+    }
+
+    setIsDebouncing(true);
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedQuery(trimmedSearchQuery);
+      setIsDebouncing(false);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const { data: issueResults, isFetching: isIssueSearchFetching } = useQuery(
     convexQuery(
       api.issues.search,
       activeOrg && hasSearchQuery
         ? {
             organizationId: activeOrg.id,
-            searchQuery: deferredQuery,
+            searchQuery: debouncedQuery,
           }
         : "skip",
     ),
@@ -75,14 +101,15 @@ export function SearchCommand({
         : "skip",
     ),
   );
-  const { data: templates } = useQuery(
-    convexQuery(api.templates.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
-  );
   const recentIssues = recentIssuesPage?.page ?? [];
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
-    if (!nextOpen) setSearchQuery("");
+    if (!nextOpen) {
+      setSearchQuery("");
+      setDebouncedQuery("");
+      setIsDebouncing(false);
+    }
   };
 
   const navigateTo = (to: string) => {
@@ -92,6 +119,128 @@ export function SearchCommand({
 
   const handleSelectIssue = (issueNumber: number) => {
     navigateTo(`/org/${slug}/issues/${issueNumber}`);
+  };
+
+  const searchContextLabel = activeOrg ? `Team: ${activeOrg.name}` : "Search all issues";
+  const isSearchLoading = hasTypedQuery && (isDebouncing || isIssueSearchFetching);
+  const issueCount = issueResults?.length ?? 0;
+  const issueCountLabel = issueCount === 1 ? "1 issue found" : `${issueCount} issues found`;
+
+  return (
+    <CommandDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Issue Search"
+      description="Search all issues by title, number, status, and priority."
+    >
+      <Command>
+        <div className="border-b border-border/70 px-3 py-2">
+          <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+            {searchContextLabel}
+          </p>
+        </div>
+        <CommandInput
+          placeholder="Search all issues..."
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
+        {hasTypedQuery && (
+          <div className="text-muted-foreground flex items-center gap-2 border-b border-border/70 px-3 py-1.5 text-xs">
+            {isSearchLoading ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>Searching issues...</span>
+              </>
+            ) : (
+              <>
+                <Search className="size-3.5" />
+                <span>{issueCountLabel}</span>
+              </>
+            )}
+          </div>
+        )}
+        <CommandList
+          className={isSearchLoading ? "opacity-60 transition-opacity" : "transition-opacity"}
+        >
+          <CommandEmpty>
+            {hasTypedQuery
+              ? isSearchLoading
+                ? "Searching issues..."
+                : "No issues found."
+              : "Type to search issues..."}
+          </CommandEmpty>
+
+          {hasSearchQuery && issueResults && issueResults.length > 0 && (
+            <CommandGroup heading="Issues">
+              {issueResults.map((issue) => (
+                <CommandItem
+                  key={issue._id}
+                  value={`${issue.number} ${issue.title}`}
+                  onSelect={() => handleSelectIssue(issue.number)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex w-full items-center gap-3">
+                    <StatusIcon status={issue.status} />
+                    <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                      #{issue.number}
+                    </span>
+                    <span className="truncate text-sm">{issue.title}</span>
+                    <div className="ml-auto">
+                      <PriorityIndicator priority={issue.priority} />
+                    </div>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {!hasTypedQuery && recentIssues.length > 0 && (
+            <CommandGroup heading="Recent Issues">
+              {recentIssues.map((issue) => (
+                <CommandItem
+                  key={issue._id}
+                  value={`${issue.number} ${issue.title} recent`}
+                  onSelect={() => handleSelectIssue(issue.number)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex w-full items-center gap-3">
+                    <StatusIcon status={issue.status} />
+                    <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                      #{issue.number}
+                    </span>
+                    <span className="truncate text-sm">{issue.title}</span>
+                    <div className="ml-auto">
+                      <PriorityIndicator priority={issue.priority} />
+                    </div>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </Command>
+    </CommandDialog>
+  );
+}
+
+type ActionCommandProps = CommandDialogProps & {
+  onIssueSearchOpen?: () => void;
+};
+
+export function ActionCommand({ open, onOpenChange, onIssueSearchOpen }: ActionCommandProps) {
+  const { slug } = orgRouteApi.useParams();
+  const router = useRouter();
+  const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations } = useOrganizations();
+  const setActiveOrganization = useSetActiveOrganization();
+  const { theme, setTheme } = useTheme();
+  const { data: templates } = useQuery(
+    convexQuery(api.templates.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
+  );
+
+  const navigateTo = (to: string) => {
+    onOpenChange(false);
+    router.push(to);
   };
 
   const handleSwitchTeam = (organizationSlug: string) => {
@@ -110,29 +259,44 @@ export function SearchCommand({
     setTheme(nextTheme);
   };
 
-  return (
-    <CommandDialog open={open} onOpenChange={handleOpenChange}>
-      <Command>
-        <CommandInput
-          placeholder="Search issues..."
-          value={searchQuery}
-          onValueChange={setSearchQuery}
-        />
-        <CommandList className={isStale ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          <CommandEmpty>
-            {searchQuery.trim()
-              ? isStale
-                ? "Searching..."
-                : "No commands or issues found."
-              : "Type to search issues or commands..."}
-          </CommandEmpty>
+  const handleOpenIssueSearch = () => {
+    onOpenChange(false);
+    onIssueSearchOpen?.();
+  };
 
-          <CommandGroup heading="Go To">
+  return (
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Commands"
+      description="Run navigation and workspace actions."
+    >
+      <Command>
+        <div className="border-b border-border/70 px-3 py-2">
+          <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
+            Command Shift P or Ctrl Shift P
+          </p>
+        </div>
+        <CommandInput placeholder="Search options..." />
+        <CommandList>
+          <CommandEmpty>No options found.</CommandEmpty>
+
+          <CommandGroup heading="Quick Actions">
+            <CommandItem
+              value={`search issues ${slug}`}
+              onSelect={handleOpenIssueSearch}
+              className="cursor-pointer"
+            >
+              <Search className="size-3.5" />
+              <span className="text-sm">Search Issues</span>
+              <CommandShortcut>Ctrl/Cmd K</CommandShortcut>
+            </CommandItem>
             <CommandItem
               value={`issues ${slug}`}
               onSelect={() => navigateTo(`/org/${slug}`)}
               className="cursor-pointer"
             >
+              <CircleDot className="size-3.5" />
               <span className="text-sm">All Issues</span>
             </CommandItem>
             <CommandItem
@@ -235,62 +399,6 @@ export function SearchCommand({
               {theme === "system" && <Check className="ml-auto size-3.5" />}
             </CommandItem>
           </CommandGroup>
-
-          {hasSearchQuery && issueResults && issueResults.length > 0 && (
-            <CommandGroup heading="Issues">
-              {issueResults.map(
-                (issue: {
-                  _id: string;
-                  number: number;
-                  title: string;
-                  status: "open" | "in_progress" | "closed";
-                  priority: "low" | "medium" | "high" | "urgent";
-                }) => (
-                  <CommandItem
-                    key={issue._id}
-                    value={`${issue.number} ${issue.title}`}
-                    onSelect={() => handleSelectIssue(issue.number)}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 w-full">
-                      <StatusIcon status={issue.status} />
-                      <span className="text-xs text-muted-foreground font-mono shrink-0">
-                        #{issue.number}
-                      </span>
-                      <span className="truncate text-sm">{issue.title}</span>
-                      <div className="ml-auto">
-                        <PriorityIndicator priority={issue.priority} />
-                      </div>
-                    </div>
-                  </CommandItem>
-                ),
-              )}
-            </CommandGroup>
-          )}
-
-          {!hasSearchQuery && recentIssues.length > 0 && (
-            <CommandGroup heading="Recent Issues">
-              {recentIssues.map((issue) => (
-                <CommandItem
-                  key={issue._id}
-                  value={`${issue.number} ${issue.title} recent`}
-                  onSelect={() => handleSelectIssue(issue.number)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <StatusIcon status={issue.status} />
-                    <span className="text-xs text-muted-foreground font-mono shrink-0">
-                      #{issue.number}
-                    </span>
-                    <span className="truncate text-sm">{issue.title}</span>
-                    <div className="ml-auto">
-                      <PriorityIndicator priority={issue.priority} />
-                    </div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
         </CommandList>
       </Command>
     </CommandDialog>

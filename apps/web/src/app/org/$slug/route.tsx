@@ -2,7 +2,7 @@
 
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CircleDot, Search, Settings } from "lucide-react";
+import { CircleDot, Command, Search, Settings } from "lucide-react";
 import { useMutation } from "convex/react";
 
 import { api } from "@/convex";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRouter } from "@/lib/navigation";
 import { ProjectSidebar } from "@/components/project-sidebar";
-import { SearchCommand } from "@/components/search-command";
+import { ActionCommand, IssueSearchCommand } from "@/components/search-command";
 import {
   useActiveOrganization,
   useOrganizations,
@@ -23,6 +23,20 @@ import {
 export const Route = createFileRoute("/org/$slug")({
   component: OrgSlugRoute,
 });
+
+function isEditableElement(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+}
 
 function OrgSlugRoute() {
   return (
@@ -34,7 +48,8 @@ function OrgSlugRoute() {
 
 export default function OrgSlugLayout({ children }: { children: React.ReactNode }) {
   const params = Route.useParams();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [issueSearchOpen, setIssueSearchOpen] = useState(false);
+  const [actionCommandOpen, setActionCommandOpen] = useState(false);
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
   const { data: organizations } = useOrganizations();
@@ -84,24 +99,52 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
     });
   }, [activeOrg?.id, ensureDefaultLabels]);
 
-  // Cmd+K shortcut
+  // Global command shortcuts:
+  // Cmd/Ctrl+K => issue search
+  // Cmd/Ctrl+Shift+P => command options
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if (isEditableElement(e.target)) {
+        return;
+      }
+
+      const hasModifier = e.metaKey || e.ctrlKey;
+      if (!hasModifier || e.altKey) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (key === "k" && !e.shiftKey) {
         e.preventDefault();
-        setSearchOpen(true);
+        setActionCommandOpen(false);
+        setIssueSearchOpen(true);
+        return;
+      }
+
+      if (key === "p" && e.shiftKey) {
+        e.preventDefault();
+        setIssueSearchOpen(false);
+        setActionCommandOpen(true);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const openIssueSearch = useCallback(() => {
+    setActionCommandOpen(false);
+    setIssueSearchOpen(true);
+  }, []);
+
+  const openActionCommand = useCallback(() => {
+    setIssueSearchOpen(false);
+    setActionCommandOpen(true);
+  }, []);
 
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <ProjectSidebar onSearchOpen={openSearch} />
+        <ProjectSidebar onSearchOpen={openIssueSearch} onActionCommandOpen={openActionCommand} />
 
         <SidebarInset>
           {/*TODO: show org name in header, not just slug (need to fetch org data here or lift name up from sidebar)*/}
@@ -110,9 +153,22 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
         </SidebarInset>
 
         {/* Fixed toolbar: toggle always visible, quick actions when collapsed */}
-        <FloatingToolbar slug={params.slug} onSearchOpen={openSearch} />
+        <FloatingToolbar
+          slug={params.slug}
+          onSearchOpen={openIssueSearch}
+          onActionCommandOpen={openActionCommand}
+        />
 
-        {searchOpen && <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />}
+        {issueSearchOpen && (
+          <IssueSearchCommand open={issueSearchOpen} onOpenChange={setIssueSearchOpen} />
+        )}
+        {actionCommandOpen && (
+          <ActionCommand
+            open={actionCommandOpen}
+            onOpenChange={setActionCommandOpen}
+            onIssueSearchOpen={openIssueSearch}
+          />
+        )}
       </SidebarProvider>
     </TooltipProvider>
   );
@@ -145,7 +201,15 @@ function ContentHeader({ orgName }: { orgName: string }) {
 
 /* ── Fixed toolbar — stays at same position regardless of sidebar state ── */
 
-function FloatingToolbar({ slug, onSearchOpen }: { slug: string; onSearchOpen: () => void }) {
+function FloatingToolbar({
+  slug,
+  onSearchOpen,
+  onActionCommandOpen,
+}: {
+  slug: string;
+  onSearchOpen: () => void;
+  onActionCommandOpen: () => void;
+}) {
   const router = useRouter();
   const { state, isMobile } = useSidebar();
 
@@ -168,6 +232,15 @@ function FloatingToolbar({ slug, onSearchOpen }: { slug: string; onSearchOpen: (
           >
             <Search className="size-4" />
             <span className="sr-only">Search</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onActionCommandOpen}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Command className="size-4" />
+            <span className="sr-only">Commands</span>
           </Button>
           <Button
             variant="ghost"

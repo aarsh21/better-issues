@@ -19,6 +19,7 @@ import {
   useOrganizations,
   useSetActiveOrganization,
 } from "@/hooks/use-organization";
+import { matchesShortcut, useShortcutSettings } from "@/hooks/use-keybinds";
 
 export const Route = createFileRoute("/org/$slug")({
   component: OrgSlugRoute,
@@ -48,8 +49,8 @@ function OrgSlugRoute() {
 
 export default function OrgSlugLayout({ children }: { children: React.ReactNode }) {
   const params = Route.useParams();
-  const [issueSearchOpen, setIssueSearchOpen] = useState(false);
-  const [actionCommandOpen, setActionCommandOpen] = useState(false);
+  const [activeCommand, setActiveCommand] = useState<"issueSearch" | "actionCommand" | null>(null);
+  const { shortcuts } = useShortcutSettings();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
   const { data: organizations } = useOrganizations();
@@ -99,47 +100,38 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
     });
   }, [activeOrg?.id, ensureDefaultLabels]);
 
-  // Global command shortcuts:
-  // Cmd/Ctrl+K => issue search
-  // Cmd/Ctrl+Shift+P => command options
+  // Global command shortcuts are configurable in Settings > Shortcuts.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isEditableElement(e.target)) {
         return;
       }
 
-      const hasModifier = e.metaKey || e.ctrlKey;
-      if (!hasModifier || e.altKey) {
+      if (matchesShortcut(e, shortcuts.search)) {
+        e.preventDefault();
+        setActiveCommand("issueSearch");
         return;
       }
 
-      const key = e.key.toLowerCase();
-      if (key === "k" && !e.shiftKey) {
+      if (matchesShortcut(e, shortcuts.commandPrompt)) {
         e.preventDefault();
-        setActionCommandOpen(false);
-        setIssueSearchOpen(true);
-        return;
-      }
-
-      if (key === "p" && e.shiftKey) {
-        e.preventDefault();
-        setIssueSearchOpen(false);
-        setActionCommandOpen(true);
+        setActiveCommand("actionCommand");
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [shortcuts]);
 
   const openIssueSearch = useCallback(() => {
-    setActionCommandOpen(false);
-    setIssueSearchOpen(true);
+    setActiveCommand("issueSearch");
   }, []);
 
   const openActionCommand = useCallback(() => {
-    setIssueSearchOpen(false);
-    setActionCommandOpen(true);
+    setActiveCommand("actionCommand");
   }, []);
+
+  const issueSearchOpen = activeCommand === "issueSearch";
+  const actionCommandOpen = activeCommand === "actionCommand";
 
   return (
     <TooltipProvider>
@@ -160,13 +152,21 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
         />
 
         {issueSearchOpen && (
-          <IssueSearchCommand open={issueSearchOpen} onOpenChange={setIssueSearchOpen} />
+          <IssueSearchCommand
+            open={issueSearchOpen}
+            onOpenChange={(open) => {
+              setActiveCommand(open ? "issueSearch" : null);
+            }}
+          />
         )}
         {actionCommandOpen && (
           <ActionCommand
             open={actionCommandOpen}
-            onOpenChange={setActionCommandOpen}
+            onOpenChange={(open) => {
+              setActiveCommand(open ? "actionCommand" : null);
+            }}
             onIssueSearchOpen={openIssueSearch}
+            shortcuts={shortcuts}
           />
         )}
       </SidebarProvider>

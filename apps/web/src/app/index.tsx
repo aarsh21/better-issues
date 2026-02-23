@@ -185,7 +185,8 @@ export default function HomePage() {
               <h3 className="mb-1.5 text-xs font-bold">Command palette</h3>
               <p className="text-[11px] leading-relaxed text-muted-foreground">
                 Use Cmd/Ctrl+K to search all issues instantly. Use Cmd/Ctrl+Shift+P for workspace
-                actions like switching teams, creating issues, and changing mode.
+                actions like switching teams, creating issues, and changing mode. Both are
+                customizable in Settings.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                 <div className="inline-flex items-center gap-1 border border-border bg-card px-2 py-1">

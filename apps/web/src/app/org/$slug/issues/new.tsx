@@ -286,7 +286,9 @@ function TemplateSelectionStep({
 
           <div className="flex items-center gap-2 border border-border px-3 py-2 text-sm text-muted-foreground">
             <Search className="h-3.5 w-3.5" />
-            <span>Tip: Search existing issues before creating a new one (Cmd/Ctrl+K)</span>
+            <span>
+              Tip: Search existing issues before creating a new one (Cmd/Ctrl+K by default).
+            </span>
           </div>
 
           <button

@@ -38,13 +38,14 @@ const cloneDefaults = (): ShortcutSettings => ({
 });
 
 export const normalizeShortcutKey = (rawKey: string): string | null => {
-  const normalized = rawKey.trim().toLowerCase();
-  if (normalized.length === 0 || MODIFIER_KEYS.has(normalized)) {
-    return null;
+  const lowered = rawKey.toLowerCase();
+  if (lowered === " ") {
+    return "space";
   }
 
-  if (normalized === " ") {
-    return "space";
+  const normalized = lowered.trim();
+  if (normalized.length === 0 || MODIFIER_KEYS.has(normalized)) {
+    return null;
   }
 
   if (normalized === "escape") {

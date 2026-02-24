@@ -2,7 +2,7 @@
 
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useMutation } from "convex/react";
 import {
@@ -11,16 +11,20 @@ import {
   ClipboardCopy,
   Clock,
   FileText,
+  Keyboard,
   Plus,
   Tag,
   Trash2,
+  User,
   UserPlus,
   Users,
   X,
 } from "lucide-react";
-import { useMemo, useReducer, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
 
+import type { Id } from "@/convex";
 import { api } from "@/convex";
 import { queryClient } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -47,6 +51,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabelBadge } from "@/components/issues/label-badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   useActiveOrganization,
   useCancelInvitation,
@@ -55,6 +60,12 @@ import {
   useMembers,
   useRemoveMember,
 } from "@/hooks/use-organization";
+import {
+  formatShortcut,
+  normalizeShortcutKey,
+  shortcutBindingsEqual,
+  useShortcutSettings,
+} from "@/hooks/use-keybinds";
 import { authClient } from "@/lib/auth-client";
 import { usePathname } from "@/lib/navigation";
 import { prefetchOrgRouteData } from "@/lib/route-prefetch";
@@ -73,8 +84,16 @@ const LABEL_COLORS = [
   "#1e293b",
 ];
 
-type SettingsTab = "labels" | "templates" | "members";
-const SETTINGS_TABS = new Set<SettingsTab>(["labels", "templates", "members"]);
+type SettingsTab = "profile" | "shortcuts" | "labels" | "templates" | "members";
+const SETTINGS_TABS = new Set<SettingsTab>([
+  "profile",
+  "shortcuts",
+  "labels",
+  "templates",
+  "members",
+]);
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const USERNAME_REGEX = /^[a-zA-Z0-9_.]+$/;
 
 export const Route = createFileRoute("/org/$slug/settings")({
   validateSearch: (search) => ({
@@ -97,7 +116,7 @@ export default function SettingsPage() {
   const pathname = usePathname();
   const settingsPath = `/org/${params.slug}/settings`;
   const isSettingsIndex = pathname === settingsPath || pathname === `${settingsPath}/`;
-  const activeTab = search.tab ?? "labels";
+  const selectedTab = search.tab ?? "profile";
 
   if (!isSettingsIndex) {
     return <Outlet />;
@@ -117,7 +136,7 @@ export default function SettingsPage() {
       <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-2xl">
           <Tabs
-            value={activeTab}
+            value={selectedTab}
             onValueChange={(value) => {
               const nextTab = value as SettingsTab;
               void navigate({
@@ -129,20 +148,51 @@ export default function SettingsPage() {
               });
             }}
           >
-            <TabsList>
-              <TabsTrigger value="labels" className="gap-1.5">
+            <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+              <TabsTrigger
+                value="profile"
+                className="gap-1.5 border border-border data-[state=active]:bg-muted"
+              >
+                <User className="h-3.5 w-3.5" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger
+                value="shortcuts"
+                className="gap-1.5 border border-border data-[state=active]:bg-muted"
+              >
+                <Keyboard className="h-3.5 w-3.5" />
+                Shortcuts
+              </TabsTrigger>
+              <TabsTrigger
+                value="labels"
+                className="gap-1.5 border border-border data-[state=active]:bg-muted"
+              >
                 <Tag className="h-3.5 w-3.5" />
                 Labels
               </TabsTrigger>
-              <TabsTrigger value="templates" className="gap-1.5">
+              <TabsTrigger
+                value="templates"
+                className="gap-1.5 border border-border data-[state=active]:bg-muted"
+              >
                 <FileText className="h-3.5 w-3.5" />
                 Templates
               </TabsTrigger>
-              <TabsTrigger value="members" className="gap-1.5">
+              <TabsTrigger
+                value="members"
+                className="gap-1.5 border border-border data-[state=active]:bg-muted"
+              >
                 <Users className="h-3.5 w-3.5" />
                 Members
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="profile" className="mt-6">
+              {activeOrg && <ProfileTab organizationId={activeOrg.id} />}
+            </TabsContent>
+
+            <TabsContent value="shortcuts" className="mt-6">
+              <ShortcutsTab />
+            </TabsContent>
 
             <TabsContent value="labels" className="mt-6">
               {activeOrg && <LabelsTab organizationId={activeOrg.id} />}
@@ -157,6 +207,420 @@ export default function SettingsPage() {
             </TabsContent>
           </Tabs>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const getUsernameValidationError = (username: string): string | null => {
+  if (username.length === 0) {
+    return "Username is required";
+  }
+
+  if (username.length < 3) {
+    return "Username must be at least 3 characters";
+  }
+
+  if (username.length > 30) {
+    return "Username must be at most 30 characters";
+  }
+
+  if (!USERNAME_REGEX.test(username)) {
+    return "Only letters, numbers, underscores, and dots are allowed";
+  }
+
+  return null;
+};
+
+function ProfileTab({ organizationId }: { organizationId: string }) {
+  const queryClient = useQueryClient();
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
+  const generateAvatarUploadUrl = useMutation(api.files.generateAvatarUploadUrl);
+  const createAvatarReference = useMutation(api.files.createAvatarReference);
+  const [state, dispatch] = useReducer(
+    (
+      current: {
+        usernameDraft: string | null;
+        isSavingUsername: boolean;
+        isUploadingImage: boolean;
+        isRemovingImage: boolean;
+      },
+      action:
+        | { type: "setUsernameDraft"; usernameDraft: string }
+        | { type: "setIsSavingUsername"; isSavingUsername: boolean }
+        | { type: "setIsUploadingImage"; isUploadingImage: boolean }
+        | { type: "setIsRemovingImage"; isRemovingImage: boolean },
+    ) => {
+      switch (action.type) {
+        case "setUsernameDraft":
+          return {
+            ...current,
+            usernameDraft: action.usernameDraft,
+          };
+        case "setIsSavingUsername":
+          return {
+            ...current,
+            isSavingUsername: action.isSavingUsername,
+          };
+        case "setIsUploadingImage":
+          return {
+            ...current,
+            isUploadingImage: action.isUploadingImage,
+          };
+        case "setIsRemovingImage":
+          return {
+            ...current,
+            isRemovingImage: action.isRemovingImage,
+          };
+        default:
+          return current;
+      }
+    },
+    {
+      usernameDraft: null,
+      isSavingUsername: false,
+      isUploadingImage: false,
+      isRemovingImage: false,
+    },
+  );
+
+  const currentUsername = user?.username?.trim() ?? "";
+  const usernameInputValue = state.usernameDraft ?? user?.username ?? "";
+  const normalizedUsername = usernameInputValue.trim();
+  const usernameError = getUsernameValidationError(normalizedUsername);
+  const hasUsernameChanged = state.usernameDraft !== null && normalizedUsername !== currentUsername;
+  const initial =
+    user?.name?.charAt(0)?.toUpperCase() ?? user?.email?.charAt(0)?.toUpperCase() ?? "U";
+
+  const handleSaveUsername = async () => {
+    if (!user || usernameError || !hasUsernameChanged) {
+      return;
+    }
+
+    dispatch({ type: "setIsSavingUsername", isSavingUsername: true });
+    const { error } = await authClient.updateUser({ username: normalizedUsername });
+    dispatch({ type: "setIsSavingUsername", isSavingUsername: false });
+
+    if (error) {
+      toast.error(error.message || error.statusText || "Failed to save username");
+      return;
+    }
+
+    dispatch({ type: "setUsernameDraft", usernameDraft: normalizedUsername });
+    toast.success(currentUsername ? "Username updated" : "Username added");
+    await queryClient.invalidateQueries();
+  };
+
+  const handleUploadProfilePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
+      toast.error("Profile photos must be 5MB or smaller");
+      return;
+    }
+
+    dispatch({ type: "setIsUploadingImage", isUploadingImage: true });
+
+    let uploadResponse: Response;
+    let uploadToken: string;
+    try {
+      const avatarUpload = await generateAvatarUploadUrl({ organizationId });
+      uploadToken = avatarUpload.uploadToken;
+      uploadResponse = await fetch(avatarUpload.uploadUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": file.type,
+        },
+        body: file,
+      });
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to upload profile photo"));
+      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+      return;
+    }
+
+    if (!uploadResponse.ok) {
+      toast.error("Failed to upload profile photo");
+      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+      return;
+    }
+
+    const uploadResult = (await uploadResponse.json()) as {
+      storageId?: Id<"_storage">;
+    };
+    if (!uploadResult.storageId) {
+      toast.error("Could not save uploaded profile photo");
+      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+      return;
+    }
+
+    let imageReference: string;
+    try {
+      imageReference = await createAvatarReference({
+        organizationId,
+        storageId: uploadResult.storageId,
+        uploadToken,
+      });
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Could not authorize uploaded profile photo"));
+      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+      return;
+    }
+
+    const { error } = await authClient.updateUser({ image: imageReference });
+    if (error) {
+      toast.error(error.message || error.statusText || "Failed to update profile photo");
+      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+      return;
+    }
+
+    toast.success("Profile photo updated");
+    await queryClient.invalidateQueries();
+    dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+  };
+
+  const handleRemoveProfilePhoto = async () => {
+    dispatch({ type: "setIsRemovingImage", isRemovingImage: true });
+    const { error } = await authClient.updateUser({ image: null });
+    dispatch({ type: "setIsRemovingImage", isRemovingImage: false });
+
+    if (error) {
+      toast.error(error.message || error.statusText || "Failed to remove profile photo");
+      return;
+    }
+
+    toast.success("Profile photo removed");
+    await queryClient.invalidateQueries();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-sm font-medium">Profile</h2>
+        <p className="text-xs text-muted-foreground">
+          Update your username, avatar, and identity across your workspace.
+        </p>
+      </div>
+
+      <div className="space-y-4 border border-border p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar size="lg">
+              <AvatarImage src={user?.image ?? undefined} alt={user?.name ?? "User avatar"} />
+              <AvatarFallback className="text-sm font-semibold">{initial}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-medium">Profile photo</p>
+              <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 5MB.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                void handleUploadProfilePhoto(event);
+              }}
+              className="max-w-[220px]"
+              disabled={state.isUploadingImage || state.isRemovingImage}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void handleRemoveProfilePhoto();
+              }}
+              disabled={state.isUploadingImage || state.isRemovingImage || !user?.image}
+            >
+              {state.isRemovingImage ? "Removing..." : "Remove"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4 border border-border p-4">
+        <div>
+          <h3 className="text-sm font-medium">Username</h3>
+          <p className="text-xs text-muted-foreground">
+            Older accounts might not have one yet. Add one to sign in with username.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="profile-username">Username</Label>
+          <Input
+            id="profile-username"
+            value={usernameInputValue}
+            onChange={(event) =>
+              dispatch({ type: "setUsernameDraft", usernameDraft: event.target.value })
+            }
+            placeholder="jane_doe"
+            autoComplete="username"
+          />
+          {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            onClick={() => {
+              void handleSaveUsername();
+            }}
+            disabled={state.isSavingUsername || !hasUsernameChanged || usernameError !== null}
+          >
+            {state.isSavingUsername ? "Saving..." : "Save Username"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ShortcutTarget = "search" | "commandPrompt";
+
+function ShortcutsTab() {
+  const { shortcuts, resetShortcuts, updateShortcut } = useShortcutSettings();
+  const [capturingTarget, setCapturingTarget] = useState<ShortcutTarget | null>(null);
+
+  useEffect(() => {
+    if (!capturingTarget) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        setCapturingTarget(null);
+        return;
+      }
+
+      if (!(event.metaKey || event.ctrlKey)) {
+        return;
+      }
+
+      const normalizedKey = normalizeShortcutKey(event.key);
+      if (!normalizedKey) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const nextBinding = {
+        key: normalizedKey,
+        shift: event.shiftKey,
+        alt: event.altKey,
+      };
+
+      const otherTarget: ShortcutTarget = capturingTarget === "search" ? "commandPrompt" : "search";
+      if (shortcutBindingsEqual(nextBinding, shortcuts[otherTarget])) {
+        toast.error("This shortcut is already used. Pick a different combination.");
+        return;
+      }
+
+      updateShortcut(capturingTarget, nextBinding);
+      toast.success(`Shortcut updated to ${formatShortcut(nextBinding)}`);
+      setCapturingTarget(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [capturingTarget, shortcuts, updateShortcut]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-sm font-medium">Keyboard Shortcuts</h2>
+        <p className="text-xs text-muted-foreground">
+          Customize keys for issue search and the command prompt.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <ShortcutRow
+          title="Issue search"
+          description="Opens the issue search dialog"
+          bindingLabel={formatShortcut(shortcuts.search)}
+          isCapturing={capturingTarget === "search"}
+          onCaptureToggle={() => {
+            setCapturingTarget((current) => (current === "search" ? null : "search"));
+          }}
+        />
+
+        <ShortcutRow
+          title="Command prompt"
+          description="Opens the workspace command dialog"
+          bindingLabel={formatShortcut(shortcuts.commandPrompt)}
+          isCapturing={capturingTarget === "commandPrompt"}
+          onCaptureToggle={() => {
+            setCapturingTarget((current) => (current === "commandPrompt" ? null : "commandPrompt"));
+          }}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          Press Escape to cancel capture. Shortcuts always use Ctrl/Cmd as the base modifier.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            resetShortcuts();
+            setCapturingTarget(null);
+            toast.success("Shortcuts reset to defaults");
+          }}
+        >
+          Reset to defaults
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ShortcutRow({
+  title,
+  description,
+  bindingLabel,
+  isCapturing,
+  onCaptureToggle,
+}: {
+  title: string;
+  description: string;
+  bindingLabel: string;
+  isCapturing: boolean;
+  onCaptureToggle: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="border border-border px-2 py-1 font-mono text-xs text-muted-foreground">
+          {bindingLabel}
+        </span>
+        <Button variant={isCapturing ? "default" : "outline"} size="sm" onClick={onCaptureToggle}>
+          {isCapturing ? "Listening..." : "Change"}
+        </Button>
       </div>
     </div>
   );

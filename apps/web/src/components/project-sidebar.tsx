@@ -33,6 +33,7 @@ import {
   useActiveOrganization,
   useSetActiveOrganization,
 } from "@/hooks/use-organization";
+import { getShortcutDisplayParts, useShortcutSettings } from "@/hooks/use-keybinds";
 
 import {
   Sidebar,
@@ -58,7 +59,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { CreateOrgDialog } from "./create-org-dialog";
 
@@ -72,6 +73,7 @@ export function ProjectSidebar({
   onActionCommandOpen?: () => void;
 }) {
   const router = useRouter();
+  const { shortcuts } = useShortcutSettings();
   const { slug } = orgRouteApi.useParams();
   const pathname = useLocation({
     select: (location) => location.pathname,
@@ -100,8 +102,14 @@ export function ProjectSidebar({
                     <Search />
                     <span>Search</span>
                     <KbdGroup className="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⌘/Ctrl</Kbd>
-                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">K</Kbd>
+                      {getShortcutDisplayParts(shortcuts.search).map((part) => (
+                        <Kbd
+                          key={`search-shortcut-${part}`}
+                          className="h-6 min-w-6 px-2 text-sm font-semibold"
+                        >
+                          {part}
+                        </Kbd>
+                      ))}
                     </KbdGroup>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -110,9 +118,14 @@ export function ProjectSidebar({
                     <Command />
                     <span>Commands</span>
                     <KbdGroup className="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⌘/Ctrl</Kbd>
-                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">⇧</Kbd>
-                      <Kbd className="h-6 min-w-6 px-2 text-sm font-semibold">P</Kbd>
+                      {getShortcutDisplayParts(shortcuts.commandPrompt).map((part) => (
+                        <Kbd
+                          key={`command-shortcut-${part}`}
+                          className="h-6 min-w-6 px-2 text-sm font-semibold"
+                        >
+                          {part}
+                        </Kbd>
+                      ))}
                     </KbdGroup>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -351,6 +364,7 @@ function UserNavMenu() {
             )}
           >
             <Avatar className="h-8 w-8 shrink-0">
+              <AvatarImage src={user.image ?? undefined} alt={user.name ?? user.email} />
               <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
                 {initial}
               </AvatarFallback>
@@ -373,6 +387,7 @@ function UserNavMenu() {
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left">
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.image ?? undefined} alt={user.name ?? user.email} />
                     <AvatarFallback className="text-xs font-semibold">{initial}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left leading-tight">

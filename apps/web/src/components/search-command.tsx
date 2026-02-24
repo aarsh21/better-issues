@@ -1,6 +1,7 @@
 "use client";
 
 import type { Doc } from "@/convex";
+import type { ShortcutSettings } from "@/hooks/use-keybinds";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ import {
   useSetActiveOrganization,
 } from "@/hooks/use-organization";
 import { useRouter } from "@/lib/navigation";
+import { formatShortcut } from "@/hooks/use-keybinds";
 
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { StatusIcon } from "@/components/issues/status-badge";
@@ -54,27 +56,18 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [isDebouncing, setIsDebouncing] = useState(false);
   const { data: activeOrg } = useActiveOrganization();
-  const hasTypedQuery = searchQuery.trim().length > 0;
-  const hasSearchQuery = debouncedQuery.trim().length > 0;
+  const trimmedSearchQuery = searchQuery.trim();
+  const hasTypedQuery = trimmedSearchQuery.length > 0;
+  const hasSearchQuery = hasTypedQuery && debouncedQuery.length > 0;
 
   useEffect(() => {
-    const trimmedSearchQuery = searchQuery.trim();
-    if (trimmedSearchQuery.length === 0) {
-      setDebouncedQuery("");
-      setIsDebouncing(false);
-      return;
-    }
-
-    setIsDebouncing(true);
     const timeoutId = window.setTimeout(() => {
       setDebouncedQuery(trimmedSearchQuery);
-      setIsDebouncing(false);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [trimmedSearchQuery]);
 
   const { data: issueResults, isFetching: isIssueSearchFetching } = useQuery(
     convexQuery(
@@ -108,7 +101,6 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
     if (!nextOpen) {
       setSearchQuery("");
       setDebouncedQuery("");
-      setIsDebouncing(false);
     }
   };
 
@@ -122,6 +114,7 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
   };
 
   const searchContextLabel = activeOrg ? `Team: ${activeOrg.name}` : "Search all issues";
+  const isDebouncing = hasTypedQuery && debouncedQuery !== trimmedSearchQuery;
   const isSearchLoading = hasTypedQuery && (isDebouncing || isIssueSearchFetching);
   const issueCount = issueResults?.length ?? 0;
   const issueCountLabel = issueCount === 1 ? "1 issue found" : `${issueCount} issues found`;
@@ -225,9 +218,15 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
 
 type ActionCommandProps = CommandDialogProps & {
   onIssueSearchOpen?: () => void;
+  shortcuts: ShortcutSettings;
 };
 
-export function ActionCommand({ open, onOpenChange, onIssueSearchOpen }: ActionCommandProps) {
+export function ActionCommand({
+  open,
+  onOpenChange,
+  onIssueSearchOpen,
+  shortcuts,
+}: ActionCommandProps) {
   const { slug } = orgRouteApi.useParams();
   const router = useRouter();
   const { data: activeOrg } = useActiveOrganization();
@@ -274,7 +273,7 @@ export function ActionCommand({ open, onOpenChange, onIssueSearchOpen }: ActionC
       <Command>
         <div className="border-b border-border/70 px-3 py-2">
           <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
-            Command Shift P or Ctrl Shift P
+            {formatShortcut(shortcuts.commandPrompt)}
           </p>
         </div>
         <CommandInput placeholder="Search options..." />
@@ -289,7 +288,7 @@ export function ActionCommand({ open, onOpenChange, onIssueSearchOpen }: ActionC
             >
               <Search className="size-3.5" />
               <span className="text-sm">Search Issues</span>
-              <CommandShortcut>Ctrl/Cmd K</CommandShortcut>
+              <CommandShortcut>{formatShortcut(shortcuts.search)}</CommandShortcut>
             </CommandItem>
             <CommandItem
               value={`issues ${slug}`}

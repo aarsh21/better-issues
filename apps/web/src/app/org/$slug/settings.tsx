@@ -24,6 +24,7 @@ import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
 
+import type { Id } from "@/convex";
 import { api } from "@/convex";
 import { queryClient } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -115,8 +116,7 @@ export default function SettingsPage() {
   const pathname = usePathname();
   const settingsPath = `/org/${params.slug}/settings`;
   const isSettingsIndex = pathname === settingsPath || pathname === `${settingsPath}/`;
-  const [activeTab, setActiveTab] = useState<SettingsTab>(search.tab ?? "profile");
-  const selectedTab = search.tab ?? activeTab;
+  const selectedTab = search.tab ?? "profile";
 
   if (!isSettingsIndex) {
     return <Outlet />;
@@ -139,7 +139,6 @@ export default function SettingsPage() {
             value={selectedTab}
             onValueChange={(value) => {
               const nextTab = value as SettingsTab;
-              setActiveTab(nextTab);
               void navigate({
                 to: ".",
                 search: (prev) => ({
@@ -244,7 +243,8 @@ const getUsernameValidationError = (username: string): string | null => {
 function ProfileTab({ organizationId }: { organizationId: string }) {
   const queryClient = useQueryClient();
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
-  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const generateAvatarUploadUrl = useMutation(api.files.generateAvatarUploadUrl);
+  const createAvatarReference = useMutation(api.files.createAvatarReference);
   const [state, dispatch] = useReducer(
     (
       current: {
@@ -340,9 +340,11 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
     dispatch({ type: "setIsUploadingImage", isUploadingImage: true });
 
     let uploadResponse: Response;
+    let uploadToken: string;
     try {
-      const uploadUrl = await generateUploadUrl({ organizationId });
-      uploadResponse = await fetch(uploadUrl, {
+      const avatarUpload = await generateAvatarUploadUrl({ organizationId });
+      uploadToken = avatarUpload.uploadToken;
+      uploadResponse = await fetch(avatarUpload.uploadUrl, {
         method: "POST",
         headers: {
           "Content-Type": file.type,
@@ -362,7 +364,7 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
     }
 
     const uploadResult = (await uploadResponse.json()) as {
-      storageId?: string;
+      storageId?: Id<"_storage">;
     };
     if (!uploadResult.storageId) {
       toast.error("Could not save uploaded profile photo");
@@ -370,7 +372,20 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
       return;
     }
 
-    const { error } = await authClient.updateUser({ image: `storage:${uploadResult.storageId}` });
+    let imageReference: string;
+    try {
+      imageReference = await createAvatarReference({
+        organizationId,
+        storageId: uploadResult.storageId,
+        uploadToken,
+      });
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Could not authorize uploaded profile photo"));
+      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+      return;
+    }
+
+    const { error } = await authClient.updateUser({ image: imageReference });
     if (error) {
       toast.error(error.message || error.statusText || "Failed to update profile photo");
       dispatch({ type: "setIsUploadingImage", isUploadingImage: false });

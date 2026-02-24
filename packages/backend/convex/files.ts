@@ -4,9 +4,16 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
-import { authComponent } from "./auth";
+import {
+  authComponent,
+  createAvatarUploadToken,
+  createProfileImageReference,
+  resolveAvatarUploadToken,
+} from "./auth";
 import { requireOrgMembership, requirePermission } from "./lib/permissions";
 import { parseTemplateSchema } from "./lib/templateSchema";
+
+const MAX_AVATAR_UPLOAD_TOKEN_AGE_MS = 15 * 60 * 1_000;
 
 type TemplateFileValue = {
   storageId: Id<"_storage">;
@@ -129,6 +136,36 @@ export const generateUploadUrl = mutation({
   },
 });
 
+export const generateAvatarUploadUrl = mutation({
+  args: {
+    organizationId: v.string(),
+  },
+  returns: v.object({
+    uploadUrl: v.string(),
+    uploadToken: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
+
+    const issuedAt = Date.now();
+    const [uploadUrl, uploadToken] = await Promise.all([
+      ctx.storage.generateUploadUrl(),
+      createAvatarUploadToken({
+        organizationId: args.organizationId,
+        userId: user._id,
+        issuedAt,
+      }),
+    ]);
+
+    return {
+      uploadUrl,
+      uploadToken,
+    };
+  },
+});
+
 export const getUrls = query({
   args: {
     organizationId: v.string(),
@@ -162,6 +199,41 @@ export const getUrls = query({
         };
       }),
     );
+  },
+});
+
+export const createAvatarReference = mutation({
+  args: {
+    organizationId: v.string(),
+    storageId: v.id("_storage"),
+    uploadToken: v.string(),
+  },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new ConvexError("Not authenticated");
+    await requireOrgMembership(ctx, user._id, args.organizationId);
+
+    const uploadToken = await resolveAvatarUploadToken({
+      token: args.uploadToken,
+      userId: user._id,
+      organizationId: args.organizationId,
+      maxAgeMs: MAX_AVATAR_UPLOAD_TOKEN_AGE_MS,
+    });
+    if (!uploadToken) {
+      throw new ConvexError("Avatar upload authorization expired. Please upload again.");
+    }
+
+    const storageDocument = await ctx.db.system.get(args.storageId);
+    if (!storageDocument || storageDocument._creationTime < uploadToken.issuedAt) {
+      throw new ConvexError("Invalid avatar file. Please upload a new image.");
+    }
+
+    return await createProfileImageReference({
+      organizationId: args.organizationId,
+      storageId: args.storageId,
+      userId: user._id,
+    });
   },
 });
 

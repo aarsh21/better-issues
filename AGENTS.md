@@ -1,15 +1,15 @@
 # AGENTS
 
 better-issues is a premium issue tracker with best-in-market UI and UX.
-It is a Turbo monorepo with a single Next.js app and a Convex backend.
+It is a Turbo monorepo with a single TanStack Start app and a Convex backend.
 Treat every change as user-facing and keep design quality high.
 
 **Project Structure**
 
-- `apps/web/` — Next.js app
-- `apps/web/src/` — App Router pages, components, hooks, lib, styles
+- `apps/web/` — TanStack Start app
+- `apps/web/src/` — TanStack Router route modules (`app/`), components, hooks, lib, styles
 - `apps/web/public/` — Static assets
-- `apps/web/next.config.ts` — Next.js config (standalone output, typed routes, React Compiler)
+- `apps/web/vite.config.ts` — Vite and TanStack Start config
 - `packages/backend/convex/` — Convex backend (schema, functions, auth, http)
 - `packages/env/` — Shared env schema
 
@@ -40,10 +40,10 @@ Treat every change as user-facing and keep design quality high.
 - Use double quotes, semicolons, 2-space indentation, trailing commas in multiline literals.
 - Prefer `const`, `readonly` props, and named exports.
 
-**React and Next.js**
+**React and TanStack Start**
 
-- App Router; default to Server Components. Add `"use client"` only when required.
-- Respect typed routes in `next.config.ts`. Keep layouts/pages small.
+- TanStack Router file-based routes live in `apps/web/src/app/`; keep route modules small and focused.
+- Respect generated route artifacts like `apps/web/src/routeTree.gen.ts`; do not hand-edit generated files.
 
 **Convex Backend**
 
@@ -69,7 +69,9 @@ Treat every change as user-facing and keep design quality high.
 
 - better-auth-best-practices
 - frontend-design
-- next-best-practices
+- tanstack-start-best-practices
+- tanstack-router-best-practices
+- tanstack-query-best-practices
 - ui-ux-pro-max
 - vercel-react-best-practices
 - web-design-guidelines

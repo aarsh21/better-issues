@@ -14,6 +14,8 @@ import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
 import type * as issues from "../issues.js";
 import type * as labels from "../labels.js";
+import type * as lib_logger from "../lib/logger.js";
+import type * as lib_logging from "../lib/logging.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_templateSchema from "../lib/templateSchema.js";
 import type * as privateData from "../privateData.js";
@@ -32,6 +34,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   issues: typeof issues;
   labels: typeof labels;
+  "lib/logger": typeof lib_logger;
+  "lib/logging": typeof lib_logging;
   "lib/permissions": typeof lib_permissions;
   "lib/templateSchema": typeof lib_templateSchema;
   privateData: typeof privateData;

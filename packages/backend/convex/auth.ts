@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 
 import type { Id } from "./_generated/dataModel";
-import { query } from "./_generated/server";
+
 import { authComponent, createAuth } from "./betterAuth/auth";
+import { loggedQuery } from "./lib/logging";
 import { requireOrgMembership } from "./lib/permissions";
 
 export { authComponent, createAuth };
@@ -261,7 +262,7 @@ const authUserValidator = v.object({
   userId: v.optional(v.union(v.null(), v.string())),
 });
 
-export const getCurrentUser = query({
+export const getCurrentUser = loggedQuery("auth.getCurrentUser")({
   args: {},
   returns: v.union(authUserValidator, v.null()),
   handler: async (ctx) => {

@@ -2,8 +2,9 @@ import type { MutationCtx } from "./_generated/server";
 
 import { ConvexError, v } from "convex/values";
 
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { authComponent } from "./auth";
+import { loggedQuery, loggedMutation } from "./lib/logging";
 import { requireOrgMembership, requirePermission } from "./lib/permissions";
 
 const DEFAULT_LABELS: ReadonlyArray<{
@@ -98,7 +99,7 @@ const labelValidator = v.object({
   description: v.optional(v.string()),
 });
 
-export const list = query({
+export const list = loggedQuery("labels.list")({
   args: {
     organizationId: v.string(),
   },
@@ -117,7 +118,7 @@ export const list = query({
   },
 });
 
-export const create = mutation({
+export const create = loggedMutation("labels.create")({
   args: {
     organizationId: v.string(),
     name: v.string(),
@@ -166,7 +167,7 @@ export const seedDefaultsForOrganization = internalMutation({
   },
 });
 
-export const ensureDefaults = mutation({
+export const ensureDefaults = loggedMutation("labels.ensureDefaults")({
   args: {
     organizationId: v.string(),
   },
@@ -180,7 +181,7 @@ export const ensureDefaults = mutation({
   },
 });
 
-export const update = mutation({
+export const update = loggedMutation("labels.update")({
   args: {
     labelId: v.id("labels"),
     name: v.optional(v.string()),
@@ -209,7 +210,7 @@ export const update = mutation({
   },
 });
 
-export const remove = mutation({
+export const remove = loggedMutation("labels.remove")({
   args: {
     labelId: v.id("labels"),
   },

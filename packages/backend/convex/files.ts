@@ -3,13 +3,13 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
 import {
   authComponent,
   createAvatarUploadToken,
   createProfileImageReference,
   resolveAvatarUploadToken,
 } from "./auth";
+import { loggedQuery, loggedMutation } from "./lib/logging";
 import { requireOrgMembership, requirePermission } from "./lib/permissions";
 import { parseTemplateSchema } from "./lib/templateSchema";
 
@@ -122,7 +122,7 @@ async function getIssueStorageIds(
   return collectIssueStorageIds(issue, template);
 }
 
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = loggedMutation("files.generateUploadUrl")({
   args: {
     organizationId: v.string(),
   },
@@ -136,7 +136,7 @@ export const generateUploadUrl = mutation({
   },
 });
 
-export const generateAvatarUploadUrl = mutation({
+export const generateAvatarUploadUrl = loggedMutation("files.generateAvatarUploadUrl")({
   args: {
     organizationId: v.string(),
   },
@@ -166,7 +166,7 @@ export const generateAvatarUploadUrl = mutation({
   },
 });
 
-export const getUrls = query({
+export const getUrls = loggedQuery("files.getUrls")({
   args: {
     organizationId: v.string(),
     issueId: v.id("issues"),
@@ -202,7 +202,7 @@ export const getUrls = query({
   },
 });
 
-export const createAvatarReference = mutation({
+export const createAvatarReference = loggedMutation("files.createAvatarReference")({
   args: {
     organizationId: v.string(),
     storageId: v.id("_storage"),
@@ -237,7 +237,7 @@ export const createAvatarReference = mutation({
   },
 });
 
-export const remove = mutation({
+export const remove = loggedMutation("files.remove")({
   args: {
     organizationId: v.string(),
     issueId: v.id("issues"),

@@ -8,340 +8,339 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './app/__root'
-import { Route as SignUpRouteImport } from './app/sign-up'
-import { Route as SignInRouteImport } from './app/sign-in'
-import { Route as OrgRouteRouteImport } from './app/org/route'
-import { Route as IndexRouteImport } from './app/index'
-import { Route as OrgIndexRouteImport } from './app/org/index'
-import { Route as InviteIdRouteImport } from './app/invite/$id'
-import { Route as ApiHealthRouteImport } from './app/api/health'
-import { Route as OrgSlugRouteRouteImport } from './app/org/$slug/route'
-import { Route as OrgSlugIndexRouteImport } from './app/org/$slug/index'
-import { Route as OrgSlugSettingsRouteImport } from './app/org/$slug/settings'
-import { Route as ApiAuthReadyRouteImport } from './app/api/auth/ready'
-import { Route as ApiAuthSplatRouteImport } from './app/api/auth/$'
-import { Route as OrgSlugIssuesNewRouteImport } from './app/org/$slug/issues/new'
-import { Route as OrgSlugIssuesNumberRouteImport } from './app/org/$slug/issues/$number'
-import { Route as OrgSlugSettingsTemplatesNewRouteImport } from './app/org/$slug/settings/templates/new'
+import { Route as rootRouteImport } from "./app/__root";
+import { Route as SignUpRouteImport } from "./app/sign-up";
+import { Route as SignInRouteImport } from "./app/sign-in";
+import { Route as OrgRouteRouteImport } from "./app/org/route";
+import { Route as IndexRouteImport } from "./app/index";
+import { Route as OrgIndexRouteImport } from "./app/org/index";
+import { Route as InviteIdRouteImport } from "./app/invite/$id";
+import { Route as ApiHealthRouteImport } from "./app/api/health";
+import { Route as OrgSlugRouteRouteImport } from "./app/org/$slug/route";
+import { Route as OrgSlugIndexRouteImport } from "./app/org/$slug/index";
+import { Route as OrgSlugSettingsRouteImport } from "./app/org/$slug/settings";
+import { Route as ApiAuthReadyRouteImport } from "./app/api/auth/ready";
+import { Route as ApiAuthSplatRouteImport } from "./app/api/auth/$";
+import { Route as OrgSlugIssuesNewRouteImport } from "./app/org/$slug/issues/new";
+import { Route as OrgSlugIssuesNumberRouteImport } from "./app/org/$slug/issues/$number";
+import { Route as OrgSlugSettingsTemplatesNewRouteImport } from "./app/org/$slug/settings/templates/new";
 
 const SignUpRoute = SignUpRouteImport.update({
-  id: '/sign-up',
-  path: '/sign-up',
+  id: "/sign-up",
+  path: "/sign-up",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SignInRoute = SignInRouteImport.update({
-  id: '/sign-in',
-  path: '/sign-in',
+  id: "/sign-in",
+  path: "/sign-in",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const OrgRouteRoute = OrgRouteRouteImport.update({
-  id: '/org',
-  path: '/org',
+  id: "/org",
+  path: "/org",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const OrgIndexRoute = OrgIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => OrgRouteRoute,
-} as any)
+} as any);
 const InviteIdRoute = InviteIdRouteImport.update({
-  id: '/invite/$id',
-  path: '/invite/$id',
+  id: "/invite/$id",
+  path: "/invite/$id",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
+  id: "/api/health",
+  path: "/api/health",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const OrgSlugRouteRoute = OrgSlugRouteRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
+  id: "/$slug",
+  path: "/$slug",
   getParentRoute: () => OrgRouteRoute,
-} as any)
+} as any);
 const OrgSlugIndexRoute = OrgSlugIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => OrgSlugRouteRoute,
-} as any)
+} as any);
 const OrgSlugSettingsRoute = OrgSlugSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => OrgSlugRouteRoute,
-} as any)
+} as any);
 const ApiAuthReadyRoute = ApiAuthReadyRouteImport.update({
-  id: '/api/auth/ready',
-  path: '/api/auth/ready',
+  id: "/api/auth/ready",
+  path: "/api/auth/ready",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+  id: "/api/auth/$",
+  path: "/api/auth/$",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const OrgSlugIssuesNewRoute = OrgSlugIssuesNewRouteImport.update({
-  id: '/issues/new',
-  path: '/issues/new',
+  id: "/issues/new",
+  path: "/issues/new",
   getParentRoute: () => OrgSlugRouteRoute,
-} as any)
+} as any);
 const OrgSlugIssuesNumberRoute = OrgSlugIssuesNumberRouteImport.update({
-  id: '/issues/$number',
-  path: '/issues/$number',
+  id: "/issues/$number",
+  path: "/issues/$number",
   getParentRoute: () => OrgSlugRouteRoute,
-} as any)
-const OrgSlugSettingsTemplatesNewRoute =
-  OrgSlugSettingsTemplatesNewRouteImport.update({
-    id: '/templates/new',
-    path: '/templates/new',
-    getParentRoute: () => OrgSlugSettingsRoute,
-  } as any)
+} as any);
+const OrgSlugSettingsTemplatesNewRoute = OrgSlugSettingsTemplatesNewRouteImport.update({
+  id: "/templates/new",
+  path: "/templates/new",
+  getParentRoute: () => OrgSlugSettingsRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/org': typeof OrgRouteRouteWithChildren
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
-  '/org/$slug': typeof OrgSlugRouteRouteWithChildren
-  '/api/health': typeof ApiHealthRoute
-  '/invite/$id': typeof InviteIdRoute
-  '/org/': typeof OrgIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/auth/ready': typeof ApiAuthReadyRoute
-  '/org/$slug/settings': typeof OrgSlugSettingsRouteWithChildren
-  '/org/$slug/': typeof OrgSlugIndexRoute
-  '/org/$slug/issues/$number': typeof OrgSlugIssuesNumberRoute
-  '/org/$slug/issues/new': typeof OrgSlugIssuesNewRoute
-  '/org/$slug/settings/templates/new': typeof OrgSlugSettingsTemplatesNewRoute
+  "/": typeof IndexRoute;
+  "/org": typeof OrgRouteRouteWithChildren;
+  "/sign-in": typeof SignInRoute;
+  "/sign-up": typeof SignUpRoute;
+  "/org/$slug": typeof OrgSlugRouteRouteWithChildren;
+  "/api/health": typeof ApiHealthRoute;
+  "/invite/$id": typeof InviteIdRoute;
+  "/org/": typeof OrgIndexRoute;
+  "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/auth/ready": typeof ApiAuthReadyRoute;
+  "/org/$slug/settings": typeof OrgSlugSettingsRouteWithChildren;
+  "/org/$slug/": typeof OrgSlugIndexRoute;
+  "/org/$slug/issues/$number": typeof OrgSlugIssuesNumberRoute;
+  "/org/$slug/issues/new": typeof OrgSlugIssuesNewRoute;
+  "/org/$slug/settings/templates/new": typeof OrgSlugSettingsTemplatesNewRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
-  '/api/health': typeof ApiHealthRoute
-  '/invite/$id': typeof InviteIdRoute
-  '/org': typeof OrgIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/auth/ready': typeof ApiAuthReadyRoute
-  '/org/$slug/settings': typeof OrgSlugSettingsRouteWithChildren
-  '/org/$slug': typeof OrgSlugIndexRoute
-  '/org/$slug/issues/$number': typeof OrgSlugIssuesNumberRoute
-  '/org/$slug/issues/new': typeof OrgSlugIssuesNewRoute
-  '/org/$slug/settings/templates/new': typeof OrgSlugSettingsTemplatesNewRoute
+  "/": typeof IndexRoute;
+  "/sign-in": typeof SignInRoute;
+  "/sign-up": typeof SignUpRoute;
+  "/api/health": typeof ApiHealthRoute;
+  "/invite/$id": typeof InviteIdRoute;
+  "/org": typeof OrgIndexRoute;
+  "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/auth/ready": typeof ApiAuthReadyRoute;
+  "/org/$slug/settings": typeof OrgSlugSettingsRouteWithChildren;
+  "/org/$slug": typeof OrgSlugIndexRoute;
+  "/org/$slug/issues/$number": typeof OrgSlugIssuesNumberRoute;
+  "/org/$slug/issues/new": typeof OrgSlugIssuesNewRoute;
+  "/org/$slug/settings/templates/new": typeof OrgSlugSettingsTemplatesNewRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/org': typeof OrgRouteRouteWithChildren
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
-  '/org/$slug': typeof OrgSlugRouteRouteWithChildren
-  '/api/health': typeof ApiHealthRoute
-  '/invite/$id': typeof InviteIdRoute
-  '/org/': typeof OrgIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/auth/ready': typeof ApiAuthReadyRoute
-  '/org/$slug/settings': typeof OrgSlugSettingsRouteWithChildren
-  '/org/$slug/': typeof OrgSlugIndexRoute
-  '/org/$slug/issues/$number': typeof OrgSlugIssuesNumberRoute
-  '/org/$slug/issues/new': typeof OrgSlugIssuesNewRoute
-  '/org/$slug/settings/templates/new': typeof OrgSlugSettingsTemplatesNewRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/org": typeof OrgRouteRouteWithChildren;
+  "/sign-in": typeof SignInRoute;
+  "/sign-up": typeof SignUpRoute;
+  "/org/$slug": typeof OrgSlugRouteRouteWithChildren;
+  "/api/health": typeof ApiHealthRoute;
+  "/invite/$id": typeof InviteIdRoute;
+  "/org/": typeof OrgIndexRoute;
+  "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/auth/ready": typeof ApiAuthReadyRoute;
+  "/org/$slug/settings": typeof OrgSlugSettingsRouteWithChildren;
+  "/org/$slug/": typeof OrgSlugIndexRoute;
+  "/org/$slug/issues/$number": typeof OrgSlugIssuesNumberRoute;
+  "/org/$slug/issues/new": typeof OrgSlugIssuesNewRoute;
+  "/org/$slug/settings/templates/new": typeof OrgSlugSettingsTemplatesNewRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/org'
-    | '/sign-in'
-    | '/sign-up'
-    | '/org/$slug'
-    | '/api/health'
-    | '/invite/$id'
-    | '/org/'
-    | '/api/auth/$'
-    | '/api/auth/ready'
-    | '/org/$slug/settings'
-    | '/org/$slug/'
-    | '/org/$slug/issues/$number'
-    | '/org/$slug/issues/new'
-    | '/org/$slug/settings/templates/new'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/org"
+    | "/sign-in"
+    | "/sign-up"
+    | "/org/$slug"
+    | "/api/health"
+    | "/invite/$id"
+    | "/org/"
+    | "/api/auth/$"
+    | "/api/auth/ready"
+    | "/org/$slug/settings"
+    | "/org/$slug/"
+    | "/org/$slug/issues/$number"
+    | "/org/$slug/issues/new"
+    | "/org/$slug/settings/templates/new";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/sign-in'
-    | '/sign-up'
-    | '/api/health'
-    | '/invite/$id'
-    | '/org'
-    | '/api/auth/$'
-    | '/api/auth/ready'
-    | '/org/$slug/settings'
-    | '/org/$slug'
-    | '/org/$slug/issues/$number'
-    | '/org/$slug/issues/new'
-    | '/org/$slug/settings/templates/new'
+    | "/"
+    | "/sign-in"
+    | "/sign-up"
+    | "/api/health"
+    | "/invite/$id"
+    | "/org"
+    | "/api/auth/$"
+    | "/api/auth/ready"
+    | "/org/$slug/settings"
+    | "/org/$slug"
+    | "/org/$slug/issues/$number"
+    | "/org/$slug/issues/new"
+    | "/org/$slug/settings/templates/new";
   id:
-    | '__root__'
-    | '/'
-    | '/org'
-    | '/sign-in'
-    | '/sign-up'
-    | '/org/$slug'
-    | '/api/health'
-    | '/invite/$id'
-    | '/org/'
-    | '/api/auth/$'
-    | '/api/auth/ready'
-    | '/org/$slug/settings'
-    | '/org/$slug/'
-    | '/org/$slug/issues/$number'
-    | '/org/$slug/issues/new'
-    | '/org/$slug/settings/templates/new'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/org"
+    | "/sign-in"
+    | "/sign-up"
+    | "/org/$slug"
+    | "/api/health"
+    | "/invite/$id"
+    | "/org/"
+    | "/api/auth/$"
+    | "/api/auth/ready"
+    | "/org/$slug/settings"
+    | "/org/$slug/"
+    | "/org/$slug/issues/$number"
+    | "/org/$slug/issues/new"
+    | "/org/$slug/settings/templates/new";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  OrgRouteRoute: typeof OrgRouteRouteWithChildren
-  SignInRoute: typeof SignInRoute
-  SignUpRoute: typeof SignUpRoute
-  ApiHealthRoute: typeof ApiHealthRoute
-  InviteIdRoute: typeof InviteIdRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiAuthReadyRoute: typeof ApiAuthReadyRoute
+  IndexRoute: typeof IndexRoute;
+  OrgRouteRoute: typeof OrgRouteRouteWithChildren;
+  SignInRoute: typeof SignInRoute;
+  SignUpRoute: typeof SignUpRoute;
+  ApiHealthRoute: typeof ApiHealthRoute;
+  InviteIdRoute: typeof InviteIdRoute;
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
+  ApiAuthReadyRoute: typeof ApiAuthReadyRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/sign-up': {
-      id: '/sign-up'
-      path: '/sign-up'
-      fullPath: '/sign-up'
-      preLoaderRoute: typeof SignUpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sign-in': {
-      id: '/sign-in'
-      path: '/sign-in'
-      fullPath: '/sign-in'
-      preLoaderRoute: typeof SignInRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/org': {
-      id: '/org'
-      path: '/org'
-      fullPath: '/org'
-      preLoaderRoute: typeof OrgRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/org/': {
-      id: '/org/'
-      path: '/'
-      fullPath: '/org/'
-      preLoaderRoute: typeof OrgIndexRouteImport
-      parentRoute: typeof OrgRouteRoute
-    }
-    '/invite/$id': {
-      id: '/invite/$id'
-      path: '/invite/$id'
-      fullPath: '/invite/$id'
-      preLoaderRoute: typeof InviteIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/org/$slug': {
-      id: '/org/$slug'
-      path: '/$slug'
-      fullPath: '/org/$slug'
-      preLoaderRoute: typeof OrgSlugRouteRouteImport
-      parentRoute: typeof OrgRouteRoute
-    }
-    '/org/$slug/': {
-      id: '/org/$slug/'
-      path: '/'
-      fullPath: '/org/$slug/'
-      preLoaderRoute: typeof OrgSlugIndexRouteImport
-      parentRoute: typeof OrgSlugRouteRoute
-    }
-    '/org/$slug/settings': {
-      id: '/org/$slug/settings'
-      path: '/settings'
-      fullPath: '/org/$slug/settings'
-      preLoaderRoute: typeof OrgSlugSettingsRouteImport
-      parentRoute: typeof OrgSlugRouteRoute
-    }
-    '/api/auth/ready': {
-      id: '/api/auth/ready'
-      path: '/api/auth/ready'
-      fullPath: '/api/auth/ready'
-      preLoaderRoute: typeof ApiAuthReadyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/org/$slug/issues/new': {
-      id: '/org/$slug/issues/new'
-      path: '/issues/new'
-      fullPath: '/org/$slug/issues/new'
-      preLoaderRoute: typeof OrgSlugIssuesNewRouteImport
-      parentRoute: typeof OrgSlugRouteRoute
-    }
-    '/org/$slug/issues/$number': {
-      id: '/org/$slug/issues/$number'
-      path: '/issues/$number'
-      fullPath: '/org/$slug/issues/$number'
-      preLoaderRoute: typeof OrgSlugIssuesNumberRouteImport
-      parentRoute: typeof OrgSlugRouteRoute
-    }
-    '/org/$slug/settings/templates/new': {
-      id: '/org/$slug/settings/templates/new'
-      path: '/templates/new'
-      fullPath: '/org/$slug/settings/templates/new'
-      preLoaderRoute: typeof OrgSlugSettingsTemplatesNewRouteImport
-      parentRoute: typeof OrgSlugSettingsRoute
-    }
+    "/sign-up": {
+      id: "/sign-up";
+      path: "/sign-up";
+      fullPath: "/sign-up";
+      preLoaderRoute: typeof SignUpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/sign-in": {
+      id: "/sign-in";
+      path: "/sign-in";
+      fullPath: "/sign-in";
+      preLoaderRoute: typeof SignInRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/org": {
+      id: "/org";
+      path: "/org";
+      fullPath: "/org";
+      preLoaderRoute: typeof OrgRouteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/org/": {
+      id: "/org/";
+      path: "/";
+      fullPath: "/org/";
+      preLoaderRoute: typeof OrgIndexRouteImport;
+      parentRoute: typeof OrgRouteRoute;
+    };
+    "/invite/$id": {
+      id: "/invite/$id";
+      path: "/invite/$id";
+      fullPath: "/invite/$id";
+      preLoaderRoute: typeof InviteIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/health": {
+      id: "/api/health";
+      path: "/api/health";
+      fullPath: "/api/health";
+      preLoaderRoute: typeof ApiHealthRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/org/$slug": {
+      id: "/org/$slug";
+      path: "/$slug";
+      fullPath: "/org/$slug";
+      preLoaderRoute: typeof OrgSlugRouteRouteImport;
+      parentRoute: typeof OrgRouteRoute;
+    };
+    "/org/$slug/": {
+      id: "/org/$slug/";
+      path: "/";
+      fullPath: "/org/$slug/";
+      preLoaderRoute: typeof OrgSlugIndexRouteImport;
+      parentRoute: typeof OrgSlugRouteRoute;
+    };
+    "/org/$slug/settings": {
+      id: "/org/$slug/settings";
+      path: "/settings";
+      fullPath: "/org/$slug/settings";
+      preLoaderRoute: typeof OrgSlugSettingsRouteImport;
+      parentRoute: typeof OrgSlugRouteRoute;
+    };
+    "/api/auth/ready": {
+      id: "/api/auth/ready";
+      path: "/api/auth/ready";
+      fullPath: "/api/auth/ready";
+      preLoaderRoute: typeof ApiAuthReadyRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/auth/$": {
+      id: "/api/auth/$";
+      path: "/api/auth/$";
+      fullPath: "/api/auth/$";
+      preLoaderRoute: typeof ApiAuthSplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/org/$slug/issues/new": {
+      id: "/org/$slug/issues/new";
+      path: "/issues/new";
+      fullPath: "/org/$slug/issues/new";
+      preLoaderRoute: typeof OrgSlugIssuesNewRouteImport;
+      parentRoute: typeof OrgSlugRouteRoute;
+    };
+    "/org/$slug/issues/$number": {
+      id: "/org/$slug/issues/$number";
+      path: "/issues/$number";
+      fullPath: "/org/$slug/issues/$number";
+      preLoaderRoute: typeof OrgSlugIssuesNumberRouteImport;
+      parentRoute: typeof OrgSlugRouteRoute;
+    };
+    "/org/$slug/settings/templates/new": {
+      id: "/org/$slug/settings/templates/new";
+      path: "/templates/new";
+      fullPath: "/org/$slug/settings/templates/new";
+      preLoaderRoute: typeof OrgSlugSettingsTemplatesNewRouteImport;
+      parentRoute: typeof OrgSlugSettingsRoute;
+    };
   }
 }
 
 interface OrgSlugSettingsRouteChildren {
-  OrgSlugSettingsTemplatesNewRoute: typeof OrgSlugSettingsTemplatesNewRoute
+  OrgSlugSettingsTemplatesNewRoute: typeof OrgSlugSettingsTemplatesNewRoute;
 }
 
 const OrgSlugSettingsRouteChildren: OrgSlugSettingsRouteChildren = {
   OrgSlugSettingsTemplatesNewRoute: OrgSlugSettingsTemplatesNewRoute,
-}
+};
 
 const OrgSlugSettingsRouteWithChildren = OrgSlugSettingsRoute._addFileChildren(
   OrgSlugSettingsRouteChildren,
-)
+);
 
 interface OrgSlugRouteRouteChildren {
-  OrgSlugSettingsRoute: typeof OrgSlugSettingsRouteWithChildren
-  OrgSlugIndexRoute: typeof OrgSlugIndexRoute
-  OrgSlugIssuesNumberRoute: typeof OrgSlugIssuesNumberRoute
-  OrgSlugIssuesNewRoute: typeof OrgSlugIssuesNewRoute
+  OrgSlugSettingsRoute: typeof OrgSlugSettingsRouteWithChildren;
+  OrgSlugIndexRoute: typeof OrgSlugIndexRoute;
+  OrgSlugIssuesNumberRoute: typeof OrgSlugIssuesNumberRoute;
+  OrgSlugIssuesNewRoute: typeof OrgSlugIssuesNewRoute;
 }
 
 const OrgSlugRouteRouteChildren: OrgSlugRouteRouteChildren = {
@@ -349,25 +348,21 @@ const OrgSlugRouteRouteChildren: OrgSlugRouteRouteChildren = {
   OrgSlugIndexRoute: OrgSlugIndexRoute,
   OrgSlugIssuesNumberRoute: OrgSlugIssuesNumberRoute,
   OrgSlugIssuesNewRoute: OrgSlugIssuesNewRoute,
-}
+};
 
-const OrgSlugRouteRouteWithChildren = OrgSlugRouteRoute._addFileChildren(
-  OrgSlugRouteRouteChildren,
-)
+const OrgSlugRouteRouteWithChildren = OrgSlugRouteRoute._addFileChildren(OrgSlugRouteRouteChildren);
 
 interface OrgRouteRouteChildren {
-  OrgSlugRouteRoute: typeof OrgSlugRouteRouteWithChildren
-  OrgIndexRoute: typeof OrgIndexRoute
+  OrgSlugRouteRoute: typeof OrgSlugRouteRouteWithChildren;
+  OrgIndexRoute: typeof OrgIndexRoute;
 }
 
 const OrgRouteRouteChildren: OrgRouteRouteChildren = {
   OrgSlugRouteRoute: OrgSlugRouteRouteWithChildren,
   OrgIndexRoute: OrgIndexRoute,
-}
+};
 
-const OrgRouteRouteWithChildren = OrgRouteRoute._addFileChildren(
-  OrgRouteRouteChildren,
-)
+const OrgRouteRouteWithChildren = OrgRouteRoute._addFileChildren(OrgRouteRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -378,16 +373,16 @@ const rootRouteChildren: RootRouteChildren = {
   InviteIdRoute: InviteIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthReadyRoute: ApiAuthReadyRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
+import type { getRouter } from "./router.tsx";
+import type { createStart } from "@tanstack/react-start";
+declare module "@tanstack/react-start" {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
   }
 }

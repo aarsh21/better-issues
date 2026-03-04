@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { loggedQuery, loggedMutation } from "./lib/logging";
 import { requireOrgMembership, requirePermission } from "./lib/permissions";
 import { parseTemplateSchema } from "./lib/templateSchema";
 
@@ -16,7 +16,7 @@ const templateValidator = v.object({
   createdAt: v.number(),
 });
 
-export const list = query({
+export const list = loggedQuery("templates.list")({
   args: {
     organizationId: v.string(),
   },
@@ -35,7 +35,7 @@ export const list = query({
   },
 });
 
-export const get = query({
+export const get = loggedQuery("templates.get")({
   args: {
     templateId: v.id("issueTemplates"),
   },
@@ -51,7 +51,7 @@ export const get = query({
   },
 });
 
-export const create = mutation({
+export const create = loggedMutation("templates.create")({
   args: {
     organizationId: v.string(),
     name: v.string(),
@@ -87,7 +87,7 @@ export const create = mutation({
   },
 });
 
-export const update = mutation({
+export const update = loggedMutation("templates.update")({
   args: {
     templateId: v.id("issueTemplates"),
     name: v.optional(v.string()),
@@ -125,7 +125,7 @@ export const update = mutation({
   },
 });
 
-export const remove = mutation({
+export const remove = loggedMutation("templates.remove")({
   args: {
     templateId: v.id("issueTemplates"),
   },

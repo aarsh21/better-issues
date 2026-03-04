@@ -1,9 +1,9 @@
 import { ConvexError, v } from "convex/values";
 
-import { query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { loggedQuery } from "./lib/logging";
 
-export const get = query({
+export const get = loggedQuery("privateData.get")({
   args: {},
   returns: v.object({ message: v.string() }),
   handler: async (ctx) => {

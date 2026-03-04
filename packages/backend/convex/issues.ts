@@ -4,8 +4,8 @@ import type { MutationCtx } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { loggedQuery, loggedMutation } from "./lib/logging";
 import { requireOrgMembership, requirePermission } from "./lib/permissions";
 import { parseTemplateSchema, validateTemplateData } from "./lib/templateSchema";
 
@@ -57,7 +57,7 @@ async function requireLabelsInOrganization(
   }
 }
 
-export const list = query({
+export const list = loggedQuery("issues.list")({
   args: {
     organizationId: v.string(),
     status: v.optional(v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed"))),
@@ -131,7 +131,7 @@ export const list = query({
   },
 });
 
-export const search = query({
+export const search = loggedQuery("issues.search")({
   args: {
     organizationId: v.string(),
     searchQuery: v.string(),
@@ -157,7 +157,7 @@ export const search = query({
   },
 });
 
-export const getByNumber = query({
+export const getByNumber = loggedQuery("issues.getByNumber")({
   args: {
     organizationId: v.string(),
     number: v.number(),
@@ -179,7 +179,7 @@ export const getByNumber = query({
   },
 });
 
-export const create = mutation({
+export const create = loggedMutation("issues.create")({
   args: {
     organizationId: v.string(),
     title: v.string(),
@@ -275,7 +275,7 @@ export const create = mutation({
   },
 });
 
-export const update = mutation({
+export const update = loggedMutation("issues.update")({
   args: {
     issueId: v.id("issues"),
     title: v.optional(v.string()),
@@ -316,7 +316,7 @@ export const update = mutation({
   },
 });
 
-export const updateStatus = mutation({
+export const updateStatus = loggedMutation("issues.updateStatus")({
   args: {
     issueId: v.id("issues"),
     status: v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed")),
@@ -354,7 +354,7 @@ export const updateStatus = mutation({
   },
 });
 
-export const remove = mutation({
+export const remove = loggedMutation("issues.remove")({
   args: {
     issueId: v.id("issues"),
   },

@@ -51,6 +51,13 @@
       "url": "https://github.com/drizzle-team/drizzle-orm-docs",
       "branch": "main",
       "searchPath": "src/content/docs"
+    },
+    {
+      "type": "git",
+      "name": "uploadthing",
+      "url": "https://github.com/pingdotgg/uploadthing",
+      "branch": "main",
+      "searchPath": "docs/src/app"
     }
   ],
   "model": "claude-haiku-4.5",

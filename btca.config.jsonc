@@ -44,6 +44,13 @@
       "url": "https://github.com/shadcn-ui/ui",
       "branch": "main",
       "searchPath": "ui/apps/v4/content/docs"
+    },
+    {
+      "type": "git",
+      "name": "drizzle-orm-docs",
+      "url": "https://github.com/drizzle-team/drizzle-orm-docs",
+      "branch": "main",
+      "searchPath": "src/content/docs"
     }
   ],
   "model": "claude-haiku-4.5",

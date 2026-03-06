@@ -76,19 +76,6 @@ Treat every change as user-facing and keep design quality high.
 - vercel-react-best-practices
 - web-design-guidelines
 - avoid-feature-creep
-- convex
-- convex-agents
-- convex-best-practices
-- convex-component-authoring
-- convex-cron-jobs
-- convex-file-storage
-- convex-functions
-- convex-http-actions
-- convex-migrations
-- convex-realtime
-- convex-schema-validator
-- convex-security-audit
-- convex-security-check
 
 **btca Research Tool**
 

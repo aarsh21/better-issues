@@ -15,7 +15,10 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       { title: "better-issues" },
-      { name: "description", content: "A premium issue tracker for small teams" },
+      {
+        name: "description",
+        content: "A premium issue tracker for small teams",
+      },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -30,7 +33,7 @@ function RootLayout() {
       <head>
         <HeadContent />
       </head>
-      <body className="antialiased">
+      <body className="antialiased bg-background">
         <Providers>
           <Outlet />
           {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null}

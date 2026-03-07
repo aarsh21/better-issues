@@ -107,7 +107,7 @@ export function TemplateFieldRenderer({
       });
 
       const nextFiles: TemplateFileValue[] = (uploaded ?? []).map((file) => {
-        const serverData = file.serverData as { attachmentId?: string } | null;
+        const serverData = file.serverData;
         if (!serverData?.attachmentId) {
           throw new Error("Upload failed");
         }

@@ -54,16 +54,19 @@ function IssueListPage() {
     queryKey: ["issues", "infinite", organizationId, search.status],
     enabled: !!organizationId,
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) =>
-      unwrapResponse(
+    queryFn: ({ pageParam }) => {
+      const cursor = typeof pageParam === "string" ? pageParam : undefined;
+
+      return unwrapResponse(
         apiClient.api.v1.issues.get({
           query: {
             organizationId: organizationId!,
-            cursor: pageParam ?? undefined,
+            cursor,
             status: search.status,
           },
         }),
-      ),
+      );
+    },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
 

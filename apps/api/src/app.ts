@@ -282,7 +282,7 @@ const app = new Elysia()
           const normalizedName = body.name.trim().toLowerCase();
           invariant(normalizedName.length > 0, 400, "Label name is required");
 
-          const existing = await db
+          const existing = db
             .select()
             .from(labels)
             .where(
@@ -321,7 +321,7 @@ const app = new Elysia()
         async ({ authSession, params, body }) => {
           const session = requireSession(authSession);
           const label = ensure(
-            await db.select().from(labels).where(eq(labels.id, params.labelId)).get(),
+            db.select().from(labels).where(eq(labels.id, params.labelId)).get(),
             404,
             "Label not found",
           );
@@ -330,7 +330,7 @@ const app = new Elysia()
           const nextName = body.name?.trim();
           if (nextName) {
             const normalizedName = nextName.toLowerCase();
-            const existing = await db
+            const existing = db
               .select()
               .from(labels)
               .where(

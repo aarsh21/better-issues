@@ -7,8 +7,10 @@ export * from "./contracts";
 import type {
   AttachmentDto,
   CursorPage,
+  IssuePriority,
   IssueDetailDto,
   IssueListItemDto,
+  IssueStatus,
   LabelDto,
   SessionDto,
   TemplateDto,
@@ -22,29 +24,170 @@ const getBaseUrl = () => {
   return window.location.origin;
 };
 
-export const apiClient: any = treaty<any>(getBaseUrl(), {
+type ErrorResponseBody = {
+  message?: string;
+};
+
+type ApiResponse<T> =
+  | {
+      data: T;
+      error: null;
+      headers: ResponseInit["headers"];
+      response: Response;
+      status: number;
+    }
+  | {
+      data: null;
+      error: {
+        status: number;
+        value: ErrorResponseBody;
+      };
+      headers: ResponseInit["headers"];
+      response: Response;
+      status: number;
+    };
+
+type ApiRequest<T> = Promise<ApiResponse<T>>;
+
+type UpdateProfileInput = {
+  image?: string | null;
+  name?: string;
+  username?: string | null;
+};
+
+type LabelMutationInput = {
+  color: string;
+  description?: string | null;
+  name: string;
+  organizationId: string;
+};
+
+type UpdateLabelInput = {
+  color?: string;
+  description?: string | null;
+  name?: string;
+};
+
+type TemplateMutationInput = {
+  description: string;
+  name: string;
+  organizationId: string;
+  schema: string;
+};
+
+type UpdateTemplateInput = {
+  description?: string;
+  name?: string;
+  schema?: string;
+};
+
+type IssueListQuery = {
+  assigneeId?: string;
+  cursor?: string;
+  labelId?: string;
+  organizationId: string;
+  q?: string;
+  status?: string;
+};
+
+type CreateIssueInput = {
+  assigneeId?: string | null;
+  attachmentIds: string[];
+  description?: string | null;
+  labelIds: string[];
+  organizationId: string;
+  priority: IssuePriority;
+  templateData?: string | null;
+  templateId?: string | null;
+  title: string;
+};
+
+type UpdateIssueInput = {
+  description?: string | null;
+  labelIds?: string[];
+  priority?: IssuePriority;
+  templateData?: string | null;
+  title?: string;
+};
+
+type UpdateIssueStatusInput = {
+  status: IssueStatus;
+};
+
+type ApiClient = {
+  api: {
+    v1: {
+      attachments: (params: { attachmentId: string }) => {
+        delete: () => ApiRequest<{ ok: true }>;
+      };
+      issues: {
+        "by-number": {
+          get: (options: {
+            query: {
+              number: number;
+              organizationId: string;
+            };
+          }) => ApiRequest<IssueDetailDto | null>;
+        };
+        get: (options: { query: IssueListQuery }) => ApiRequest<CursorPage<IssueListItemDto>>;
+        post: (body: CreateIssueInput) => ApiRequest<{ issueId: string; number: number }>;
+      } & ((params: { issueId: string }) => {
+        attachments: {
+          get: () => ApiRequest<AttachmentDto[]>;
+        };
+        delete: () => ApiRequest<{ ok: true }>;
+        patch: (body: UpdateIssueInput) => ApiRequest<IssueDetailDto>;
+        status: {
+          post: (body: UpdateIssueStatusInput) => ApiRequest<{ ok: true }>;
+        };
+      });
+      labels: {
+        get: (options: {
+          query: {
+            organizationId: string;
+          };
+        }) => ApiRequest<LabelDto[]>;
+        post: (body: LabelMutationInput) => ApiRequest<LabelDto>;
+      } & ((params: { labelId: string }) => {
+        delete: () => ApiRequest<{ ok: true }>;
+        patch: (body: UpdateLabelInput) => ApiRequest<LabelDto>;
+      });
+      me: {
+        get: () => ApiRequest<SessionDto>;
+        profile: {
+          patch: (body: UpdateProfileInput) => ApiRequest<SessionDto>;
+        };
+      };
+      templates: {
+        get: (options: {
+          query: {
+            organizationId: string;
+          };
+        }) => ApiRequest<TemplateDto[]>;
+        post: (body: TemplateMutationInput) => ApiRequest<TemplateDto>;
+      } & ((params: { templateId: string }) => {
+        delete: () => ApiRequest<{ ok: true }>;
+        get: () => ApiRequest<TemplateDto>;
+        patch: (body: UpdateTemplateInput) => ApiRequest<TemplateDto>;
+      });
+    };
+  };
+};
+
+export const apiClient = treaty(getBaseUrl(), {
   fetch: {
     credentials: "include",
   },
-});
+}) as unknown as ApiClient;
 
-const unwrap = async <T>(
-  request: Promise<{ data: T | null; error: unknown; status: number }>,
-): Promise<T> => {
+const unwrap = async <T>(request: ApiRequest<T>): Promise<T> => {
   const response = await request;
   if (response.error) {
     throw new Error(
-      typeof response.error === "object" &&
-        response.error &&
-        "value" in response.error &&
-        typeof (response.error as { value?: { message?: string } }).value?.message === "string"
-        ? (response.error as { value: { message: string } }).value.message
+      typeof response.error.value?.message === "string"
+        ? response.error.value.message
         : "Request failed",
     );
-  }
-
-  if (response.data === null) {
-    throw new Error("Empty response");
   }
 
   return response.data;

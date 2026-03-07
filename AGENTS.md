@@ -4,6 +4,9 @@ better-issues is a premium issue tracker with best-in-market UI and UX.
 It is a Turbo monorepo with a single TanStack Start app and a Convex backend.
 Treat every change as user-facing and keep design quality high.
 
+## Maintainability
+Long term maintainability is a core priority. If you add new functionality, first check if there are shared logic that can be extracted to a separate module. Duplicate logic across mulitple files is a code smell and should be avoided. Don't be afraid to change existing code. Don't take shortcuts by just adding local logic to solve a problem
+
 **Project Structure**
 
 - `apps/web/` — TanStack Start app

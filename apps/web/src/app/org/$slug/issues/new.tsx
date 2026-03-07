@@ -11,6 +11,7 @@ import { useMemo, useReducer } from "react";
 import { toast } from "sonner";
 
 import { api } from "@/convex";
+import { LabelBadge } from "@/components/issues/label-badge";
 import { queryClient } from "@/components/providers";
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
 import { Button } from "@/components/ui/button";
@@ -444,15 +445,13 @@ function IssueFormStep({
                           key={label._id}
                           type="button"
                           onClick={() => onToggleLabel(label._id)}
-                          className="inline-flex items-center gap-1 border px-1.5 py-0.5 text-xs cursor-pointer transition-colors"
+                          aria-pressed={isSelected}
+                          className="cursor-pointer transition-opacity"
                           style={{
-                            borderColor: isSelected ? label.color : undefined,
-                            backgroundColor: isSelected ? `${label.color}20` : undefined,
-                            color: isSelected ? label.color : undefined,
+                            opacity: isSelected ? 1 : 0.4,
                           }}
                         >
-                          <span className="h-2 w-2" style={{ backgroundColor: label.color }} />
-                          {label.name}
+                          <LabelBadge name={label.name} color={label.color} />
                         </button>
                       );
                     })

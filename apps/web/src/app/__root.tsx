@@ -5,6 +5,7 @@ import appCss from "../index.css?url";
 import Providers from "@/components/providers";
 import AppError from "@/components/routes/app-error";
 import NotFound from "@/components/routes/not-found";
+import { useEffect } from "react";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -25,6 +26,11 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      void import("react-grab");
+    }
+  }, []);
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

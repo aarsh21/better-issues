@@ -31,6 +31,7 @@
     "@better-issues/env": "workspace:*",
     "@tanstack/react-query-devtools": "^5.91.3",
     "dotenv": "^17.3.1",
+    "react-grab": "^0.1.26",
     "zod": "^4.3.6"
   },
   "devDependencies": {

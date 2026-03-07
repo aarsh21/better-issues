@@ -1,0 +1,34 @@
+{
+  "languages": {
+    "JavaScript": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["oxfmt", "..."]
+    },
+    "JSX": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["oxfmt", "..."]
+    },
+    "TypeScript": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["oxfmt", "..."]
+    },
+    "TSX": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["oxfmt", "..."]
+    },
+    "JSON": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["oxfmt", "..."]
+    },
+    "JSONC": {
+      "format_on_save": "on",
+      "formatter": "language_server",
+      "language_servers": ["oxfmt", "..."]
+    }
+  }
+}

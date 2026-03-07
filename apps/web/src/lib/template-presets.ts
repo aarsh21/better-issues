@@ -1,4 +1,4 @@
-import type { TemplateSchema } from "@/convex";
+import type { TemplateSchema } from "@/lib/api-contracts";
 
 export type TemplatePreset = {
   name: string;

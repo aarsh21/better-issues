@@ -1,0 +1,29 @@
+{
+  "name": "@better-issues/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./seed": "./src/seed.ts",
+    "./default-labels": "./src/default-labels.ts"
+  },
+  "scripts": {
+    "db:migrate": "bun run src/migrate.ts",
+    "db:seed": "bun run src/seed.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-issues/env": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@better-issues/config": "workspace:*",
+    "@types/bun": "^1.2.21",
+    "@types/node": "^24.3.0",
+    "drizzle-kit": "^0.31.9",
+    "typescript": "catalog:"
+  }
+}

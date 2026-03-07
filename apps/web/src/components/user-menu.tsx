@@ -1,10 +1,11 @@
 "use client";
 
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/convex";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { authClient } from "@/lib/auth-client";
 import { clearIssueSnapshots } from "@/lib/issue-snapshot-cache";
 import { useRouter } from "@/lib/navigation";
+import { useCurrentUser } from "@/hooks/use-session";
 
 import {
   DropdownMenu,
@@ -15,14 +16,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { authClient } from "@/lib/auth-client";
 
 import { Button } from "./ui/button";
 
 export function UserMenu() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
+  const { data: user } = useCurrentUser();
 
   if (!user) return null;
 

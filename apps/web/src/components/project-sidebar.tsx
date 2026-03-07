@@ -18,11 +18,9 @@ import {
   Monitor,
   Users,
 } from "lucide-react";
-import { convexQuery } from "@convex-dev/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 
-import { api } from "@/convex";
 import { authClient } from "@/lib/auth-client";
 import { clearIssueSnapshots } from "@/lib/issue-snapshot-cache";
 import { useRouter } from "@/lib/navigation";
@@ -34,6 +32,7 @@ import {
   useSetActiveOrganization,
 } from "@/hooks/use-organization";
 import { getShortcutDisplayParts, useShortcutSettings } from "@/hooks/use-keybinds";
+import { useCurrentUser } from "@/hooks/use-session";
 
 import {
   Sidebar,
@@ -93,7 +92,6 @@ export function ProjectSidebar({
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Quick Actions */}
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -144,7 +142,6 @@ export function ProjectSidebar({
 
           <SidebarSeparator />
 
-          {/* Main Navigation */}
           <SidebarGroup>
             <SidebarGroupLabel>Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -169,7 +166,6 @@ export function ProjectSidebar({
 
           <SidebarSeparator />
 
-          {/* Quick Filters */}
           <SidebarGroup>
             <SidebarGroupLabel>Filters</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -216,8 +212,6 @@ export function ProjectSidebar({
   );
 }
 
-/* ── Nav Item (uses onClick for navigation to avoid render prop conflicts) ── */
-
 function NavItem({
   href,
   icon: Icon,
@@ -254,8 +248,6 @@ function NavItem({
     </SidebarMenuItem>
   );
 }
-
-/* ── Team Switcher ────────────────────────────────────────────── */
 
 function TeamSwitcher({ onCreateOrg }: { onCreateOrg: () => void }) {
   const router = useRouter();
@@ -337,13 +329,11 @@ function TeamSwitcher({ onCreateOrg }: { onCreateOrg: () => void }) {
   );
 }
 
-/* ── User Nav Menu (Footer) ──────────────────────────────────── */
-
 function UserNavMenu() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isMobile } = useSidebar();
-  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
+  const { data: user } = useCurrentUser();
   const { setTheme, theme } = useTheme();
 
   if (!user) return null;
@@ -453,8 +443,6 @@ function UserNavMenu() {
     </SidebarMenu>
   );
 }
-
-/* ── Quick Filters ───────────────────────────────────────────── */
 
 function QuickFilters({ slug, pathname }: { slug: string; pathname: string }) {
   const searchString = useLocation({

@@ -3,9 +3,7 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { CircleDot, Command, Search, Settings } from "lucide-react";
-import { useMutation } from "convex/react";
 
-import { api } from "@/convex";
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -55,12 +53,8 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
   const { data: activeOrg } = useActiveOrganization();
   const { data: organizations } = useOrganizations();
   const setActive = useSetActiveOrganization();
-  const ensureDefaultLabels = useMutation(api.labels.ensureDefaults);
   const lastSyncedSlug = useRef<string | null>(null);
-  const seededOrgIds = useRef(new Set<string>());
 
-  // Only call setActive when the slug actually changes AND
-  // the cached active org doesn't already match
   useEffect(() => {
     const slug = params.slug;
     const canResolveSlug =
@@ -89,18 +83,6 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
     }
   }, [organizations, params.slug, router]);
 
-  useEffect(() => {
-    if (!activeOrg?.id || seededOrgIds.current.has(activeOrg.id)) {
-      return;
-    }
-
-    seededOrgIds.current.add(activeOrg.id);
-    void ensureDefaultLabels({ organizationId: activeOrg.id }).catch(() => {
-      seededOrgIds.current.delete(activeOrg.id);
-    });
-  }, [activeOrg?.id, ensureDefaultLabels]);
-
-  // Global command shortcuts are configurable in Settings > Shortcuts.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isEditableElement(e.target)) {
@@ -139,12 +121,10 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
         <ProjectSidebar onSearchOpen={openIssueSearch} onActionCommandOpen={openActionCommand} />
 
         <SidebarInset>
-          {/*TODO: show org name in header, not just slug (need to fetch org data here or lift name up from sidebar)*/}
-          <ContentHeader orgName={""} />
+          <ContentHeader orgName={activeOrg?.name ?? ""} />
           <main className="flex-1 overflow-hidden">{children}</main>
         </SidebarInset>
 
-        {/* Fixed toolbar: toggle always visible, quick actions when collapsed */}
         <FloatingToolbar
           slug={params.slug}
           onSearchOpen={openIssueSearch}
@@ -174,8 +154,6 @@ export default function OrgSlugLayout({ children }: { children: React.ReactNode 
   );
 }
 
-/* ── Content header — adapts padding when sidebar is collapsed ── */
-
 function ContentHeader({ orgName }: { orgName: string }) {
   const { state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
@@ -187,7 +165,6 @@ function ContentHeader({ orgName }: { orgName: string }) {
         isCollapsed ? "pl-40 pr-3" : "px-3",
       )}
     >
-      {/* On mobile, keep the trigger in the header (Sheet-based sidebar) */}
       {isMobile && (
         <>
           <SidebarTrigger className="-ml-1" />
@@ -198,8 +175,6 @@ function ContentHeader({ orgName }: { orgName: string }) {
     </header>
   );
 }
-
-/* ── Fixed toolbar — stays at same position regardless of sidebar state ── */
 
 function FloatingToolbar({
   slug,
@@ -213,7 +188,6 @@ function FloatingToolbar({
   const router = useRouter();
   const { state, isMobile } = useSidebar();
 
-  // On mobile, sidebar uses Sheet overlay — no floating toolbar needed
   if (isMobile) return null;
 
   const isCollapsed = state === "collapsed";

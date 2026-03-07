@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./web": "./src/web.ts"
+    "./web": "./src/web.ts",
+    "./api": "./src/api.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

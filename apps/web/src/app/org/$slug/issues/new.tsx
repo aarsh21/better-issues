@@ -1,17 +1,21 @@
 "use client";
 
-import type { Doc, Id, TemplateSchema } from "@/convex";
+import type { Doc, Id, TemplateSchema } from "@/lib/api-contracts";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useMutation } from "convex/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, Search } from "lucide-react";
 import { useMemo, useReducer } from "react";
 import { toast } from "sonner";
 
-import { api } from "@/convex";
-import { queryClient } from "@/components/providers";
+import {
+  apiClient,
+  issueKeys,
+  labelsQueryOptions,
+  parseTemplateSchema,
+  templatesQueryOptions,
+} from "@better-issues/api-client";
+
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +32,8 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useActiveOrganization } from "@/hooks/use-organization";
+import { unwrapResponse } from "@/lib/api";
 import { useRouter } from "@/lib/navigation";
-import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 type IssueStep = "choose-template" | "form";
@@ -116,14 +120,27 @@ function newIssueReducer(state: NewIssueState, action: NewIssueAction): NewIssue
   }
 }
 
+const collectAttachmentIds = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectAttachmentIds(entry));
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  if ("storageId" in value && typeof value.storageId === "string") {
+    return [value.storageId];
+  }
+
+  return Object.values(value).flatMap((entry) => collectAttachmentIds(entry));
+};
+
 export const Route = createFileRoute("/org/$slug/issues/new")({
   validateSearch: (search) => ({
     template: typeof search.template === "string" ? search.template : undefined,
     templates: typeof search.templates === "string" ? search.templates : undefined,
   }),
-  loader: ({ params }) => {
-    void prefetchOrgRouteData(`/org/${encodeURIComponent(params.slug)}/issues/new`, queryClient);
-  },
   component: NewIssuePage,
 });
 
@@ -131,17 +148,18 @@ export default function NewIssuePage() {
   const params = Route.useParams();
   const search = Route.useSearch();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: activeOrg } = useActiveOrganization();
   const [state, dispatch] = useReducer(newIssueReducer, INITIAL_NEW_ISSUE_STATE);
 
-  const { data: templates } = useQuery(
-    convexQuery(api.templates.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
-  );
-  const { data: labels } = useQuery(
-    convexQuery(api.labels.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
-  );
-
-  const createIssue = useMutation(api.issues.create);
+  const { data: templates } = useQuery({
+    ...templatesQueryOptions(activeOrg?.id ?? ""),
+    enabled: !!activeOrg,
+  });
+  const { data: labels } = useQuery({
+    ...labelsQueryOptions(activeOrg?.id ?? ""),
+    enabled: !!activeOrg,
+  });
 
   const templateFromSearchId = search.template ?? search.templates;
 
@@ -169,7 +187,7 @@ export default function NewIssuePage() {
     if (!selectedTemplate) {
       return null;
     }
-    return JSON.parse(selectedTemplate.schema) as TemplateSchema;
+    return parseTemplateSchema(selectedTemplate.schema);
   }, [selectedTemplate]);
 
   const handleTemplateSelect = (template: IssueTemplate | null) => {
@@ -185,21 +203,26 @@ export default function NewIssuePage() {
 
     dispatch({ type: "setSubmitting", submitting: true });
 
-    const result = await createIssue({
-      organizationId: activeOrg.id,
-      title: state.title.trim(),
-      description: state.description.trim() || undefined,
-      priority: state.priority,
-      labelIds: state.selectedLabels,
-      templateId: selectedTemplate?._id,
-      templateData:
-        Object.keys(state.templateData).length > 0 ? JSON.stringify(state.templateData) : undefined,
-    }).then(
+    const result = await unwrapResponse<{ issueId: string; number: number }>(
+      apiClient.api.v1.issues.post({
+        organizationId: activeOrg.id,
+        title: state.title.trim(),
+        description: state.description.trim() || null,
+        priority: state.priority,
+        assigneeId: null,
+        labelIds: state.selectedLabels,
+        templateId: selectedTemplate?._id ?? null,
+        templateData:
+          Object.keys(state.templateData).length > 0 ? JSON.stringify(state.templateData) : null,
+        attachmentIds: Array.from(new Set(collectAttachmentIds(state.templateData))),
+      }),
+    ).then(
       (value) => ({ ok: true, value }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
 
     if (result.ok) {
+      await queryClient.invalidateQueries({ queryKey: issueKeys.all });
       toast.success(`Issue #${result.value.number} created`);
       router.push(`/org/${params.slug}/issues/${result.value.number}`);
     } else {

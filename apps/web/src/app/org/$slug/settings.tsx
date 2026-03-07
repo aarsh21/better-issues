@@ -1,10 +1,8 @@
 "use client";
 
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { convexQuery } from "@convex-dev/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useMutation } from "convex/react";
 import {
   ArrowLeft,
   Check,
@@ -24,9 +22,15 @@ import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
 
-import type { Id } from "@/convex";
-import { api } from "@/convex";
-import { queryClient } from "@/components/providers";
+import {
+  apiClient,
+  labelKeys,
+  labelsQueryOptions,
+  sessionKeys,
+  templateKeys,
+  templatesQueryOptions,
+} from "@better-issues/api-client";
+
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
@@ -66,10 +70,12 @@ import {
   shortcutBindingsEqual,
   useShortcutSettings,
 } from "@/hooks/use-keybinds";
+import { useCurrentUser, useSession } from "@/hooks/use-session";
 import { authClient } from "@/lib/auth-client";
 import { usePathname } from "@/lib/navigation";
-import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 import { TEMPLATE_PRESETS } from "@/lib/template-presets";
+import { useUploadThing } from "@/lib/uploadthing";
+import { unwrapResponse } from "@/lib/api";
 
 const LABEL_COLORS = [
   "#ef4444",
@@ -102,9 +108,6 @@ export const Route = createFileRoute("/org/$slug/settings")({
         ? (search.tab as SettingsTab)
         : undefined,
   }),
-  loader: ({ params }) => {
-    void prefetchOrgRouteData(`/org/${encodeURIComponent(params.slug)}/settings`, queryClient);
-  },
   component: SettingsPage,
 });
 
@@ -187,7 +190,7 @@ export default function SettingsPage() {
             </TabsList>
 
             <TabsContent value="profile" className="mt-6">
-              {activeOrg && <ProfileTab organizationId={activeOrg.id} />}
+              <ProfileTab />
             </TabsContent>
 
             <TabsContent value="shortcuts" className="mt-6">
@@ -240,11 +243,14 @@ const getUsernameValidationError = (username: string): string | null => {
   return null;
 };
 
-function ProfileTab({ organizationId }: { organizationId: string }) {
+function ProfileTab() {
   const queryClient = useQueryClient();
-  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser));
-  const generateAvatarUploadUrl = useMutation(api.files.generateAvatarUploadUrl);
-  const createAvatarReference = useMutation(api.files.createAvatarReference);
+  const { data: user } = useCurrentUser();
+  const { startUpload } = useUploadThing("avatar", {
+    onUploadError: (error) => {
+      toast.error(error.message);
+    },
+  });
   const [state, dispatch] = useReducer(
     (
       current: {
@@ -316,7 +322,7 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
 
     dispatch({ type: "setUsernameDraft", usernameDraft: normalizedUsername });
     toast.success(currentUsername ? "Username updated" : "Username added");
-    await queryClient.invalidateQueries();
+    await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
   };
 
   const handleUploadProfilePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -339,76 +345,39 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
 
     dispatch({ type: "setIsUploadingImage", isUploadingImage: true });
 
-    let uploadResponse: Response;
-    let uploadToken: string;
-    try {
-      const avatarUpload = await generateAvatarUploadUrl({ organizationId });
-      uploadToken = avatarUpload.uploadToken;
-      uploadResponse = await fetch(avatarUpload.uploadUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
-      });
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Failed to upload profile photo"));
-      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
-      return;
-    }
+    const result = await startUpload([file]).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
 
-    if (!uploadResponse.ok) {
-      toast.error("Failed to upload profile photo");
-      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
-      return;
-    }
+    dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
 
-    const uploadResult = (await uploadResponse.json()) as {
-      storageId?: Id<"_storage">;
-    };
-    if (!uploadResult.storageId) {
-      toast.error("Could not save uploaded profile photo");
-      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
-      return;
-    }
-
-    let imageReference: string;
-    try {
-      imageReference = await createAvatarReference({
-        organizationId,
-        storageId: uploadResult.storageId,
-        uploadToken,
-      });
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Could not authorize uploaded profile photo"));
-      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
-      return;
-    }
-
-    const { error } = await authClient.updateUser({ image: imageReference });
-    if (error) {
-      toast.error(error.message || error.statusText || "Failed to update profile photo");
-      dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+    if (!result.ok) {
+      toast.error(getErrorMessage(result.error, "Failed to upload profile photo"));
       return;
     }
 
     toast.success("Profile photo updated");
-    await queryClient.invalidateQueries();
-    dispatch({ type: "setIsUploadingImage", isUploadingImage: false });
+    await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
   };
 
   const handleRemoveProfilePhoto = async () => {
     dispatch({ type: "setIsRemovingImage", isRemovingImage: true });
-    const { error } = await authClient.updateUser({ image: null });
+    const result = await unwrapResponse(apiClient.api.v1.me.profile.patch({ image: null })).then(
+      () => ({ ok: true }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    );
     dispatch({ type: "setIsRemovingImage", isRemovingImage: false });
 
-    if (error) {
-      toast.error(error.message || error.statusText || "Failed to remove profile photo");
+    if (!result.ok) {
+      toast.error(
+        result.error instanceof Error ? result.error.message : "Failed to remove profile photo",
+      );
       return;
     }
 
     toast.success("Profile photo removed");
-    await queryClient.invalidateQueries();
+    await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
   };
 
   return (
@@ -626,38 +595,9 @@ function ShortcutRow({
   );
 }
 
-// ─── Labels Tab ──────────────────────────────────────────────
-
 function LabelsTab({ organizationId }: { organizationId: string }) {
-  const { data: labels } = useQuery(convexQuery(api.labels.list, { organizationId }));
-  const createLabel = useMutation(api.labels.create).withOptimisticUpdate((localStore, args) => {
-    const current = localStore.getQuery(api.labels.list, {
-      organizationId: args.organizationId,
-    });
-    if (current !== undefined) {
-      localStore.setQuery(api.labels.list, { organizationId: args.organizationId }, [
-        ...current,
-        {
-          _id: crypto.randomUUID() as any,
-          _creationTime: current.length + 1,
-          organizationId: args.organizationId,
-          name: args.name,
-          color: args.color,
-          description: args.description,
-        },
-      ]);
-    }
-  });
-  const removeLabel = useMutation(api.labels.remove).withOptimisticUpdate((localStore, args) => {
-    const current = localStore.getQuery(api.labels.list, { organizationId });
-    if (current !== undefined) {
-      localStore.setQuery(
-        api.labels.list,
-        { organizationId },
-        current.filter((l) => l._id !== args.labelId),
-      );
-    }
-  });
+  const queryClient = useQueryClient();
+  const { data: labels } = useQuery(labelsQueryOptions(organizationId));
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -666,12 +606,14 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
-    const result = await createLabel({
-      organizationId,
-      name: newName.trim(),
-      color: newColor,
-      description: newDescription.trim() || undefined,
-    }).then(
+    const result = await unwrapResponse(
+      apiClient.api.v1.labels.post({
+        organizationId,
+        name: newName.trim(),
+        color: newColor,
+        description: newDescription.trim() || null,
+      }),
+    ).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
@@ -681,19 +623,21 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
       setShowCreate(false);
       setNewName("");
       setNewDescription("");
+      await queryClient.invalidateQueries({ queryKey: labelKeys.list(organizationId) });
     } else {
       toast.error(result.error instanceof Error ? result.error.message : "Failed to create label");
     }
   };
 
   const handleRemove = async (labelId: string) => {
-    const result = await removeLabel({ labelId: labelId as any }).then(
+    const result = await unwrapResponse(apiClient.api.v1.labels({ labelId }).delete()).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
 
     if (result.ok) {
       toast.success("Label removed");
+      await queryClient.invalidateQueries({ queryKey: labelKeys.list(organizationId) });
     } else {
       toast.error(result.error instanceof Error ? result.error.message : "Failed to remove label");
     }
@@ -733,7 +677,7 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
         </div>
       ) : (
         <div className="space-y-1">
-          {labels.map((label: { _id: any; name: string; color: string; description?: string }) => (
+          {labels.map((label) => (
             <div
               key={label._id}
               className="flex items-center justify-between border border-border px-3 py-2"
@@ -747,7 +691,9 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleRemove(label._id)}
+                onClick={() => {
+                  void handleRemove(label._id);
+                }}
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -812,7 +758,7 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
             <Button variant="outline" onClick={() => setShowCreate(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!newName.trim()}>
+            <Button onClick={() => void handleCreate()} disabled={!newName.trim()}>
               Create
             </Button>
           </DialogFooter>
@@ -822,22 +768,20 @@ function LabelsTab({ organizationId }: { organizationId: string }) {
   );
 }
 
-// ─── Templates Tab ───────────────────────────────────────────
-
 function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: string }) {
-  const { data: templates } = useQuery(convexQuery(api.templates.list, { organizationId }));
-  const removeTemplate = useMutation(api.templates.remove);
-  const createTemplate = useMutation(api.templates.create);
+  const queryClient = useQueryClient();
+  const { data: templates } = useQuery(templatesQueryOptions(organizationId));
   const [creatingPreset, setCreatingPreset] = useState<string | null>(null);
 
   const handleRemove = async (templateId: string) => {
-    const result = await removeTemplate({ templateId: templateId as any }).then(
+    const result = await unwrapResponse(apiClient.api.v1.templates({ templateId }).delete()).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
 
     if (result.ok) {
       toast.success("Template removed");
+      await queryClient.invalidateQueries({ queryKey: templateKeys.list(organizationId) });
     } else {
       toast.error(
         result.error instanceof Error ? result.error.message : "Failed to remove template",
@@ -847,18 +791,21 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
 
   const handleCreatePreset = async (preset: (typeof TEMPLATE_PRESETS)[number]) => {
     setCreatingPreset(preset.name);
-    const result = await createTemplate({
-      organizationId,
-      name: preset.name,
-      description: preset.description,
-      schema: JSON.stringify(preset.schema),
-    }).then(
+    const result = await unwrapResponse(
+      apiClient.api.v1.templates.post({
+        organizationId,
+        name: preset.name,
+        description: preset.description,
+        schema: JSON.stringify(preset.schema),
+      }),
+    ).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
 
     if (result.ok) {
       toast.success(`${preset.name} template created`);
+      await queryClient.invalidateQueries({ queryKey: templateKeys.list(organizationId) });
     } else {
       toast.error(
         result.error instanceof Error ? result.error.message : "Failed to create template",
@@ -905,7 +852,7 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
             </div>
           ) : (
             <div className="space-y-1">
-              {templates.map((template: { _id: any; name: string; description: string }) => (
+              {templates.map((template) => (
                 <div
                   key={template._id}
                   className="flex items-center justify-between border border-border px-3 py-3"
@@ -917,7 +864,9 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemove(template._id)}
+                    onClick={() => {
+                      void handleRemove(template._id);
+                    }}
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -951,7 +900,9 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleCreatePreset(preset)}
+                      onClick={() => {
+                        void handleCreatePreset(preset);
+                      }}
                       disabled={creatingPreset !== null || presetExists}
                     >
                       {presetExists
@@ -970,8 +921,6 @@ function TemplatesTab({ organizationId, slug }: { organizationId: string; slug: 
     </div>
   );
 }
-
-// ─── Members Tab ─────────────────────────────────────────────
 
 type MemberItem = NonNullable<ReturnType<typeof useMembers>["data"]>[number];
 type InvitationItem = NonNullable<ReturnType<typeof useInvitations>["data"]>[number];
@@ -1030,7 +979,7 @@ function membersTabReducer(state: MembersTabState, action: MembersTabAction): Me
 
 function MembersTab() {
   const { data: activeOrg } = useActiveOrganization();
-  const { data: session } = authClient.useSession();
+  const session = useSession();
   const { data: members, isPending: loading } = useMembers(activeOrg?.id);
   const { data: invitations, isPending: invitationsLoading } = useInvitations(activeOrg?.id);
   const inviteMember = useInviteMember();
@@ -1038,7 +987,7 @@ function MembersTab() {
   const cancelInvitation = useCancelInvitation(activeOrg?.id);
   const [state, dispatch] = useReducer(membersTabReducer, INITIAL_MEMBERS_TAB_STATE);
 
-  const currentUserId = session?.user?.id;
+  const currentUserId = session.data?.user?.id;
   const currentMember = (members ?? []).find((m) => m.user.id === currentUserId);
   const isAdmin = currentMember?.role === "admin" || currentMember?.role === "owner";
   const pendingInvitations = useMemo(

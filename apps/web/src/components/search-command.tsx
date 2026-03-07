@@ -1,9 +1,8 @@
 "use client";
 
-import type { Doc } from "@/convex";
 import type { ShortcutSettings } from "@/hooks/use-keybinds";
+import type { TemplateDto } from "@better-issues/api-client";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -20,7 +19,7 @@ import {
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-import { api } from "@/convex";
+import { issuesQueryOptions, templatesQueryOptions } from "@better-issues/api-client";
 import {
   useActiveOrganization,
   useOrganizations,
@@ -69,32 +68,21 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
     return () => window.clearTimeout(timeoutId);
   }, [trimmedSearchQuery]);
 
-  const { data: issueResults, isFetching: isIssueSearchFetching } = useQuery(
-    convexQuery(
-      api.issues.search,
-      activeOrg && hasSearchQuery
-        ? {
-            organizationId: activeOrg.id,
-            searchQuery: debouncedQuery,
-          }
-        : "skip",
-    ),
-  );
-  const { data: recentIssuesPage } = useQuery(
-    convexQuery(
-      api.issues.list,
-      activeOrg
-        ? {
-            organizationId: activeOrg.id,
-            paginationOpts: {
-              cursor: null,
-              numItems: 8,
-            },
-          }
-        : "skip",
-    ),
-  );
-  const recentIssues = recentIssuesPage?.page ?? [];
+  const { data: issueResultsPage, isFetching: isIssueSearchFetching } = useQuery({
+    ...issuesQueryOptions({
+      organizationId: activeOrg?.id ?? "",
+      q: debouncedQuery,
+    }),
+    enabled: !!activeOrg && hasSearchQuery,
+  });
+  const { data: recentIssuesPage } = useQuery({
+    ...issuesQueryOptions({
+      organizationId: activeOrg?.id ?? "",
+    }),
+    enabled: !!activeOrg,
+  });
+  const issueResults = issueResultsPage?.items ?? [];
+  const recentIssues = recentIssuesPage?.items.slice(0, 8) ?? [];
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
@@ -116,7 +104,7 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
   const searchContextLabel = activeOrg ? `Team: ${activeOrg.name}` : "Search all issues";
   const isDebouncing = hasTypedQuery && debouncedQuery !== trimmedSearchQuery;
   const isSearchLoading = hasTypedQuery && (isDebouncing || isIssueSearchFetching);
-  const issueCount = issueResults?.length ?? 0;
+  const issueCount = issueResults.length;
   const issueCountLabel = issueCount === 1 ? "1 issue found" : `${issueCount} issues found`;
 
   return (
@@ -163,7 +151,7 @@ export function IssueSearchCommand({ open, onOpenChange }: CommandDialogProps) {
               : "Type to search issues..."}
           </CommandEmpty>
 
-          {hasSearchQuery && issueResults && issueResults.length > 0 && (
+          {hasSearchQuery && issueResults.length > 0 && (
             <CommandGroup heading="Issues">
               {issueResults.map((issue) => (
                 <CommandItem
@@ -233,9 +221,10 @@ export function ActionCommand({
   const { data: organizations } = useOrganizations();
   const setActiveOrganization = useSetActiveOrganization();
   const { theme, setTheme } = useTheme();
-  const { data: templates } = useQuery(
-    convexQuery(api.templates.list, activeOrg ? { organizationId: activeOrg.id } : "skip"),
-  );
+  const { data: templates } = useQuery({
+    ...templatesQueryOptions(activeOrg?.id ?? ""),
+    enabled: !!activeOrg,
+  });
 
   const navigateTo = (to: string) => {
     onOpenChange(false);
@@ -338,7 +327,7 @@ export function ActionCommand({
               <Plus className="size-3.5" />
               <span className="text-sm">Blank Issue</span>
             </CommandItem>
-            {templates?.map((template: Doc<"issueTemplates">) => (
+            {templates?.map((template: TemplateDto) => (
               <CommandItem
                 key={template._id}
                 value={`new issue template ${template.name} ${slug}`}

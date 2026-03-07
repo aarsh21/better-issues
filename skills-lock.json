@@ -1,10 +1,30 @@
 {
   "version": 1,
   "skills": {
+    "create-evlog-adapter": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "f2d3a04c43a5db91cf632f8c3256824887423e189311e06b81e954905af908bd"
+    },
+    "create-evlog-enricher": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "49b8d8cf918a3f7232b9799f28fb67acde61fda20d1a6307f550fc4b7a729c3d"
+    },
+    "create-evlog-framework-integration": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "20bb6291514403abe02e4a01f529a21fd0685224bb5fdc4b4d129b67143b6001"
+    },
     "logging-best-practices": {
       "source": "boristane/agent-skills",
       "sourceType": "github",
       "computedHash": "b4810947c33b5356bf385c84cfe387afa9c54af652baaedb7d642a083cceaa4c"
+    },
+    "review-logging-patterns": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "c4469d4ea1ff92c8be6bcfdb066b4465966caee05df02529155e5bcb8c15c01e"
     }
   }
 }

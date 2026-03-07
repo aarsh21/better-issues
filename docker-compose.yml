@@ -1,110 +1,32 @@
 services:
-  backend:
-    image: ghcr.io/get-convex/convex-backend:${CONVEX_BACKEND_TAG:-latest}
-    restart: unless-stopped
-    stop_grace_period: 10s
-    stop_signal: SIGINT
-    networks:
-      - dokploy
-    expose:
-      - "3210"
-      - "3211"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.convex-main.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.convex-main.entrypoints=websecure"
-      - "traefik.http.routers.convex-main.tls=true"
-      - "traefik.http.routers.convex-main.service=convex-main"
-      - "traefik.http.services.convex-main.loadbalancer.server.port=3210"
-      - "traefik.http.routers.convex-http.rule=Host(`${DOMAIN}`) && PathPrefix(`/http`)"
-      - "traefik.http.routers.convex-http.entrypoints=websecure"
-      - "traefik.http.routers.convex-http.tls=true"
-      - "traefik.http.routers.convex-http.priority=200"
-      - "traefik.http.routers.convex-http.service=convex-http"
-      - "traefik.http.routers.convex-http.middlewares=convex-http-strip"
-      - "traefik.http.middlewares.convex-http-strip.stripprefix.prefixes=/http"
-      - "traefik.http.services.convex-http.loadbalancer.server.port=3211"
-    volumes:
-      - convex_data:/convex/data
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     environment:
-      INSTANCE_NAME: ${INSTANCE_NAME:-convex-prod}
-      INSTANCE_SECRET: ${INSTANCE_SECRET}
-      CONVEX_CLOUD_ORIGIN: https://${DOMAIN}
-      CONVEX_SITE_ORIGIN: https://${DOMAIN}/http
+      APP_URL: ${APP_URL:-http://localhost:3001}
+      API_URL: ${API_URL:-http://localhost:3002}
+      DATABASE_URL: ${DATABASE_URL:-file:/data/better-issues.sqlite}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      UPLOADTHING_TOKEN: ${UPLOADTHING_TOKEN}
       ALLOWED_SIGNUPS: ${ALLOWED_SIGNUPS:-true}
-      DATABASE_URL: ${DATABASE_URL:-}
-      POSTGRES_URL: ${POSTGRES_URL:-}
-      MYSQL_URL: ${MYSQL_URL:-}
-      RUST_LOG: ${CONVEX_RUST_LOG:-info}
-    healthcheck:
-      test: curl -f http://localhost:3210/version
-      interval: 5s
-      start_period: 10s
-
-  dashboard:
-    image: ghcr.io/get-convex/convex-dashboard:${CONVEX_BACKEND_TAG:-latest}
-    restart: unless-stopped
-    networks:
-      - dokploy
-    expose:
-      - "6791"
-    environment:
-      NEXT_PUBLIC_DEPLOYMENT_URL: https://${DOMAIN}
-    depends_on:
-      backend:
-        condition: service_healthy
-    labels:
-      - "traefik.enable=${EXPOSE_DASHBOARD:-false}"
-      - "traefik.http.routers.convex-dashboard.rule=Host(`${CONVEX_DASHBOARD_DOMAIN:-dashboard.localhost}`)"
-      - "traefik.http.routers.convex-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.convex-dashboard.tls=true"
-      - "traefik.http.routers.convex-dashboard.service=convex-dashboard"
-      - "traefik.http.services.convex-dashboard.loadbalancer.server.port=6791"
+    volumes:
+      - sqlite_data:/data
+    ports:
+      - "3002:3002"
 
   web:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_CONVEX_URL: https://${DOMAIN}
-        NEXT_PUBLIC_CONVEX_SITE_URL: https://${DOMAIN}/http
-        NEXT_PUBLIC_ALLOWED_SIGNUPS: ${NEXT_PUBLIC_ALLOWED_SIGNUPS:-true}
-    restart: unless-stopped
-    networks:
-      - dokploy
-    expose:
-      - "4100"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.better-issues-web.rule=Host(`${APP_DOMAIN}`)"
-      - "traefik.http.routers.better-issues-web.entrypoints=websecure"
-      - "traefik.http.routers.better-issues-web.tls=true"
-      - "traefik.http.routers.better-issues-web.priority=100"
-      - "traefik.http.routers.better-issues-web.service=better-issues-web"
-      - "traefik.http.services.better-issues-web.loadbalancer.server.port=4100"
     environment:
       PORT: 4100
-      NEXT_PUBLIC_CONVEX_URL: https://${DOMAIN}
-      NEXT_PUBLIC_CONVEX_SITE_URL: https://${DOMAIN}/http
-      NEXT_PUBLIC_ALLOWED_SIGNUPS: ${NEXT_PUBLIC_ALLOWED_SIGNUPS:-true}
-      CONVEX_SELF_HOSTED_URL: http://backend:3210
-      CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_SELF_HOSTED_ADMIN_KEY:-}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      SITE_URL: ${SITE_URL}
+      API_URL: http://api:3002
+      VITE_ALLOWED_SIGNUPS: ${ALLOWED_SIGNUPS:-true}
     depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4100/api/health"]
-      interval: 30s
-      timeout: 10s
-      start_period: 40s
-      retries: 3
+      - api
+    ports:
+      - "3001:4100"
 
 volumes:
-  convex_data:
-
-networks:
-  dokploy:
-    external: true
-    name: ${DOKPLOY_NETWORK:-dokploy-network}
+  sqlite_data:

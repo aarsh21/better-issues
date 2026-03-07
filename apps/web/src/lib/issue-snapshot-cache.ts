@@ -1,4 +1,4 @@
-import type { Doc } from "@/convex";
+import type { Doc } from "@/lib/api-contracts";
 
 type Issue = Doc<"issues">;
 type IssueStatusFilter = Issue["status"] | undefined;

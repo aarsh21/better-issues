@@ -10,24 +10,27 @@ Treat every change as user-facing and keep design quality high.
 - `apps/web/src/` — TanStack Router route modules (`app/`), components, hooks, lib, styles
 - `apps/web/public/` — Static assets
 - `apps/web/vite.config.ts` — Vite and TanStack Start config
-- `packages/backend/convex/` — Convex backend (schema, functions, auth, http)
+- `apps/api/` — Elysia API server
+- `packages/db/` — Drizzle schema, migrations, and database client
+- `packages/auth/` — Better Auth config and permission helpers
+- `packages/api-client/` — Eden client, shared DTOs, and query helpers
 - `packages/env/` — Shared env schema
 
 **Non-Negotiables**
 
+- ALWAYS USE BUN.
 - Always use shadcn colors and shadcn/ui components for UI work.
 - Never run `bun run dev`; the user will run it manually.
-- Do not edit generated Convex files in `packages/backend/convex/_generated` or `packages/backend/convex/betterAuth/_generated`.
 - Keep the UX clean, fast, and consistent with existing patterns.
 
 **Core Commands**
 
 - Install deps: `bun install`
-- Convex setup: `bun run dev:setup`
 - Lint + format: `bun run check`
 - Type check: `bun run check-types`
 - Build: `bun run build`
-- Dev servers (only if asked): `bun run dev:web`, `bun run dev:server`
+- Dev servers (only if asked): `bun run dev:web`, `bun run dev:api`
+- Database: `bun run db:generate`, `bun run db:migrate`, `bun run db:studio`, `bun run db:seed`
 
 **Tests**
 
@@ -45,10 +48,11 @@ Treat every change as user-facing and keep design quality high.
 - TanStack Router file-based routes live in `apps/web/src/app/`; keep route modules small and focused.
 - Respect generated route artifacts like `apps/web/src/routeTree.gen.ts`; do not hand-edit generated files.
 
-**Convex Backend**
+**API + Data**
 
-- Use `query`, `mutation`, `action` from `packages/backend/convex/_generated/server`.
-- Validate args with `v`; return serializable data; prefer `ConvexError` for user-facing errors.
+- Keep Better Auth as the source of truth for users, sessions, organizations, members, and invitations.
+- Keep Drizzle schema and database access inside `packages/db`.
+- Keep Elysia routes and UploadThing handlers inside `apps/api/src/`.
 
 **Styling and UI**
 
@@ -85,7 +89,9 @@ Configured resources:
 
 - `tanstack-start` — TanStack Start framework
 - `tanstack-router` — Type-safe React routing
-- `convex` — Backend platform
+- `elysia-docs` — Elysia server framework
+- `drizzle-orm-docs` — Drizzle ORM
+- `uploadthing` — File uploads
 - `tanstack-query` — Server state management
 - `tanstack-form` — Form state management
 - `better-auth` — Authentication framework

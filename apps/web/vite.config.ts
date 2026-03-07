@@ -7,11 +7,19 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 export default defineConfig({
   server: {
     port: 3001,
+    proxy: {
+      "/api": {
+        target: "http://localhost:3002",
+        changeOrigin: true,
+      },
+    },
   },
-  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
+  envPrefix: ["VITE_"],
   plugins: [
     tailwindcss(),
-    tsconfigPaths(),
+    tsconfigPaths({
+      ignoreConfigErrors: true,
+    }),
     tanstackStart({
       srcDirectory: "src",
       router: {

@@ -1,13 +1,13 @@
 "use client";
 
-import type { Id, TemplateField } from "@/convex";
+import type { Id, TemplateField, TemplateFileValue } from "@/lib/api-contracts";
 
-import { useMutation } from "convex/react";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { api } from "@/convex";
+import { apiClient } from "@better-issues/api-client";
+
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,19 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { unwrapResponse } from "@/lib/api";
+import { useUploadThing } from "@/lib/uploadthing";
 import { formatFileSize } from "@/lib/utils";
-
-type TemplateFileValue = {
-  storageId: Id<"_storage">;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
-};
 
 const isTemplateFileValue = (candidate: unknown): candidate is TemplateFileValue => {
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     return false;
   }
+
   const record = candidate as {
     storageId?: unknown;
     fileName?: unknown;
@@ -42,12 +38,9 @@ const isTemplateFileValue = (candidate: unknown): candidate is TemplateFileValue
 
   return (
     typeof record.storageId === "string" &&
-    record.storageId.length > 0 &&
     typeof record.fileName === "string" &&
-    record.fileName.length > 0 &&
     typeof record.fileType === "string" &&
-    typeof record.fileSize === "number" &&
-    Number.isFinite(record.fileSize)
+    typeof record.fileSize === "number"
   );
 };
 
@@ -82,187 +75,159 @@ export function TemplateFieldRenderer({
   const id = `template-field-${field.key}`;
   const allowMultiple = field.type === "file" ? field.multiple !== false : false;
   const files = field.type === "file" ? normalizeFileValues(value, allowMultiple) : [];
-
-  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
-  const removeFile = useMutation(api.files.remove);
-
   const [uploading, setUploading] = useState(false);
+  const { startUpload } = useUploadThing("issueAttachment", {
+    onUploadError: (error) => {
+      toast.error(error.message);
+    },
+  });
 
   const handleFilesSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (readOnly) return;
     const input = event.currentTarget;
+
     if (!organizationId) {
       toast.error("Organization context is required for file uploads");
       input.value = "";
       return;
     }
-    const selectedFiles = Array.from(input.files ?? []);
 
-    if (selectedFiles.length === 0) return;
+    const selectedFiles = Array.from(input.files ?? []);
+    if (selectedFiles.length === 0) {
+      return;
+    }
 
     const filesToUpload = allowMultiple ? selectedFiles : [selectedFiles[0]!];
-
     setUploading(true);
-    let encounteredError: unknown = null;
 
-    // Generate upload URLs and upload files in parallel
-    const uploadResults = await Promise.all(
-      filesToUpload.map(async (file) => {
-        const uploadUrl = await generateUploadUrl({ organizationId });
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": file.type || "application/octet-stream",
-          },
-          body: file,
-        });
+    try {
+      const uploaded = await startUpload(filesToUpload, {
+        organizationId,
+        issueId,
+      });
 
-        if (!response.ok) {
-          throw new Error(`Upload failed for ${file.name}`);
-        }
-
-        const result = (await response.json()) as { storageId?: string };
-        if (!result.storageId) {
-          throw new Error(`Upload failed for ${file.name}`);
+      const nextFiles: TemplateFileValue[] = (uploaded ?? []).map((file) => {
+        const serverData = file.serverData as { attachmentId?: string } | null;
+        if (!serverData?.attachmentId) {
+          throw new Error("Upload failed");
         }
 
         return {
-          storageId: result.storageId as Id<"_storage">,
+          storageId: serverData.attachmentId as Id<"attachments">,
           fileName: file.name,
-          fileType: file.type || "application/octet-stream",
+          fileType: file.type,
           fileSize: file.size,
-        } satisfies TemplateFileValue;
-      }),
-    ).catch((error) => {
-      encounteredError = error;
-      return [] as TemplateFileValue[];
-    });
+        };
+      });
 
-    if (encounteredError) {
-      toast.error(encounteredError instanceof Error ? encounteredError.message : "Upload failed");
-    }
-
-    if (uploadResults.length > 0) {
-      const existingFiles = normalizeFileValues(value, allowMultiple);
       if (allowMultiple) {
-        onChange([...existingFiles, ...uploadResults]);
+        onChange([...files, ...nextFiles]);
       } else {
-        const previousFile = existingFiles[0];
-        onChange(uploadResults[0]);
-        if (previousFile) {
-          if (issueId) {
-            await removeFile({
-              organizationId,
-              issueId,
-              storageId: previousFile.storageId,
-            }).catch(() => {
-              // Best-effort cleanup.
-            });
-          }
+        const previous = files[0];
+        onChange(nextFiles[0]);
+
+        if (previous) {
+          await unwrapResponse(
+            apiClient.api.v1.attachments({ attachmentId: previous.storageId }).delete(),
+          ).catch(() => undefined);
         }
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      input.value = "";
     }
-
-    setUploading(false);
-    input.value = "";
   };
 
-  const handleRemoveFile = async (storageId: Id<"_storage">) => {
+  const handleRemoveFile = async (storageId: Id<"attachments">) => {
     if (readOnly) return;
-    if (!organizationId) {
-      toast.error("Organization context is required for file removal");
-      return;
-    }
 
     const nextFiles = files.filter((file) => file.storageId !== storageId);
     onChange(allowMultiple ? nextFiles : undefined);
-    if (!issueId) {
-      return;
-    }
 
-    const result = await removeFile({ organizationId, issueId, storageId }).then(
-      () => ({ ok: true }) as const,
-      (error: unknown) => ({ ok: false, error }) as const,
+    await unwrapResponse(apiClient.api.v1.attachments({ attachmentId: storageId }).delete()).catch(
+      (error: unknown) => {
+        toast.error(error instanceof Error ? error.message : "Failed to remove file");
+      },
     );
-
-    if (!result.ok) {
-      toast.error(result.error instanceof Error ? result.error.message : "Failed to remove file");
-    }
   };
 
   return (
     <div className="grid gap-2">
       <Label htmlFor={id} className="text-sm">
         {field.label}
-        {field.required && <span className="text-destructive ml-1">*</span>}
+        {field.required ? <span className="ml-1 text-destructive">*</span> : null}
       </Label>
-      {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
+      {field.description ? (
+        <p className="text-xs text-muted-foreground">{field.description}</p>
+      ) : null}
 
-      {field.type === "text" && (
+      {field.type === "text" ? (
         <Input
           id={id}
           placeholder={field.placeholder}
           value={(value as string) ?? ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           disabled={readOnly}
         />
-      )}
+      ) : null}
 
-      {field.type === "url" && (
+      {field.type === "url" ? (
         <Input
           id={id}
           type="url"
           placeholder={field.placeholder ?? "https://..."}
           value={(value as string) ?? ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           disabled={readOnly}
         />
-      )}
+      ) : null}
 
-      {field.type === "textarea" && (
+      {field.type === "textarea" ? (
         <Textarea
           id={id}
           placeholder={field.placeholder}
           value={(value as string) ?? ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           rows={4}
           disabled={readOnly}
         />
-      )}
+      ) : null}
 
-      {field.type === "number" && (
+      {field.type === "number" ? (
         <Input
           id={id}
           type="number"
           placeholder={field.placeholder}
-          value={(value as string) ?? ""}
-          onChange={(e) => onChange(e.target.value ? Number(e.target.value) : "")}
+          value={(value as string | number | undefined) ?? ""}
+          onChange={(event) => onChange(event.target.value ? Number(event.target.value) : "")}
           disabled={readOnly}
         />
-      )}
+      ) : null}
 
-      {field.type === "checkbox" && (
+      {field.type === "checkbox" ? (
         <div className="flex items-center gap-2">
           <Checkbox
             id={id}
             checked={(value as boolean) ?? false}
-            onCheckedChange={(checked) => onChange(checked)}
+            onCheckedChange={(checked) => onChange(Boolean(checked))}
             disabled={readOnly}
           />
-          <Label htmlFor={id} className="text-sm font-normal cursor-pointer">
+          <Label htmlFor={id} className="cursor-pointer text-sm font-normal">
             {field.placeholder ?? "Yes"}
           </Label>
         </div>
-      )}
+      ) : null}
 
-      {field.type === "select" && field.options && (
+      {field.type === "select" && field.options ? (
         <Select
           value={(value as string) ?? ""}
-          onValueChange={(v) => onChange(v)}
+          onValueChange={(nextValue) => onChange(nextValue)}
           disabled={readOnly}
         >
-          <SelectTrigger id={id} disabled={readOnly}>
-            <SelectValue placeholder={field.placeholder ?? "Select..."} />
+          <SelectTrigger id={id}>
+            <SelectValue placeholder={field.placeholder ?? "Select an option"} />
           </SelectTrigger>
           <SelectContent>
             {field.options.map((option) => (
@@ -272,20 +237,22 @@ export function TemplateFieldRenderer({
             ))}
           </SelectContent>
         </Select>
-      )}
+      ) : null}
 
-      {field.type === "file" && (
+      {field.type === "file" ? (
         <div className="grid gap-3">
           <div className="flex items-center gap-3">
             <Input
               id={id}
               type="file"
-              accept={field.accept}
               multiple={allowMultiple}
-              onChange={handleFilesSelected}
+              accept={field.accept}
+              onChange={(event) => {
+                void handleFilesSelected(event);
+              }}
               disabled={readOnly || uploading}
             />
-            {uploading && <span className="text-xs text-muted-foreground">Uploading...</span>}
+            {uploading ? <span className="text-xs text-muted-foreground">Uploading...</span> : null}
           </div>
 
           {files.length === 0 ? (
@@ -297,26 +264,27 @@ export function TemplateFieldRenderer({
                   key={file.storageId}
                   className="flex items-center justify-between border border-border px-3 py-2"
                 >
-                  <div className="grid gap-0.5">
+                  <div>
                     <p className="text-sm font-medium">{file.fileName}</p>
                     <p className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}</p>
                   </div>
-                  {!readOnly && (
+                  {!readOnly ? (
                     <Button
-                      type="button"
                       variant="ghost"
-                      size="icon-xs"
-                      onClick={() => handleRemoveFile(file.storageId)}
+                      size="icon-sm"
+                      onClick={() => {
+                        void handleRemoveFile(file.storageId);
+                      }}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

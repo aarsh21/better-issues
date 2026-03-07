@@ -1,0 +1,26 @@
+{
+  "name": "@better-issues/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./permissions": "./src/permissions.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-issues/db": "workspace:*",
+    "@better-issues/env": "workspace:*",
+    "better-auth": "catalog:",
+    "drizzle-orm": "^0.45.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@better-issues/config": "workspace:*",
+    "@types/bun": "^1.2.21",
+    "@types/node": "^24.3.0",
+    "typescript": "catalog:"
+  }
+}

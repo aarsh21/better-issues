@@ -1,14 +1,14 @@
 "use client";
 
-import type { TemplateField, TemplateSchema } from "@/convex";
+import type { TemplateField, TemplateSchema } from "@/lib/api-contracts";
 
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation } from "convex/react";
-import { ArrowLeft, GripVertical, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useMemo, useReducer } from "react";
 import { toast } from "sonner";
 
-import { TEMPLATE_FIELD_TYPES, api } from "@/convex";
+import { TEMPLATE_FIELD_TYPES, templateSchemaValidator } from "@better-issues/api-client";
+
 import { TemplateFieldRenderer } from "@/components/issues/template-fields";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,8 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useActiveOrganization } from "@/hooks/use-organization";
 import { useRouter } from "@/lib/navigation";
+import { apiClient } from "@better-issues/api-client";
+import { unwrapResponse } from "@/lib/api";
 
 type TemplateFieldDraft = TemplateField & { id: string };
 
@@ -63,38 +66,27 @@ const INITIAL_TEMPLATE_STATE: TemplateState = {
 
 function templateReducer(state: TemplateState, action: TemplateAction): TemplateState {
   switch (action.type) {
-    case "setName": {
+    case "setName":
       return { ...state, name: action.name };
-    }
-    case "setDescription": {
+    case "setDescription":
       return { ...state, description: action.description };
-    }
-    case "togglePreview": {
+    case "togglePreview":
       return { ...state, showPreview: !state.showPreview };
-    }
-    case "setSubmitting": {
+    case "setSubmitting":
       return { ...state, submitting: action.submitting };
-    }
-    case "addField": {
+    case "addField":
       return { ...state, fields: [...state.fields, createEmptyField()] };
-    }
-    case "removeField": {
-      return {
-        ...state,
-        fields: state.fields.filter((_, index) => index !== action.index),
-      };
-    }
-    case "updateField": {
+    case "removeField":
+      return { ...state, fields: state.fields.filter((_, index) => index !== action.index) };
+    case "updateField":
       return {
         ...state,
         fields: state.fields.map((field, index) =>
           index === action.index ? { ...field, ...action.updates } : field,
         ),
       };
-    }
-    default: {
+    default:
       return state;
-    }
   }
 }
 
@@ -102,11 +94,10 @@ export const Route = createFileRoute("/org/$slug/settings/templates/new")({
   component: NewTemplatePage,
 });
 
-export default function NewTemplatePage() {
-  const params = Route.useParams();
+function NewTemplatePage() {
+  const { slug } = Route.useParams();
   const router = useRouter();
-  const { data: activeOrg } = useActiveOrganization();
-  const createTemplate = useMutation(api.templates.create);
+  const { data: activeOrganization } = useActiveOrganization();
   const [state, dispatch] = useReducer(templateReducer, INITIAL_TEMPLATE_STATE);
 
   const previewSchema = useMemo<TemplateSchema>(
@@ -119,46 +110,56 @@ export default function NewTemplatePage() {
   );
 
   const handleSubmit = async () => {
-    if (!activeOrg || !state.name.trim() || state.fields.length === 0) {
+    if (!activeOrganization) {
       return;
     }
 
-    const validFields = state.fields.filter((field) => field.key && field.label);
-    if (validFields.length === 0) {
-      toast.error("Add at least one valid field with key and label");
-      return;
-    }
-
-    const schema: TemplateSchema = {
+    const validFields = state.fields.filter((field) => field.key.trim() && field.label.trim());
+    const validation = templateSchemaValidator.safeParse({
       fields: validFields.map(({ id: _id, ...field }) => field),
-    };
+    });
+
+    if (!state.name.trim()) {
+      toast.error("Template name is required");
+      return;
+    }
+
+    if (!validation.success) {
+      toast.error(validation.error.issues[0]?.message ?? "Template schema is invalid");
+      return;
+    }
 
     dispatch({ type: "setSubmitting", submitting: true });
-    const result = await createTemplate({
-      organizationId: activeOrg.id,
-      name: state.name.trim(),
-      description: state.description.trim(),
-      schema: JSON.stringify(schema),
-    }).then(
+
+    const result = await unwrapResponse(
+      apiClient.api.v1.templates.post({
+        organizationId: activeOrganization.id,
+        name: state.name.trim(),
+        description: state.description.trim(),
+        schema: JSON.stringify(validation.data),
+      }),
+    ).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
 
-    if (result.ok) {
-      toast.success("Template created");
-      router.push(`/org/${params.slug}/settings`);
+    if (!result.ok) {
+      dispatch({ type: "setSubmitting", submitting: false });
+      toast.error(
+        result.error instanceof Error ? result.error.message : "Failed to create template",
+      );
       return;
     }
 
-    dispatch({ type: "setSubmitting", submitting: false });
-    toast.error(result.error instanceof Error ? result.error.message : "Failed to create template");
+    toast.success("Template created");
+    router.push(`/org/${slug}/settings?tab=templates`);
   };
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
-          <Link href={`/org/${params.slug}/settings`}>
+          <Link href={`/org/${slug}/settings?tab=templates`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
@@ -179,7 +180,6 @@ export default function NewTemplatePage() {
           />
         ) : (
           <TemplateEditorForm
-            slug={params.slug}
             name={state.name}
             description={state.description}
             fields={state.fields}
@@ -235,7 +235,6 @@ function TemplatePreviewPanel({
 }
 
 function TemplateEditorForm({
-  slug,
   name,
   description,
   fields,
@@ -247,7 +246,6 @@ function TemplateEditorForm({
   onRemoveField,
   onUpdateField,
 }: {
-  slug: string;
   name: string;
   description: string;
   fields: TemplateFieldDraft[];
@@ -259,37 +257,25 @@ function TemplateEditorForm({
   onRemoveField: (index: number) => void;
   onUpdateField: (index: number, updates: Partial<TemplateFieldDraft>) => void;
 }) {
-  const jsonPreview = useMemo(
-    () => JSON.stringify({ fields: fields.filter((field) => field.key && field.label) }, null, 2),
-    [fields],
-  );
-
   return (
-    <form
-      action={async () => {
-        await onSubmit();
-      }}
-      className="mx-auto max-w-lg space-y-6"
-    >
-      <div className="grid gap-4">
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="template-name">
-            Template Name <span className="text-destructive">*</span>
-          </Label>
+          <Label htmlFor="template-name">Name</Label>
           <Input
             id="template-name"
-            placeholder="Bug Report"
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
+            placeholder="Bug report"
           />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="template-description">Description</Label>
-          <Input
+          <Textarea
             id="template-description"
-            placeholder="Standard template for reporting bugs"
             value={description}
             onChange={(event) => onDescriptionChange(event.target.value)}
+            placeholder="Collect the right details before triage."
           />
         </div>
       </div>
@@ -297,218 +283,133 @@ function TemplateEditorForm({
       <Separator />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fields</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onAddField}
-            className="gap-1.5"
-          >
-            <Plus className="h-3 w-3" />
-            Add Field
-          </Button>
-        </div>
-
         {fields.map((field, index) => (
-          <TemplateFieldEditorCard
-            key={field.id}
-            field={field}
-            index={index}
-            disableRemove={fields.length <= 1}
-            onRemove={() => onRemoveField(index)}
-            onUpdate={(updates) => onUpdateField(index, updates)}
-          />
+          <div key={field.id} className="space-y-4 border border-border p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Field {index + 1}</h3>
+              {fields.length > 1 ? (
+                <Button variant="ghost" size="icon-sm" onClick={() => onRemoveField(index)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Key</Label>
+                <Input
+                  value={field.key}
+                  placeholder="stepsToReproduce"
+                  onChange={(event) => onUpdateField(index, { key: event.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Label</Label>
+                <Input
+                  value={field.label}
+                  placeholder="Steps to reproduce"
+                  onChange={(event) => onUpdateField(index, { label: event.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Type</Label>
+                <Select
+                  value={field.type}
+                  onValueChange={(value) =>
+                    onUpdateField(index, { type: value as TemplateField["type"] })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATE_FIELD_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Placeholder</Label>
+                <Input
+                  value={field.placeholder ?? ""}
+                  placeholder="Optional helper text"
+                  onChange={(event) => onUpdateField(index, { placeholder: event.target.value })}
+                />
+              </div>
+            </div>
+
+            {field.type === "select" ? (
+              <div className="grid gap-2">
+                <Label>Options</Label>
+                <Textarea
+                  value={(field.options ?? []).join("\n")}
+                  placeholder={"High\nMedium\nLow"}
+                  onChange={(event) =>
+                    onUpdateField(index, {
+                      options: event.target.value
+                        .split("\n")
+                        .map((option) => option.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                />
+              </div>
+            ) : null}
+
+            {field.type === "file" ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Accepted types</Label>
+                  <Input
+                    value={field.accept ?? ""}
+                    placeholder="image/*,.pdf"
+                    onChange={(event) => onUpdateField(index, { accept: event.target.value })}
+                  />
+                </div>
+                <div className="flex items-end gap-2 pb-2">
+                  <Checkbox
+                    id={`field-multiple-${field.id}`}
+                    checked={field.multiple !== false}
+                    onCheckedChange={(checked) =>
+                      onUpdateField(index, { multiple: Boolean(checked) })
+                    }
+                  />
+                  <Label htmlFor={`field-multiple-${field.id}`}>Allow multiple files</Label>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`field-required-${field.id}`}
+                checked={field.required}
+                onCheckedChange={(checked) => onUpdateField(index, { required: Boolean(checked) })}
+              />
+              <Label htmlFor={`field-required-${field.id}`}>Required field</Label>
+            </div>
+          </div>
         ))}
       </div>
 
-      <Separator />
-
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-          JSON Schema
-        </Label>
-        <pre className="overflow-auto border border-border bg-muted p-3 text-xs font-mono">
-          {jsonPreview}
-        </pre>
-      </div>
-
-      <div className="flex gap-3">
+      <div className="flex items-center justify-between">
+        <Button variant="outline" onClick={onAddField}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Field
+        </Button>
         <Button
-          type="submit"
-          disabled={submitting || !name.trim() || fields.length === 0}
-          className="flex-1"
+          disabled={submitting}
+          onClick={() => {
+            void onSubmit();
+          }}
         >
           {submitting ? "Creating..." : "Create Template"}
         </Button>
-        <Link href={`/org/${slug}/settings`}>
-          <Button type="button" variant="outline">
-            Cancel
-          </Button>
-        </Link>
       </div>
-    </form>
-  );
-}
-
-function TemplateFieldEditorCard({
-  field,
-  index,
-  disableRemove,
-  onRemove,
-  onUpdate,
-}: {
-  field: TemplateFieldDraft;
-  index: number;
-  disableRemove: boolean;
-  onRemove: () => void;
-  onUpdate: (updates: Partial<TemplateFieldDraft>) => void;
-}) {
-  return (
-    <div className="space-y-3 border border-border p-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-mono text-muted-foreground">Field {index + 1}</span>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-          disabled={disableRemove}
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor={`field-key-${field.id}`} className="text-xs">
-            Key (camelCase)
-          </Label>
-          <Input
-            id={`field-key-${field.id}`}
-            placeholder="stepsToReproduce"
-            value={field.key}
-            onChange={(event) => onUpdate({ key: event.target.value })}
-            className="h-8 text-sm font-mono"
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor={`field-label-${field.id}`} className="text-xs">
-            Label
-          </Label>
-          <Input
-            id={`field-label-${field.id}`}
-            placeholder="Steps to Reproduce"
-            value={field.label}
-            onChange={(event) => onUpdate({ label: event.target.value })}
-            className="h-8 text-sm"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor={`field-type-${field.id}`} className="text-xs">
-            Type
-          </Label>
-          <Select
-            value={field.type}
-            onValueChange={(value) => onUpdate({ type: value as TemplateField["type"] })}
-          >
-            <SelectTrigger id={`field-type-${field.id}`} className="h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TEMPLATE_FIELD_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-end gap-2 pb-0.5">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id={`required-${field.id}`}
-              checked={field.required}
-              onCheckedChange={(checked) => onUpdate({ required: checked === true })}
-            />
-            <Label htmlFor={`required-${field.id}`} className="text-xs cursor-pointer">
-              Required
-            </Label>
-          </div>
-        </div>
-      </div>
-
-      {field.type === "select" && (
-        <div className="grid gap-1.5">
-          <Label htmlFor={`options-${field.id}`} className="text-xs">
-            Options (comma-separated)
-          </Label>
-          <Input
-            id={`options-${field.id}`}
-            placeholder="critical, major, minor, cosmetic"
-            value={field.options?.join(", ") ?? ""}
-            onChange={(event) =>
-              onUpdate({
-                options: event.target.value
-                  .split(",")
-                  .map((option) => option.trim())
-                  .filter(Boolean),
-              })
-            }
-            className="h-8 text-sm"
-          />
-        </div>
-      )}
-
-      {field.type === "file" && (
-        <div className="grid gap-3">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id={`multiple-${field.id}`}
-              checked={field.multiple !== false}
-              onCheckedChange={(checked) => onUpdate({ multiple: checked === true })}
-            />
-            <Label htmlFor={`multiple-${field.id}`} className="text-xs cursor-pointer">
-              Allow multiple files
-            </Label>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor={`accept-${field.id}`} className="text-xs">
-              Accepted file types (optional)
-            </Label>
-            <Input
-              id={`accept-${field.id}`}
-              placeholder="image/*,.pdf"
-              value={field.accept ?? ""}
-              onChange={(event) => onUpdate({ accept: event.target.value || undefined })}
-              className="h-8 text-sm"
-            />
-          </div>
-        </div>
-      )}
-
-      {field.type !== "file" && (
-        <div className="grid gap-1.5">
-          <Label htmlFor={`placeholder-${field.id}`} className="text-xs">
-            Placeholder (optional)
-          </Label>
-          <Input
-            id={`placeholder-${field.id}`}
-            placeholder="Enter placeholder text..."
-            value={field.placeholder ?? ""}
-            onChange={(event) => onUpdate({ placeholder: event.target.value || undefined })}
-            className="h-8 text-sm"
-          />
-        </div>
-      )}
     </div>
   );
 }
+
+export default NewTemplatePage;

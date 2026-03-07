@@ -10,26 +10,27 @@
       "dotenv": "^17.2.2",
       "zod": "^4.1.13",
       "typescript": "^5",
-      "convex": "^1.31.2",
-      "better-auth": "1.4.9",
-      "@convex-dev/better-auth": "^0.10.9"
+      "better-auth": "1.4.9"
     }
   },
   "type": "module",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=web --filter=@better-issues/api",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "dev:native": "turbo run dev --filter=native",
     "dev:web": "turbo run dev --filter=web",
-    "dev:server": "turbo run dev --filter=@better-issues/backend",
-    "dev:setup": "turbo run dev:setup --filter=@better-issues/backend",
+    "dev:api": "turbo run dev --filter=@better-issues/api",
+    "db:generate": "bun --cwd packages/db ./node_modules/drizzle-kit/bin.cjs generate --config drizzle.config.ts",
+    "db:migrate": "bun run --cwd packages/db db:migrate",
+    "db:studio": "bun --cwd packages/db ./node_modules/drizzle-kit/bin.cjs studio --config drizzle.config.ts",
+    "db:seed": "bun run --cwd packages/db db:seed",
     "check": "oxlint && oxfmt --write",
     "prepare": "husky"
   },
   "dependencies": {
     "@better-issues/env": "workspace:*",
-    "@tanstack/react-query-devtools": "^5.91.3",
+    "@tanstack/react-query-devtools": "^5.90.21",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },

@@ -1,20 +1,34 @@
 "use client";
 
-import { createFileRoute } from "@tanstack/react-router";
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
-import type { Id, TemplateField, TemplateSchema } from "@/convex";
+import type {
+  Id,
+  TemplateField,
+  TemplateSchema,
+  AttachmentDto,
+  CursorPage,
+  IssueDetailDto,
+  IssueListItemDto,
+} from "@/lib/api-contracts";
 
-import { useMutation } from "convex/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, ExternalLink, FileText, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "@/lib/navigation";
-import { prefetchOrgRouteData } from "@/lib/route-prefetch";
 import { getIssueSnapshot } from "@/lib/issue-snapshot-cache";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { api } from "@/convex";
-import { queryClient } from "@/components/providers";
+import {
+  apiClient,
+  attachmentKeys,
+  issueAttachmentsQueryOptions,
+  issueByNumberQueryOptions,
+  issueKeys,
+  labelsQueryOptions,
+  parseTemplateSchema,
+  templateQueryOptions,
+} from "@better-issues/api-client";
+
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -28,24 +42,18 @@ import { LabelBadge } from "@/components/issues/label-badge";
 import { PriorityIndicator } from "@/components/issues/priority-indicator";
 import { StatusBadge } from "@/components/issues/status-badge";
 import { useActiveOrganization, useOrganizations } from "@/hooks/use-organization";
-import { cn } from "@/lib/utils";
-import { formatDate, formatFileSize } from "@/lib/utils";
+import { cn, formatDate, formatFileSize } from "@/lib/utils";
+import { unwrapResponse } from "@/lib/api";
 
 type IssueStatus = "open" | "in_progress" | "closed";
 type IssuePriority = "low" | "medium" | "high" | "urgent";
 
 export const Route = createFileRoute("/org/$slug/issues/$number")({
-  loader: ({ params }) => {
-    void prefetchOrgRouteData(
-      `/org/${encodeURIComponent(params.slug)}/issues/${params.number}`,
-      queryClient,
-    );
-  },
   component: IssueDetailPage,
 });
 
 type TemplateFileValue = {
-  storageId: Id<"_storage">;
+  storageId: Id<"attachments">;
   fileName: string;
   fileType: string;
   fileSize: number;
@@ -89,33 +97,22 @@ const normalizeFileValues = (value: unknown, allowMultiple: boolean) => {
 function TemplateFileList({
   field,
   value,
-  organizationId,
-  issueId,
+  attachments,
 }: {
   field: TemplateField;
   value: unknown;
-  organizationId: string;
-  issueId: Id<"issues">;
+  attachments: Map<string, AttachmentDto>;
 }) {
   const allowMultiple = field.multiple !== false;
   const files = normalizeFileValues(value, allowMultiple);
-  const storageIds = files.map((file) => file.storageId);
-  const { data: resolvedUrls } = useQuery(
-    convexQuery(
-      api.files.getUrls,
-      storageIds.length > 0 ? { organizationId, issueId, storageIds } : "skip",
-    ),
-  );
 
   if (files.length === 0) return null;
-
-  const isLoadingUrls = resolvedUrls === undefined;
-  const urlByStorageId = new Map((resolvedUrls ?? []).map((entry) => [entry.storageId, entry.url]));
 
   return (
     <div className="grid gap-2">
       {files.map((file) => {
-        const url = urlByStorageId.get(file.storageId) ?? null;
+        const attachment = attachments.get(file.storageId);
+        const url = attachment?.url ?? null;
         const isImage = file.fileType.startsWith("image/");
 
         return (
@@ -129,9 +126,7 @@ function TemplateFileList({
                 <p className="text-sm font-medium">{file.fileName}</p>
               </div>
               <p className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}</p>
-              {isLoadingUrls ? (
-                <span className="text-xs text-muted-foreground">Loading link...</span>
-              ) : url ? (
+              {url ? (
                 <a
                   href={url}
                   target="_blank"
@@ -162,6 +157,7 @@ function TemplateFileList({
 export default function IssueDetailPage() {
   const params = Route.useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: activeOrg } = useActiveOrganization();
   const { data: organizations } = useOrganizations();
 
@@ -172,66 +168,143 @@ export default function IssueDetailPage() {
       : organizations?.find((organization) => organization.slug === params.slug)?.id;
   const cachedIssue = organizationId ? getIssueSnapshot(organizationId, issueNumber) : undefined;
 
-  const { data: issueData } = useQuery(
-    convexQuery(
-      api.issues.getByNumber,
-      organizationId ? { organizationId, number: issueNumber } : "skip",
-    ),
-  );
+  const { data: issueData } = useQuery({
+    ...issueByNumberQueryOptions(organizationId ?? "", issueNumber),
+    enabled: !!organizationId,
+  });
   const issue = issueData === undefined ? cachedIssue : issueData;
 
-  const { data: labels } = useQuery(
-    convexQuery(api.labels.list, organizationId ? { organizationId } : "skip"),
-  );
-
-  const { data: template } = useQuery(
-    convexQuery(api.templates.get, issue?.templateId ? { templateId: issue.templateId } : "skip"),
-  );
-
-  const updateIssue = useMutation(api.issues.update).withOptimisticUpdate((localStore, args) => {
-    if (!organizationId) return;
-    const current = localStore.getQuery(api.issues.getByNumber, {
-      organizationId,
-      number: issueNumber,
-    });
-    if (current !== undefined && current !== null) {
-      const updates: Record<string, unknown> = { updatedAt: current.updatedAt };
-      if (args.title !== undefined) updates.title = args.title;
-      if (args.description !== undefined) updates.description = args.description;
-      if (args.priority !== undefined) updates.priority = args.priority;
-      if (args.labelIds !== undefined) updates.labelIds = args.labelIds;
-      localStore.setQuery(
-        api.issues.getByNumber,
-        { organizationId, number: issueNumber },
-        { ...current, ...updates },
-      );
-    }
+  const { data: labels } = useQuery({
+    ...labelsQueryOptions(organizationId ?? ""),
+    enabled: !!organizationId,
   });
-  const updateStatus = useMutation(api.issues.updateStatus).withOptimisticUpdate(
-    (localStore, args) => {
+
+  const { data: template } = useQuery({
+    ...templateQueryOptions(issue?.templateId ?? ""),
+    enabled: !!issue?.templateId,
+  });
+
+  const { data: attachments } = useQuery({
+    ...issueAttachmentsQueryOptions(issue?._id ?? ""),
+    enabled: !!issue?._id,
+  });
+
+  const updateIssue = useMutation({
+    mutationFn: async (payload: {
+      issueId: string;
+      title?: string;
+      description?: string | null;
+      priority?: IssuePriority;
+      labelIds?: string[];
+    }) => unwrapResponse(apiClient.api.v1.issues({ issueId: payload.issueId }).patch(payload)),
+    onSuccess: async (updatedIssue) => {
       if (!organizationId) return;
-      const current = localStore.getQuery(api.issues.getByNumber, {
-        organizationId,
-        number: issueNumber,
+      queryClient.setQueryData(
+        issueByNumberQueryOptions(organizationId, issueNumber).queryKey,
+        updatedIssue as IssueDetailIssue,
+      );
+      await queryClient.invalidateQueries({ queryKey: issueKeys.all });
+    },
+  });
+  const updateStatus = useMutation({
+    mutationFn: async (payload: { issueId: string; status: IssueStatus }) =>
+      unwrapResponse(
+        apiClient.api.v1
+          .issues({ issueId: payload.issueId })
+          .status.post({ status: payload.status }),
+      ),
+    onMutate: async (payload) => {
+      if (!organizationId) {
+        return undefined;
+      }
+
+      const detailQueryKey = issueByNumberQueryOptions(organizationId, issueNumber).queryKey;
+      const previousDetail = queryClient.getQueryData<IssueDetailIssue | null>(detailQueryKey);
+      const previousLists = queryClient.getQueriesData<CursorPage<IssueListItemDto>>({
+        queryKey: issueKeys.all,
       });
-      if (current !== undefined && current !== null) {
-        localStore.setQuery(
-          api.issues.getByNumber,
-          { organizationId, number: issueNumber },
-          {
+      const updatedAt = Date.now();
+      const closedAt = payload.status === "closed" ? updatedAt : null;
+
+      queryClient.setQueryData<IssueDetailIssue | null>(detailQueryKey, (current) => {
+        if (!current || current._id !== payload.issueId) {
+          return current;
+        }
+
+        return {
+          ...current,
+          status: payload.status,
+          updatedAt,
+          closedAt,
+        };
+      });
+
+      queryClient.setQueriesData<CursorPage<IssueListItemDto>>(
+        { queryKey: issueKeys.all },
+        (current: CursorPage<IssueListItemDto> | undefined) => {
+          if (!current) {
+            return current;
+          }
+
+          return {
             ...current,
-            status: args.status,
-          },
-        );
+            items: current.items.map((listIssue: IssueListItemDto) =>
+              listIssue._id === payload.issueId
+                ? {
+                    ...listIssue,
+                    status: payload.status,
+                    updatedAt,
+                    closedAt,
+                  }
+                : listIssue,
+            ),
+          };
+        },
+      );
+
+      return {
+        detailQueryKey,
+        previousDetail,
+        previousLists,
+      };
+    },
+    onError: (_error, _payload, context) => {
+      if (!context) {
+        return;
+      }
+
+      queryClient.setQueryData(context.detailQueryKey, context.previousDetail);
+      for (const [queryKey, data] of context.previousLists) {
+        queryClient.setQueryData(queryKey, data);
       }
     },
-  );
-  const removeIssue = useMutation(api.issues.remove);
+    onSuccess: async (_data, payload) => {
+      if (!organizationId) {
+        return;
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: issueByNumberQueryOptions(organizationId, issueNumber).queryKey,
+      });
+      await queryClient.invalidateQueries({ queryKey: issueKeys.all });
+    },
+  });
+  const removeIssue = useMutation({
+    mutationFn: async (issueId: string) =>
+      unwrapResponse(apiClient.api.v1.issues({ issueId }).delete()),
+  });
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const parsedSchema: TemplateSchema | null = template
+    ? parseTemplateSchema(template.schema)
+    : null;
+  const attachmentsById = useMemo(
+    () => new Map((attachments ?? []).map((attachment) => [attachment._id, attachment])),
+    [attachments],
+  );
 
   if (!organizationId || issue === undefined) {
     return (
@@ -265,8 +338,6 @@ export default function IssueDetailPage() {
     ? JSON.parse(issue.templateData)
     : {};
 
-  const parsedSchema: TemplateSchema | null = template ? JSON.parse(template.schema) : null;
-
   const handleStartEdit = () => {
     setEditTitle(issue.title);
     setEditDescription(issue.description ?? "");
@@ -274,14 +345,16 @@ export default function IssueDetailPage() {
   };
 
   const handleSaveEdit = async () => {
-    const result = await updateIssue({
-      issueId: issue._id,
-      title: editTitle,
-      description: editDescription || undefined,
-    }).then(
-      () => ({ ok: true }) as const,
-      (error: unknown) => ({ ok: false, error }) as const,
-    );
+    const result = await updateIssue
+      .mutateAsync({
+        issueId: issue._id,
+        title: editTitle,
+        description: editDescription || null,
+      })
+      .then(
+        () => ({ ok: true }) as const,
+        (error: unknown) => ({ ok: false, error }) as const,
+      );
 
     if (result.ok) {
       setEditing(false);
@@ -292,7 +365,7 @@ export default function IssueDetailPage() {
   };
 
   const handleStatusChange = async (status: IssueStatus) => {
-    const result = await updateStatus({ issueId: issue._id, status }).then(
+    const result = await updateStatus.mutateAsync({ issueId: issue._id, status }).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
@@ -305,7 +378,7 @@ export default function IssueDetailPage() {
   };
 
   const handlePriorityChange = async (priority: IssuePriority) => {
-    const result = await updateIssue({ issueId: issue._id, priority }).then(
+    const result = await updateIssue.mutateAsync({ issueId: issue._id, priority }).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
@@ -322,7 +395,7 @@ export default function IssueDetailPage() {
       ? issue.labelIds.filter((id: Id<"labels">) => id !== labelId)
       : [...issue.labelIds, labelId];
 
-    const result = await updateIssue({ issueId: issue._id, labelIds: newLabels }).then(
+    const result = await updateIssue.mutateAsync({ issueId: issue._id, labelIds: newLabels }).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
@@ -333,12 +406,14 @@ export default function IssueDetailPage() {
   };
 
   const handleDelete = async () => {
-    const result = await removeIssue({ issueId: issue._id }).then(
+    const result = await removeIssue.mutateAsync(issue._id).then(
       () => ({ ok: true }) as const,
       (error: unknown) => ({ ok: false, error }) as const,
     );
 
     if (result.ok) {
+      await queryClient.invalidateQueries({ queryKey: issueKeys.all });
+      await queryClient.invalidateQueries({ queryKey: attachmentKeys.all });
       toast.success("Issue deleted");
       router.push(`/org/${params.slug}`);
     } else {
@@ -353,12 +428,12 @@ export default function IssueDetailPage() {
       labels={labels}
       parsedSchema={parsedSchema}
       parsedTemplateData={parsedTemplateData}
-      organizationId={organizationId}
       templateName={template?.name ?? "Template Data"}
       editing={editing}
       editTitle={editTitle}
       editDescription={editDescription}
       showDeleteConfirm={showDeleteConfirm}
+      attachments={attachmentsById}
       onStartEdit={handleStartEdit}
       onEditTitleChange={setEditTitle}
       onEditDescriptionChange={setEditDescription}
@@ -374,18 +449,7 @@ export default function IssueDetailPage() {
   );
 }
 
-type IssueDetailIssue = {
-  _id: Id<"issues">;
-  number: number;
-  title: string;
-  description?: string | null;
-  status: IssueStatus;
-  priority: IssuePriority;
-  labelIds: Id<"labels">[];
-  createdAt: number;
-  updatedAt: number;
-  closedAt?: number | null;
-};
+type IssueDetailIssue = IssueDetailDto;
 
 type IssueDetailLabel = { _id: Id<"labels">; name: string; color: string };
 
@@ -395,12 +459,12 @@ function IssueDetailLayout({
   labels,
   parsedSchema,
   parsedTemplateData,
-  organizationId,
   templateName,
   editing,
   editTitle,
   editDescription,
   showDeleteConfirm,
+  attachments,
   onStartEdit,
   onEditTitleChange,
   onEditDescriptionChange,
@@ -418,12 +482,12 @@ function IssueDetailLayout({
   labels: IssueDetailLabel[] | undefined;
   parsedSchema: TemplateSchema | null;
   parsedTemplateData: Record<string, unknown>;
-  organizationId: string;
   templateName: string;
   editing: boolean;
   editTitle: string;
   editDescription: string;
   showDeleteConfirm: boolean;
+  attachments: Map<string, AttachmentDto>;
   onStartEdit: () => void;
   onEditTitleChange: (value: string) => void;
   onEditDescriptionChange: (value: string) => void;
@@ -470,11 +534,11 @@ function IssueDetailLayout({
               issue={issue}
               parsedSchema={parsedSchema}
               parsedTemplateData={parsedTemplateData}
-              organizationId={organizationId}
               templateName={templateName}
               editing={editing}
               editTitle={editTitle}
               editDescription={editDescription}
+              attachments={attachments}
               onEditTitleChange={onEditTitleChange}
               onEditDescriptionChange={onEditDescriptionChange}
               onSaveEdit={onSaveEdit}
@@ -509,11 +573,11 @@ function IssueMainContent({
   issue,
   parsedSchema,
   parsedTemplateData,
-  organizationId,
   templateName,
   editing,
   editTitle,
   editDescription,
+  attachments,
   onEditTitleChange,
   onEditDescriptionChange,
   onSaveEdit,
@@ -522,11 +586,11 @@ function IssueMainContent({
   issue: IssueDetailIssue;
   parsedSchema: TemplateSchema | null;
   parsedTemplateData: Record<string, unknown>;
-  organizationId: string;
   templateName: string;
   editing: boolean;
   editTitle: string;
   editDescription: string;
+  attachments: Map<string, AttachmentDto>;
   onEditTitleChange: (value: string) => void;
   onEditDescriptionChange: (value: string) => void;
   onSaveEdit: () => Promise<void>;
@@ -594,12 +658,7 @@ function IssueMainContent({
                 return (
                   <div key={field.key} className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
-                    <TemplateFileList
-                      field={field}
-                      value={value}
-                      organizationId={organizationId}
-                      issueId={issue._id}
-                    />
+                    <TemplateFileList field={field} value={value} attachments={attachments} />
                   </div>
                 );
               }

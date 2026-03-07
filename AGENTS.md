@@ -108,4 +108,4 @@ btca ask -r npm:react@19.2.3 -q "How does useTransition work?"
 ```
 
 See all resources: `btca resources`
-Available resources: better-auth, elysia-docs, router, tanstack-query, tanstack-start, shadcn, drizzle-orm-docs
+Available resources: better-auth, elysia-docs, router, tanstack-query, tanstack-start, shadcn, drizzle-orm-docs, uploadthing

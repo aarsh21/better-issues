@@ -23,6 +23,11 @@ vi.mock('$lib/goto-resolved', () => ({
 	gotoResolvedPath: mocks.gotoResolvedPath
 }));
 
+vi.mock(
+	'$lib/components/mode-toggle.svelte',
+	() => import('$lib/components/mode-toggle.stub.svelte')
+);
+
 vi.mock('$lib/public-env', () => ({
 	publicEnv: {
 		allowSignups: true
@@ -43,12 +48,14 @@ describe('sign-in page', () => {
 		render(SignInPage, {
 			data: {
 				returnTo: '/org'
-			}
+			},
+			form: undefined,
+			params: {}
 		});
 
-		await page.getByLabelText('Email or username').fill('user@example.com');
+		await page.getByLabelText('Email or Username').fill('user@example.com');
 		await page.getByLabelText('Password').fill('SuperSecret123!');
-		await page.getByRole('button', { name: 'Sign in' }).click();
+		await page.getByRole('button', { name: 'Sign In' }).click();
 
 		await vi.waitFor(() => {
 			expect(mocks.signInEmail).toHaveBeenCalledWith({
@@ -65,12 +72,14 @@ describe('sign-in page', () => {
 		render(SignInPage, {
 			data: {
 				returnTo: '/org'
-			}
+			},
+			form: undefined,
+			params: {}
 		});
 
-		await page.getByLabelText('Email or username').fill('issue-admin');
+		await page.getByLabelText('Email or Username').fill('issue-admin');
 		await page.getByLabelText('Password').fill('SuperSecret123!');
-		await page.getByRole('button', { name: 'Sign in' }).click();
+		await page.getByRole('button', { name: 'Sign In' }).click();
 
 		await vi.waitFor(() => {
 			expect(mocks.signInUsername).toHaveBeenCalledWith({

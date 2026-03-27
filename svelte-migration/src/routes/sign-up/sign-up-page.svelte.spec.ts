@@ -21,6 +21,11 @@ vi.mock('$lib/goto-resolved', () => ({
 	gotoResolvedPath: mocks.gotoResolvedPath
 }));
 
+vi.mock(
+	'$lib/components/mode-toggle.svelte',
+	() => import('$lib/components/mode-toggle.stub.svelte')
+);
+
 describe('sign-up page', () => {
 	beforeEach(() => {
 		mocks.signUpEmail.mockReset();
@@ -33,14 +38,16 @@ describe('sign-up page', () => {
 		render(SignUpPage, {
 			data: {
 				returnTo: '/org'
-			}
+			},
+			form: undefined,
+			params: {}
 		});
 
 		await page.getByLabelText(/^Name$/).fill('Better Issues');
 		await page.getByLabelText(/^Username$/).fill('better-issues');
 		await page.getByLabelText(/^Email$/).fill('owner@example.com');
 		await page.getByLabelText(/^Password$/).fill('SuperSecret123!');
-		await page.getByRole('button', { name: 'Sign up' }).click();
+		await page.getByRole('button', { name: 'Create Account' }).click();
 
 		await vi.waitFor(() => {
 			expect(mocks.signUpEmail).toHaveBeenCalledWith({

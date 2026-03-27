@@ -5,9 +5,9 @@
 	import { authClient } from '$lib/auth-client';
 	import { DEFAULT_AUTHENTICATED_PATH } from '$lib/auth-routing';
 	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import ModeToggle from '$lib/components/mode-toggle.svelte';
 	import { gotoResolvedPath } from '$lib/goto-resolved';
 
 	let { data }: PageProps = $props();
@@ -54,72 +54,79 @@
 	}
 </script>
 
-<div class="flex min-h-svh items-center justify-center p-4">
-	<Card.Root class="w-full max-w-sm">
-		<Card.Header>
-			<Card.Title>Create account</Card.Title>
-		</Card.Header>
-		<Card.Content>
-			<form class="flex flex-col gap-4" onsubmit={onSubmit}>
-				<div class="flex flex-col gap-2">
-					<Label for="sign-up-name">Name</Label>
-					<Input
-						id="sign-up-name"
-						name="name"
-						type="text"
-						autocomplete="name"
-						bind:value={name}
-						required
-						disabled={submitting}
-					/>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="sign-up-username">Username</Label>
-					<Input
-						id="sign-up-username"
-						name="username"
-						type="text"
-						autocomplete="username"
-						bind:value={username}
-						required
-						disabled={submitting}
-					/>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="sign-up-email">Email</Label>
-					<Input
-						id="sign-up-email"
-						name="email"
-						type="email"
-						autocomplete="email"
-						bind:value={email}
-						required
-						disabled={submitting}
-					/>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="sign-up-password">Password</Label>
-					<Input
-						id="sign-up-password"
-						name="password"
-						type="password"
-						autocomplete="new-password"
-						bind:value={password}
-						required
-						disabled={submitting}
-					/>
-				</div>
-				{#if errorMessage}
-					<p class="text-xs text-destructive" role="alert">{errorMessage}</p>
-				{/if}
-				<Button type="submit" class="w-full" disabled={submitting}>
-					{submitting ? 'Creating account…' : 'Sign up'}
-				</Button>
-			</form>
-		</Card.Content>
-		<Card.Footer class="justify-center gap-1 border-t-0 pt-0">
-			<span class="text-muted-foreground">Already have an account?</span>
-			<Button variant="link" class="h-auto p-0" href={signInHref}>Sign in</Button>
-		</Card.Footer>
-	</Card.Root>
+<div class="flex h-svh items-center justify-center bg-background">
+	<div class="w-full max-w-sm p-8">
+		<div class="mb-6 flex items-center justify-between">
+			<div>
+				<h1 class="text-base font-bold tracking-tight">better-issues</h1>
+				<p class="text-xs text-muted-foreground">Issue tracking for small teams</p>
+			</div>
+			<ModeToggle />
+		</div>
+		<form class="space-y-3" onsubmit={onSubmit}>
+			<div class="space-y-1.5">
+				<Label for="sign-up-name" class="text-xs">Name</Label>
+				<Input
+					id="sign-up-name"
+					name="name"
+					type="text"
+					placeholder="Jane Doe"
+					autocomplete="name"
+					bind:value={name}
+					required
+					disabled={submitting}
+				/>
+			</div>
+			<div class="space-y-1.5">
+				<Label for="sign-up-username" class="text-xs">Username</Label>
+				<Input
+					id="sign-up-username"
+					name="username"
+					type="text"
+					placeholder="jane_doe"
+					autocomplete="username"
+					bind:value={username}
+					required
+					disabled={submitting}
+				/>
+			</div>
+			<div class="space-y-1.5">
+				<Label for="sign-up-email" class="text-xs">Email</Label>
+				<Input
+					id="sign-up-email"
+					name="email"
+					type="email"
+					placeholder="you@example.com"
+					autocomplete="email"
+					bind:value={email}
+					required
+					disabled={submitting}
+				/>
+			</div>
+			<div class="space-y-1.5">
+				<Label for="sign-up-password" class="text-xs">Password</Label>
+				<Input
+					id="sign-up-password"
+					name="password"
+					type="password"
+					placeholder="••••••••"
+					autocomplete="new-password"
+					bind:value={password}
+					required
+					disabled={submitting}
+				/>
+			</div>
+			{#if errorMessage}
+				<p class="text-xs text-destructive" role="alert">{errorMessage}</p>
+			{/if}
+			<Button type="submit" class="w-full" size="sm" disabled={submitting}>
+				{submitting ? 'Creating account...' : 'Create Account'}
+			</Button>
+		</form>
+		<p class="pt-3 text-center text-xs text-muted-foreground">
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `signInHref` uses `resolve()` plus optional `returnTo` -->
+			Already have an account?
+			<a class="text-foreground underline underline-offset-4" href={signInHref}>Sign in</a>
+		</p>
+	</div>
 </div>

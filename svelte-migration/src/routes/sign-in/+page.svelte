@@ -5,9 +5,9 @@
 	import { authClient } from '$lib/auth-client';
 	import { DEFAULT_AUTHENTICATED_PATH } from '$lib/auth-routing';
 	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import ModeToggle from '$lib/components/mode-toggle.svelte';
 	import { gotoResolvedPath } from '$lib/goto-resolved';
 	import { publicEnv } from '$lib/public-env';
 
@@ -57,52 +57,61 @@
 	}
 </script>
 
-<div class="flex min-h-svh items-center justify-center p-4">
-	<Card.Root class="w-full max-w-sm">
-		<Card.Header>
-			<Card.Title>Sign in</Card.Title>
-		</Card.Header>
-		<Card.Content>
-			<form class="flex flex-col gap-4" onsubmit={onSubmit}>
-				<div class="flex flex-col gap-2">
-					<Label for="sign-in-identifier">Email or username</Label>
-					<Input
-						id="sign-in-identifier"
-						name="identifier"
-						type="text"
-						autocomplete="username"
-						bind:value={identifier}
-						required
-						disabled={submitting}
-						aria-invalid={errorMessage ? true : undefined}
-					/>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="sign-in-password">Password</Label>
-					<Input
-						id="sign-in-password"
-						name="password"
-						type="password"
-						autocomplete="current-password"
-						bind:value={password}
-						required
-						disabled={submitting}
-						aria-invalid={errorMessage ? true : undefined}
-					/>
-				</div>
-				{#if errorMessage}
-					<p class="text-xs text-destructive" role="alert">{errorMessage}</p>
-				{/if}
-				<Button type="submit" class="w-full" disabled={submitting}>
-					{submitting ? 'Signing in…' : 'Sign in'}
-				</Button>
-			</form>
-		</Card.Content>
-		{#if publicEnv.allowSignups}
-			<Card.Footer class="justify-center gap-1 border-t-0 pt-0">
-				<span class="text-muted-foreground">No account?</span>
-				<Button variant="link" class="h-auto p-0" href={signUpHref}>Create one</Button>
-			</Card.Footer>
+<div class="flex h-svh items-center justify-center bg-background">
+	<div class="w-full max-w-sm p-8">
+		<div class="mb-6 flex items-center justify-between">
+			<div>
+				<h1 class="text-base font-bold tracking-tight">better-issues</h1>
+				<p class="text-xs text-muted-foreground">Issue tracking for small teams</p>
+			</div>
+			<ModeToggle />
+		</div>
+		<form class="space-y-3" onsubmit={onSubmit}>
+			<div class="space-y-1.5">
+				<Label for="sign-in-identifier" class="text-xs">Email or Username</Label>
+				<Input
+					id="sign-in-identifier"
+					name="identifier"
+					type="text"
+					placeholder="you@example.com or jane_doe"
+					autocomplete="username"
+					bind:value={identifier}
+					required
+					disabled={submitting}
+					aria-invalid={errorMessage ? true : undefined}
+				/>
+			</div>
+			<div class="space-y-1.5">
+				<Label for="sign-in-password" class="text-xs">Password</Label>
+				<Input
+					id="sign-in-password"
+					name="password"
+					type="password"
+					placeholder="••••••••"
+					autocomplete="current-password"
+					bind:value={password}
+					required
+					disabled={submitting}
+					aria-invalid={errorMessage ? true : undefined}
+				/>
+			</div>
+			{#if errorMessage}
+				<p class="text-xs text-destructive" role="alert">{errorMessage}</p>
+			{/if}
+			<Button type="submit" class="w-full" size="sm" disabled={submitting}>
+				{submitting ? 'Signing in...' : 'Sign In'}
+			</Button>
+		</form>
+		{#if !publicEnv.allowSignups}
+			<p class="pt-3 text-center text-xs text-muted-foreground">
+				Sign ups are disabled by the admin.
+			</p>
+		{:else}
+			<p class="pt-3 text-center text-xs text-muted-foreground">
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `signUpHref` uses `resolve()` plus optional `returnTo` -->
+				Need an account?
+				<a class="text-foreground underline underline-offset-4" href={signUpHref}>Create one</a>
+			</p>
 		{/if}
-	</Card.Root>
+	</div>
 </div>

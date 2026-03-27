@@ -34,16 +34,27 @@ const authUserValidator = v.object({
 	userId: v.optional(v.union(v.null(), v.string()))
 });
 
-const siteUrl = process.env.SITE_URL;
+const normalizeUrl = (value: string | undefined) => value?.trim().replace(/\/+$/, '') || undefined;
+const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
+
+const siteUrl = normalizeUrl(process.env.SITE_URL);
+const betterAuthUrl = normalizeUrl(process.env.BETTER_AUTH_URL);
+const baseUrl = betterAuthUrl ?? siteUrl;
+const trustedOrigins = Array.from(new Set([siteUrl, betterAuthUrl].filter(isDefined)));
 const signupsEnabled = isSignupsEnabled(process.env.ALLOWED_SIGNUPS);
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
 	return {
-		baseURL: siteUrl,
-		trustedOrigins: siteUrl ? [siteUrl] : [],
+		baseURL: baseUrl,
+		trustedOrigins,
 		secret: process.env.BETTER_AUTH_SECRET,
+		advanced: {
+			ipAddress: {
+				ipAddressHeaders: ['x-forwarded-for', 'x-real-ip']
+			}
+		},
 		database: authComponent.adapter(ctx),
 		emailAndPassword: {
 			enabled: true,

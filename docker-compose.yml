@@ -8,6 +8,9 @@ services:
       - CONVEX_CLOUD_ORIGIN=${PUBLIC_CONVEX_URL:-http://localhost:3210}
       - CONVEX_SITE_ORIGIN=${CONVEX_SITE_ORIGIN:-http://localhost:3211}
       - INSTANCE_SECRET=${INSTANCE_SECRET}
+      # Better Auth is a large bundle — increase V8 isolate memory limits
+      - ISOLATE_MAX_USER_HEAP_SIZE=268435456
+      - ISOLATE_MAX_HEAP_EXTRA_SIZE=67108864
     entrypoint: ["sh", "-c", "./generate_admin_key.sh | tail -1 > /admin/key && exec ./run_backend.sh"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3210/version"]

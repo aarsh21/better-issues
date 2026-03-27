@@ -17,6 +17,32 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  convex-keygen:
+    image: ghcr.io/get-convex/convex-backend:latest
+    entrypoint: ["sh", "-c", "./generate_admin_key.sh | tail -1 > /admin/key"]
+    volumes:
+      - convex_admin:/admin
+    environment:
+      - INSTANCE_SECRET=${INSTANCE_SECRET}
+
+  convex-deploy:
+    build:
+      context: .
+      target: deploy
+    volumes:
+      - convex_admin:/admin
+    environment:
+      - CONVEX_SELF_HOSTED_URL=http://convex:3210
+      - SITE_URL=${PUBLIC_SITE_URL:-http://localhost:3000}
+      - BETTER_AUTH_URL=${PUBLIC_SITE_URL:-http://localhost:3000}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - ALLOWED_SIGNUPS=${PUBLIC_ALLOWED_SIGNUPS:-true}
+    depends_on:
+      convex:
+        condition: service_healthy
+      convex-keygen:
+        condition: service_completed_successfully
+
   dashboard:
     image: ghcr.io/get-convex/convex-dashboard:latest
     ports:
@@ -29,7 +55,14 @@ services:
     restart: unless-stopped
 
   web:
-    build: .
+    build:
+      context: .
+      target: runtime
+      args:
+        - PUBLIC_CONVEX_URL=${PUBLIC_CONVEX_URL:-http://localhost:3210}
+        - PUBLIC_CONVEX_SITE_URL=${CONVEX_SITE_ORIGIN:-http://localhost:3211}
+        - PUBLIC_SITE_URL=${PUBLIC_SITE_URL:-http://localhost:3000}
+        - PUBLIC_ALLOWED_SIGNUPS=${PUBLIC_ALLOWED_SIGNUPS:-true}
     ports:
       - "${PORT:-3000}:3000"
     environment:
@@ -38,6 +71,7 @@ services:
       # ── Convex ──────────────────────────────────────
       - PUBLIC_CONVEX_URL=${PUBLIC_CONVEX_URL:-http://localhost:3210}
       - PUBLIC_CONVEX_SITE_URL=http://convex:3211
+      - CONVEX_URL=http://convex:3210
       # ── Better Auth ─────────────────────────────────
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${PUBLIC_SITE_URL:-http://localhost:3000}
@@ -46,9 +80,10 @@ services:
       - PUBLIC_SITE_URL=${PUBLIC_SITE_URL:-http://localhost:3000}
       - PUBLIC_ALLOWED_SIGNUPS=${PUBLIC_ALLOWED_SIGNUPS:-true}
     depends_on:
-      convex:
-        condition: service_healthy
+      convex-deploy:
+        condition: service_completed_successfully
     restart: unless-stopped
 
 volumes:
   convex_data:
+  convex_admin:

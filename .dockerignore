@@ -11,3 +11,9 @@ build
 test-results
 .vitest-attachments
 coverage
+.agents
+.claude
+.cursor
+.opencode
+.vscode
+*.md

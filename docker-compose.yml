@@ -1,9 +1,6 @@
 services:
   convex:
     image: ghcr.io/get-convex/convex-backend:latest
-    ports:
-      - "3210:3210"
-      - "3211:3211"
     volumes:
       - convex_data:/convex/data
       - convex_admin:/admin
@@ -37,8 +34,6 @@ services:
 
   dashboard:
     image: ghcr.io/get-convex/convex-dashboard:latest
-    ports:
-      - "6791:6791"
     environment:
       - NEXT_PUBLIC_DEPLOYMENT_URL=http://convex:3210
     depends_on:
@@ -55,8 +50,6 @@ services:
         - PUBLIC_CONVEX_SITE_URL=${CONVEX_SITE_ORIGIN:-http://localhost:3211}
         - PUBLIC_SITE_URL=${PUBLIC_SITE_URL:-http://localhost:3000}
         - PUBLIC_ALLOWED_SIGNUPS=${PUBLIC_ALLOWED_SIGNUPS:-true}
-    ports:
-      - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - ORIGIN=${PUBLIC_SITE_URL:-http://localhost:3000}

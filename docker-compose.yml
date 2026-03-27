@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - ORIGIN=${PUBLIC_SITE_URL}
+      # ── Convex ──────────────────────────────────────
+      - PUBLIC_CONVEX_URL=${PUBLIC_CONVEX_URL}
+      - PUBLIC_CONVEX_SITE_URL=${PUBLIC_CONVEX_SITE_URL}
+      # ── Better Auth ─────────────────────────────────
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${PUBLIC_SITE_URL}
+      - SITE_URL=${PUBLIC_SITE_URL}
+      # ── App ─────────────────────────────────────────
+      - PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
+      - PUBLIC_ALLOWED_SIGNUPS=${PUBLIC_ALLOWED_SIGNUPS:-true}
+    restart: unless-stopped

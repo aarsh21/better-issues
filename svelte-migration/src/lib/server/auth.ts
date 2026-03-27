@@ -34,6 +34,8 @@ export const requireUser = async () => {
 	return user;
 };
 
+export type CurrentUser = NonNullable<Awaited<ReturnType<typeof requireUser>>>;
+
 export const redirectAuthenticatedUser = async (fallback = DEFAULT_AUTHENTICATED_PATH) => {
 	const event = getRequestEvent();
 	const user = await fetchCurrentUser();

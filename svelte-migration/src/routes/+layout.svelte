@@ -4,12 +4,19 @@
 	import { createSvelteAuthClient } from '@mmailaender/convex-better-auth-svelte/svelte';
 	import { ModeWatcher } from 'mode-watcher';
 	import { authClient } from '$lib/auth-client';
+	import { Toaster } from '$lib/components/ui/sonner';
 
-	createSvelteAuthClient({ authClient });
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { children, data }: LayoutProps = $props();
+
+	createSvelteAuthClient({
+		authClient,
+		getServerState: () => data.authState
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 <ModeWatcher />
+<Toaster richColors />
 {@render children()}

@@ -6,24 +6,18 @@ services:
       - "3211:3211"
     volumes:
       - convex_data:/convex/data
+      - convex_admin:/admin
     environment:
       - CONVEX_CLOUD_ORIGIN=${PUBLIC_CONVEX_URL:-http://localhost:3210}
       - CONVEX_SITE_ORIGIN=${CONVEX_SITE_ORIGIN:-http://localhost:3211}
       - INSTANCE_SECRET=${INSTANCE_SECRET}
+    entrypoint: ["sh", "-c", "./generate_admin_key.sh | tail -1 > /admin/key && exec ./run_backend.sh"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3210/version"]
       interval: 5s
       timeout: 5s
       start_period: 10s
     restart: unless-stopped
-
-  convex-keygen:
-    image: ghcr.io/get-convex/convex-backend:latest
-    entrypoint: ["sh", "-c", "./generate_admin_key.sh | tail -1 > /admin/key"]
-    volumes:
-      - convex_admin:/admin
-    environment:
-      - INSTANCE_SECRET=${INSTANCE_SECRET}
 
   convex-deploy:
     build:
@@ -40,8 +34,6 @@ services:
     depends_on:
       convex:
         condition: service_healthy
-      convex-keygen:
-        condition: service_completed_successfully
 
   dashboard:
     image: ghcr.io/get-convex/convex-dashboard:latest

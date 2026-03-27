@@ -1,12 +1,14 @@
 node_modules
 
-# Output
+# Build output
 .output
+/.svelte-kit
+/build
+
+# Deploy targets
 .vercel
 .netlify
 .wrangler
-/.svelte-kit
-/build
 
 # OS
 .DS_Store
@@ -20,3 +22,17 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Testing
+test-results
+coverage
+.vitest-attachments
+
+# Convex local
+.convex
+
+# Misc
+*.log
+.cache
+.turbo
+.btca

@@ -15,7 +15,7 @@ To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-bun x sv@0.13.0 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" playwright tailwindcss="plugins:none" mcp="ide:cursor,claude-code,opencode+setup:local" --install bun svelte-migration
+bun x sv@0.13.0 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" tailwindcss="plugins:none" mcp="ide:cursor,claude-code,opencode+setup:local" --install bun svelte-migration
 ```
 
 ## Developing

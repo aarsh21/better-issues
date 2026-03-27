@@ -5,15 +5,18 @@ import { createConvexHttpClient } from '@mmailaender/convex-better-auth-svelte/s
 import { DEFAULT_AUTHENTICATED_PATH, SIGN_IN_PATH, getSafeReturnTo } from '$lib/auth-routing';
 import { api } from '$convex/_generated/api';
 
-const getCurrentUser = async () => {
+const fetchCurrentUser = async () => {
 	const client = createConvexHttpClient();
 
 	return await client.query(api.auth.getCurrentUser, {});
 };
 
+/** Resolves the signed-in user, or `null` when there is no session. */
+export const getOptionalUser = fetchCurrentUser;
+
 export const requireUser = async () => {
 	const event = getRequestEvent();
-	const user = await getCurrentUser();
+	const user = await fetchCurrentUser();
 
 	if (!user) {
 		const returnTo = getSafeReturnTo(`${event.url.pathname}${event.url.search}`);
@@ -33,7 +36,7 @@ export const requireUser = async () => {
 
 export const redirectAuthenticatedUser = async (fallback = DEFAULT_AUTHENTICATED_PATH) => {
 	const event = getRequestEvent();
-	const user = await getCurrentUser();
+	const user = await fetchCurrentUser();
 
 	if (!user) {
 		return null;

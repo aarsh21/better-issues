@@ -52,6 +52,11 @@
 
 	type SettingsTab = 'profile' | 'shortcuts' | 'labels' | 'templates' | 'members';
 	type ShortcutTarget = 'search' | 'commandPrompt';
+	type ShortcutOption = Readonly<{
+		target: ShortcutTarget;
+		title: string;
+		description: string;
+	}>;
 
 	const LABEL_COLORS = [
 		'#ef4444',
@@ -67,6 +72,18 @@
 	];
 	const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 	const USERNAME_REGEX = /^[a-zA-Z0-9_.]+$/;
+	const SHORTCUT_OPTIONS: readonly ShortcutOption[] = [
+		{
+			target: 'search',
+			title: 'Issue search',
+			description: 'Opens the issue search dialog'
+		},
+		{
+			target: 'commandPrompt',
+			title: 'Command prompt',
+			description: 'Opens the workspace command dialog'
+		}
+	];
 
 	const workspace = getWorkspace();
 	const slug = $derived(page.params.slug ?? '');
@@ -94,7 +111,7 @@
 	let uploadingAvatar = $state(false);
 	let removingAvatar = $state(false);
 
-	let shortcuts = $state<ShortcutSettings>(DEFAULT_SHORTCUTS);
+	let shortcuts = $state<ShortcutSettings>(readShortcutSettings());
 	let capturingTarget = $state<ShortcutTarget | null>(null);
 
 	let showLabelCreator = $state(false);
@@ -116,10 +133,6 @@
 	let confirmDescription = $state('');
 	let confirmLabel = $state('Confirm');
 	let confirmAction = $state<null | (() => Promise<void>)>(null);
-
-	$effect(() => {
-		shortcuts = readShortcutSettings();
-	});
 
 	$effect(() => {
 		const currentUser = currentUserQuery.data;
@@ -587,7 +600,7 @@
 						</p>
 					</div>
 
-					{#each [['search', 'Issue search', 'Opens the issue search dialog'], ['commandPrompt', 'Command prompt', 'Opens the workspace command dialog']] as const as [target, title, description]}
+					{#each SHORTCUT_OPTIONS as { target, title, description } (target)}
 						<div
 							class="flex flex-col gap-3 border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
 						>

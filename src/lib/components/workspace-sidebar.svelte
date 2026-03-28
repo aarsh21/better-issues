@@ -64,6 +64,8 @@
 
 	const activeStatus = $derived(new URLSearchParams(searchString).get('status'));
 	const isOnIssuesIndex = $derived(pathname === `/org/${slug}`);
+	const searchShortcutParts = $derived(getShortcutDisplayParts(shortcuts.search));
+	const commandShortcutParts = $derived(getShortcutDisplayParts(shortcuts.commandPrompt));
 
 	function navIssuesHref(filter?: 'open' | 'in_progress' | 'closed') {
 		const base = `/org/${slug}`;
@@ -79,29 +81,29 @@
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						class={cn(
-							'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! flex w-full cursor-pointer items-center gap-2 rounded-none p-2 text-left text-xs outline-hidden'
+							'flex w-full cursor-pointer items-center gap-2 rounded-none p-2 text-left text-xs outline-hidden group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground'
 						)}
 					>
 						<div
-							class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center text-xs font-semibold"
+							class="flex aspect-square size-8 shrink-0 items-center justify-center bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground"
 						>
 							{(activeOrg?.name ?? 'T').charAt(0).toUpperCase()}
 						</div>
 						<div class="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-							<span class="text-sidebar-foreground truncate text-xs font-semibold">
+							<span class="truncate text-xs font-semibold text-sidebar-foreground">
 								{activeOrg?.name ?? 'Select team'}
 							</span>
-							<span class="text-sidebar-foreground/60 truncate text-[10px]">
+							<span class="truncate text-[10px] text-sidebar-foreground/60">
 								{activeOrg?.slug ?? ''}
 							</span>
 						</div>
 						<ChevronsUpDownIcon
-							class="text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden ml-auto size-4 shrink-0"
+							class="ml-auto size-4 shrink-0 text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
 						/>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent class="min-w-56" align="start" sideOffset={4}>
 						<DropdownMenuGroup>
-							<DropdownMenuLabel class="text-muted-foreground text-xs">Teams</DropdownMenuLabel>
+							<DropdownMenuLabel class="text-xs text-muted-foreground">Teams</DropdownMenuLabel>
 							{#if organizations}
 								{#each organizations as org (org.id)}
 									<DropdownMenuItem
@@ -109,11 +111,11 @@
 										onSelect={() => void onTeamSelect(org.slug)}
 									>
 										<div
-											class="bg-primary text-primary-foreground flex size-6 items-center justify-center text-[10px] font-semibold"
+											class="flex size-6 items-center justify-center bg-primary text-[10px] font-semibold text-primary-foreground"
 										>
 											{org.name.charAt(0).toUpperCase()}
 										</div>
-										<span class="font-mono text-xs truncate">{org.name}</span>
+										<span class="truncate font-mono text-xs">{org.name}</span>
 										{#if activeOrg?.id === org.id}
 											<CheckIcon class="ml-auto h-3.5 w-3.5" />
 										{/if}
@@ -129,7 +131,7 @@
 							<div class="flex size-6 items-center justify-center border border-dashed">
 								<PlusIcon class="size-3.5" />
 							</div>
-							<span class="text-muted-foreground text-xs">Create team</span>
+							<span class="text-xs text-muted-foreground">Create team</span>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -146,8 +148,10 @@
 						<Sidebar.MenuButton tooltipContent="Search issues" onclick={onSearchOpen}>
 							<SearchIcon />
 							<span>Search</span>
-							<KbdGroup class="text-sidebar-foreground ml-auto group-data-[collapsible=icon]:hidden">
-								{#each getShortcutDisplayParts(shortcuts.search) as part}
+							<KbdGroup
+								class="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+							>
+								{#each searchShortcutParts as part, index (`search-${index}-${part}`)}
 									<Kbd class="h-6 min-w-6 px-2 text-sm font-semibold">{part}</Kbd>
 								{/each}
 							</KbdGroup>
@@ -157,8 +161,10 @@
 						<Sidebar.MenuButton tooltipContent="Command options" onclick={onActionCommandOpen}>
 							<CommandIcon />
 							<span>Commands</span>
-							<KbdGroup class="text-sidebar-foreground ml-auto group-data-[collapsible=icon]:hidden">
-								{#each getShortcutDisplayParts(shortcuts.commandPrompt) as part}
+							<KbdGroup
+								class="ml-auto text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+							>
+								{#each commandShortcutParts as part, index (`command-${index}-${part}`)}
 									<Kbd class="h-6 min-w-6 px-2 text-sm font-semibold">{part}</Kbd>
 								{/each}
 							</KbdGroup>
@@ -256,7 +262,7 @@
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						class={cn(
-							'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! flex w-full cursor-pointer items-center gap-2 rounded-none p-2 text-left text-xs outline-hidden'
+							'flex w-full cursor-pointer items-center gap-2 rounded-none p-2 text-left text-xs outline-hidden group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground'
 						)}
 					>
 						<Avatar class="h-8 w-8 shrink-0">
@@ -264,18 +270,22 @@
 								src={currentUser.image ?? undefined}
 								alt={currentUser.name ?? currentUser.email}
 							/>
-							<AvatarFallback class="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
+							<AvatarFallback
+								class="bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground"
+							>
 								{(currentUser.name ?? currentUser.email).charAt(0).toUpperCase()}
 							</AvatarFallback>
 						</Avatar>
 						<div class="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-							<span class="text-sidebar-foreground truncate text-xs font-semibold">
+							<span class="truncate text-xs font-semibold text-sidebar-foreground">
 								{currentUser.name ?? 'User'}
 							</span>
-							<span class="text-sidebar-foreground/60 truncate text-[10px]">{currentUser.email}</span>
+							<span class="truncate text-[10px] text-sidebar-foreground/60"
+								>{currentUser.email}</span
+							>
 						</div>
 						<ChevronsUpDownIcon
-							class="text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden ml-auto size-4 shrink-0"
+							class="ml-auto size-4 shrink-0 text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
 						/>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent class="min-w-56" align="end" sideOffset={4}>
@@ -293,23 +303,26 @@
 									</Avatar>
 									<div class="grid flex-1 text-left leading-tight">
 										<span class="truncate text-xs font-semibold">{currentUser.name ?? 'User'}</span>
-										<span class="text-muted-foreground truncate text-[10px]">{currentUser.email}</span>
+										<span class="truncate text-[10px] text-muted-foreground"
+											>{currentUser.email}</span
+										>
 									</div>
 								</div>
 							</DropdownMenuLabel>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem class="cursor-pointer gap-2" onSelect={() => void gotoResolvedPath('/org')}>
+							<DropdownMenuItem
+								class="cursor-pointer gap-2"
+								onSelect={() => void gotoResolvedPath('/org')}
+							>
 								<UsersIcon class="size-4" />
 								Teams
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuLabel class="text-muted-foreground text-[10px]">
-								Theme
-							</DropdownMenuLabel>
+							<DropdownMenuLabel class="text-[10px] text-muted-foreground">Theme</DropdownMenuLabel>
 							<DropdownMenuItem onSelect={() => setMode('light')} class="cursor-pointer gap-2">
 								<SunIcon class="size-4" />
 								Light
@@ -334,7 +347,7 @@
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
-							class="text-destructive cursor-pointer gap-2"
+							class="cursor-pointer gap-2 text-destructive"
 							onSelect={() => void onSignOut()}
 						>
 							<LogOutIcon class="size-4" />

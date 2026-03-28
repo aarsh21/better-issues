@@ -13,8 +13,10 @@
 
 	let { data }: PageProps = $props();
 
-	let identifier = $state('');
-	let password = $state('');
+	let form = $state({
+		identifier: '',
+		password: ''
+	});
 	let errorMessage = $state<string | null>(null);
 	let submitting = $state(false);
 
@@ -32,15 +34,15 @@
 		submitting = true;
 
 		try {
-			const trimmed = identifier.trim();
+			const trimmed = form.identifier.trim();
 			const result = trimmed.includes('@')
 				? await authClient.signIn.email({
 						email: trimmed,
-						password
+						password: form.password
 					})
 				: await authClient.signIn.username({
 						username: trimmed,
-						password
+						password: form.password
 					});
 
 			if (result.error) {
@@ -75,7 +77,7 @@
 					type="text"
 					placeholder="you@example.com or jane_doe"
 					autocomplete="username"
-					bind:value={identifier}
+					bind:value={form.identifier}
 					required
 					disabled={submitting}
 					aria-invalid={errorMessage ? true : undefined}
@@ -89,7 +91,7 @@
 					type="password"
 					placeholder="••••••••"
 					autocomplete="current-password"
-					bind:value={password}
+					bind:value={form.password}
 					required
 					disabled={submitting}
 					aria-invalid={errorMessage ? true : undefined}

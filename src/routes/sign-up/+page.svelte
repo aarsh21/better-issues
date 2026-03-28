@@ -12,10 +12,12 @@
 
 	let { data }: PageProps = $props();
 
-	let name = $state('');
-	let username = $state('');
-	let email = $state('');
-	let password = $state('');
+	let form = $state({
+		name: '',
+		username: '',
+		email: '',
+		password: ''
+	});
 	let errorMessage = $state<string | null>(null);
 	let submitting = $state(false);
 
@@ -34,10 +36,10 @@
 
 		try {
 			const result = await authClient.signUp.email({
-				name: name.trim(),
-				username: username.trim(),
-				email: email.trim(),
-				password
+				name: form.name.trim(),
+				username: form.username.trim(),
+				email: form.email.trim(),
+				password: form.password
 			});
 
 			if (result.error) {
@@ -72,7 +74,7 @@
 					type="text"
 					placeholder="Jane Doe"
 					autocomplete="name"
-					bind:value={name}
+					bind:value={form.name}
 					required
 					disabled={submitting}
 				/>
@@ -85,7 +87,7 @@
 					type="text"
 					placeholder="jane_doe"
 					autocomplete="username"
-					bind:value={username}
+					bind:value={form.username}
 					required
 					disabled={submitting}
 				/>
@@ -98,7 +100,7 @@
 					type="email"
 					placeholder="you@example.com"
 					autocomplete="email"
-					bind:value={email}
+					bind:value={form.email}
 					required
 					disabled={submitting}
 				/>
@@ -111,7 +113,7 @@
 					type="password"
 					placeholder="••••••••"
 					autocomplete="new-password"
-					bind:value={password}
+					bind:value={form.password}
 					required
 					disabled={submitting}
 				/>

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	import { goto } from '$app/navigation';
@@ -18,8 +17,16 @@
 	import { authClient } from '$lib/auth-client';
 	import { gotoResolvedPath } from '$lib/goto-resolved';
 	import { clearIssueSnapshots } from '$lib/issue-snapshot-cache';
-	import { getActiveOrganization, listOrganizations, setActiveOrganization } from '$lib/organization';
-	import { matchesShortcut, readShortcutSettings, type ShortcutSettings } from '$lib/shortcut-settings';
+	import {
+		getActiveOrganization,
+		listOrganizations,
+		setActiveOrganization
+	} from '$lib/organization';
+	import {
+		matchesShortcut,
+		readShortcutSettings,
+		type ShortcutSettings
+	} from '$lib/shortcut-settings';
 	import { setWorkspaceContext, type WorkspaceState } from '$lib/workspace-context';
 
 	import type { LayoutProps } from './$types';
@@ -44,6 +51,7 @@
 
 	let activeCommand = $state<'issueSearch' | 'actionCommand' | null>(null);
 	let shortcuts = $state<ShortcutSettings>(readShortcutSettings());
+	let initialized = false;
 
 	const issueSearchOpen = $derived(activeCommand === 'issueSearch');
 	const actionCommandOpen = $derived(activeCommand === 'actionCommand');
@@ -51,7 +59,12 @@
 	function isEditableElement(target: EventTarget | null) {
 		if (!(target instanceof HTMLElement)) return false;
 		const tagName = target.tagName.toLowerCase();
-		return target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+		return (
+			target.isContentEditable ||
+			tagName === 'input' ||
+			tagName === 'textarea' ||
+			tagName === 'select'
+		);
 	}
 
 	function openIssueSearch() {
@@ -60,6 +73,21 @@
 
 	function openActionCommand() {
 		activeCommand = 'actionCommand';
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (isEditableElement(e.target)) return;
+
+		if (matchesShortcut(e, shortcuts.search)) {
+			e.preventDefault();
+			activeCommand = 'issueSearch';
+			return;
+		}
+
+		if (matchesShortcut(e, shortcuts.commandPrompt)) {
+			e.preventDefault();
+			activeCommand = 'actionCommand';
+		}
 	}
 
 	$effect(() => {
@@ -77,7 +105,10 @@
 		}
 	});
 
-	onMount(() => {
+	$effect(() => {
+		if (initialized) return;
+		initialized = true;
+
 		shortcuts = readShortcutSettings();
 
 		void (async () => {
@@ -89,24 +120,6 @@
 				workspace.organizations = [];
 			}
 		})();
-
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (isEditableElement(e.target)) return;
-
-			if (matchesShortcut(e, shortcuts.search)) {
-				e.preventDefault();
-				activeCommand = 'issueSearch';
-				return;
-			}
-
-			if (matchesShortcut(e, shortcuts.commandPrompt)) {
-				e.preventDefault();
-				activeCommand = 'actionCommand';
-			}
-		};
-
-		document.addEventListener('keydown', handleKeyDown);
-		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
 
 	$effect(() => {
@@ -171,6 +184,8 @@
 	}
 </script>
 
+<svelte:document onkeydown={handleKeyDown} />
+
 <Sidebar.Provider>
 	<WorkspaceSidebar
 		{slug}
@@ -193,21 +208,21 @@
 		</div>
 	</Sidebar.Inset>
 
-	<FloatingToolbar
-		{slug}
-		onSearchOpen={openIssueSearch}
-		onActionCommandOpen={openActionCommand}
-	/>
+	<FloatingToolbar {slug} onSearchOpen={openIssueSearch} onActionCommandOpen={openActionCommand} />
 
 	<IssueSearchCommand
 		open={issueSearchOpen}
-		onOpenChange={(v) => { activeCommand = v ? 'issueSearch' : null; }}
+		onOpenChange={(v) => {
+			activeCommand = v ? 'issueSearch' : null;
+		}}
 		{slug}
 	/>
 
 	<ActionCommand
 		open={actionCommandOpen}
-		onOpenChange={(v) => { activeCommand = v ? 'actionCommand' : null; }}
+		onOpenChange={(v) => {
+			activeCommand = v ? 'actionCommand' : null;
+		}}
 		{slug}
 		onIssueSearchOpen={openIssueSearch}
 		{shortcuts}

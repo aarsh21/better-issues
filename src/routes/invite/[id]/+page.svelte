@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import Loader2Icon from '@lucide/svelte/icons/loader-2';
 	import MailIcon from '@lucide/svelte/icons/mail';
@@ -30,8 +28,12 @@
 	let rejecting = $state(false);
 
 	let redirectTimer: ReturnType<typeof setTimeout> | undefined;
+	let initialized = false;
 
-	onMount(() => {
+	$effect(() => {
+		if (initialized) return;
+		initialized = true;
+
 		void (async () => {
 			try {
 				const data = await getInvitation(params.id);
@@ -90,26 +92,26 @@
 	}
 </script>
 
-<div class="bg-background flex h-svh flex-col items-center justify-center px-4">
+<div class="flex h-svh flex-col items-center justify-center bg-background px-4">
 	<div class="absolute top-4 right-4">
 		<ModeToggle />
 	</div>
 	<div class="mb-6 text-center">
 		<h1 class="text-base font-bold tracking-tight">better-issues</h1>
-		<p class="text-muted-foreground text-xs">Issue tracking for small teams</p>
+		<p class="text-xs text-muted-foreground">Issue tracking for small teams</p>
 	</div>
 
 	{#if loading}
 		<Card.Root class="w-full max-w-sm">
 			<Card.Header class="items-center text-center">
-				<Loader2Icon class="text-muted-foreground h-6 w-6 animate-spin" />
+				<Loader2Icon class="h-6 w-6 animate-spin text-muted-foreground" />
 				<Card.Title class="text-sm">Loading invitation...</Card.Title>
 			</Card.Header>
 		</Card.Root>
 	{:else if !invitation}
 		<Card.Root class="w-full max-w-sm">
 			<Card.Header class="items-center text-center">
-				<XCircleIcon class="text-destructive h-8 w-8" />
+				<XCircleIcon class="h-8 w-8 text-destructive" />
 				<Card.Title class="text-sm">Invitation not found</Card.Title>
 				<Card.Description>
 					This invitation may have expired, been cancelled, or doesn’t exist.
@@ -123,9 +125,9 @@
 		<Card.Root class="w-full max-w-sm">
 			<Card.Header class="items-center text-center">
 				{#if invitation.status === 'accepted'}
-					<CheckCircleIcon class="text-chart-1 h-8 w-8" />
+					<CheckCircleIcon class="h-8 w-8 text-chart-1" />
 				{:else}
-					<XCircleIcon class="text-muted-foreground h-8 w-8" />
+					<XCircleIcon class="h-8 w-8 text-muted-foreground" />
 				{/if}
 				<Card.Title class="text-sm">Invitation {invitation.status}</Card.Title>
 				<Card.Description>
@@ -147,7 +149,7 @@
 	{:else if outcome === 'rejected'}
 		<Card.Root class="w-full max-w-sm">
 			<Card.Header class="items-center text-center">
-				<XCircleIcon class="text-muted-foreground h-8 w-8" />
+				<XCircleIcon class="h-8 w-8 text-muted-foreground" />
 				<Card.Title class="text-sm">Invitation declined</Card.Title>
 				<Card.Description>You have declined this invitation.</Card.Description>
 			</Card.Header>
@@ -158,7 +160,7 @@
 	{:else}
 		<Card.Root class="w-full max-w-sm">
 			<Card.Header class="items-center text-center">
-				<MailIcon class="text-muted-foreground h-8 w-8" />
+				<MailIcon class="h-8 w-8 text-muted-foreground" />
 				<Card.Title class="text-sm">You’ve been invited</Card.Title>
 				<Card.Description>
 					{#if invitation.expiresAt}
@@ -171,7 +173,7 @@
 			</Card.Header>
 			{#if actionError}
 				<Card.Content class="pt-0">
-					<p class="text-destructive text-center text-xs" role="alert">{actionError}</p>
+					<p class="text-center text-xs text-destructive" role="alert">{actionError}</p>
 				</Card.Content>
 			{/if}
 			<Card.Footer class="justify-center gap-3 pb-4">

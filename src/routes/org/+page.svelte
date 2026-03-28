@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	import type { PageProps } from './$types';
 
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 
-	import { listOrganizations, setActiveOrganization, type OrganizationSummary } from '$lib/organization';
+	import {
+		listOrganizations,
+		setActiveOrganization,
+		type OrganizationSummary
+	} from '$lib/organization';
 	import { gotoResolvedPath } from '$lib/goto-resolved';
 	import CreateOrgDialog from '$lib/components/create-org-dialog.svelte';
 	import ModeToggle from '$lib/components/mode-toggle.svelte';
@@ -20,13 +22,17 @@
 	let orgs = $state<OrganizationSummary[] | null>(null);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
+	let initialized = false;
 
 	async function handleTeamClick(slug: string) {
 		await gotoResolvedPath(`/org/${slug}`);
 		await setActiveOrganization({ organizationSlug: slug });
 	}
 
-	onMount(() => {
+	$effect(() => {
+		if (initialized) return;
+		initialized = true;
+
 		void (async () => {
 			try {
 				const list = await listOrganizations();
@@ -76,21 +82,23 @@
 					{#each orgs as org (org.id)}
 						<button
 							type="button"
-							class="border-border bg-card hover:bg-accent flex w-full cursor-pointer items-center justify-between border p-4 text-left transition-colors"
+							class="flex w-full cursor-pointer items-center justify-between border border-border bg-card p-4 text-left transition-colors hover:bg-accent"
 							onclick={() => void handleTeamClick(org.slug)}
 						>
 							<div>
 								<p class="font-medium">{org.name}</p>
-								<p class="text-muted-foreground font-mono text-xs">/{org.slug}</p>
+								<p class="font-mono text-xs text-muted-foreground">/{org.slug}</p>
 							</div>
-							<ArrowRightIcon class="text-muted-foreground h-4 w-4" />
+							<ArrowRightIcon class="h-4 w-4 text-muted-foreground" />
 						</button>
 					{/each}
 				</div>
 			{:else}
-				<div class="border-border flex flex-col items-center justify-center border border-dashed p-12 text-center">
+				<div
+					class="flex flex-col items-center justify-center border border-dashed border-border p-12 text-center"
+				>
 					<p class="mb-1 text-sm font-medium">No teams yet</p>
-					<p class="text-muted-foreground mb-4 text-xs">
+					<p class="mb-4 text-xs text-muted-foreground">
 						Create your first team to start tracking issues.
 					</p>
 					<Button size="sm" class="gap-1.5" onclick={() => (createOpen = true)}>

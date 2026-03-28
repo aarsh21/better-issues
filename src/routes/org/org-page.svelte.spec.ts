@@ -35,7 +35,10 @@ vi.mock('$lib/goto-resolved', () => ({
 	gotoResolvedPath: mocks.gotoResolvedPath
 }));
 
-vi.mock('$lib/components/mode-toggle.svelte', () => import('$lib/components/mode-toggle.stub.svelte'));
+vi.mock(
+	'$lib/components/mode-toggle.svelte',
+	() => import('$lib/components/mode-toggle.stub.svelte')
+);
 
 describe('org page', () => {
 	const currentUser: PageProps['data']['currentUser'] = {
@@ -68,7 +71,7 @@ describe('org page', () => {
 
 	function renderOrgPage() {
 		render(OrgPage, {
-			data: { currentUser },
+			data: { authState: { isAuthenticated: true }, currentUser },
 			form: undefined,
 			params: {}
 		});

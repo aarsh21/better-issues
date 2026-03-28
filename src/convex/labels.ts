@@ -1,25 +1,25 @@
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx } from './_generated/server';
 
-import { ConvexError, v } from "convex/values";
+import { ConvexError, v } from 'convex/values';
 
-import { authComponent } from "./auth";
-import { internalMutation, mutation, query } from "./_generated/server";
-import { requireOrgMembership, requirePermission } from "./lib/permissions";
+import { authComponent } from './auth';
+import { internalMutation, mutation, query } from './_generated/server';
+import { requireOrgMembership, requirePermission } from './lib/permissions';
 
 const DEFAULT_LABELS: ReadonlyArray<{
 	readonly name: string;
 	readonly color: string;
 	readonly description?: string;
 }> = [
-	{ name: "bug", color: "#ef4444", description: "Something is not working" },
-	{ name: "documentation", color: "#3b82f6", description: "Improvements or additions to docs" },
-	{ name: "duplicate", color: "#6b7280", description: "This issue or pull request already exists" },
-	{ name: "enhancement", color: "#22c55e", description: "New feature or request" },
-	{ name: "good first issue", color: "#7057ff", description: "Good for newcomers" },
-	{ name: "help wanted", color: "#06b6d4", description: "Extra attention is needed" },
-	{ name: "invalid", color: "#eab308", description: "This does not seem right" },
-	{ name: "question", color: "#d876e3", description: "Further information is requested" },
-	{ name: "wontfix", color: "#1e293b", description: "This will not be worked on" }
+	{ name: 'bug', color: '#ef4444', description: 'Something is not working' },
+	{ name: 'documentation', color: '#3b82f6', description: 'Improvements or additions to docs' },
+	{ name: 'duplicate', color: '#6b7280', description: 'This issue or pull request already exists' },
+	{ name: 'enhancement', color: '#22c55e', description: 'New feature or request' },
+	{ name: 'good first issue', color: '#7057ff', description: 'Good for newcomers' },
+	{ name: 'help wanted', color: '#06b6d4', description: 'Extra attention is needed' },
+	{ name: 'invalid', color: '#eab308', description: 'This does not seem right' },
+	{ name: 'question', color: '#d876e3', description: 'Further information is requested' },
+	{ name: 'wontfix', color: '#1e293b', description: 'This will not be worked on' }
 ];
 
 const MAX_LABELS_PER_ORGANIZATION = 15;
@@ -29,8 +29,8 @@ async function seedDefaultLabelsForOrganization(
 	organizationId: string
 ): Promise<number> {
 	const existing = await ctx.db
-		.query("labels")
-		.withIndex("by_organization", (q) => q.eq("organizationId", organizationId))
+		.query('labels')
+		.withIndex('by_organization', (q) => q.eq('organizationId', organizationId))
 		.collect();
 
 	const existingNames = new Set(existing.map((label) => label.name.toLowerCase()));
@@ -41,7 +41,7 @@ async function seedDefaultLabelsForOrganization(
 
 	await Promise.all(
 		labelsToInsert.map((label) =>
-			ctx.db.insert("labels", {
+			ctx.db.insert('labels', {
 				organizationId,
 				name: label.name,
 				color: label.color,
@@ -54,7 +54,7 @@ async function seedDefaultLabelsForOrganization(
 }
 
 const labelValidator = v.object({
-	_id: v.id("labels"),
+	_id: v.id('labels'),
 	_creationTime: v.number(),
 	organizationId: v.string(),
 	name: v.string(),
@@ -76,8 +76,8 @@ export const list = query({
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
 		return await ctx.db
-			.query("labels")
-			.withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+			.query('labels')
+			.withIndex('by_organization', (q) => q.eq('organizationId', args.organizationId))
 			.collect();
 	}
 });
@@ -89,30 +89,30 @@ export const create = mutation({
 		color: v.string(),
 		description: v.optional(v.string())
 	},
-	returns: v.id("labels"),
+	returns: v.id('labels'),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
-		await requirePermission(ctx, user._id, args.organizationId, "label", "create");
+		if (!user) throw new ConvexError('Not authenticated');
+		await requirePermission(ctx, user._id, args.organizationId, 'label', 'create');
 
 		if (!args.name.trim()) {
-			throw new ConvexError("Label name is required");
+			throw new ConvexError('Label name is required');
 		}
 
 		const existing = await ctx.db
-			.query("labels")
-			.withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+			.query('labels')
+			.withIndex('by_organization', (q) => q.eq('organizationId', args.organizationId))
 			.collect();
 
 		if (existing.length >= MAX_LABELS_PER_ORGANIZATION) {
-			throw new ConvexError("Maximum of 15 labels per organization");
+			throw new ConvexError('Maximum of 15 labels per organization');
 		}
 
 		if (existing.some((label) => label.name.toLowerCase() === args.name.trim().toLowerCase())) {
-			throw new ConvexError("A label with this name already exists");
+			throw new ConvexError('A label with this name already exists');
 		}
 
-		return await ctx.db.insert("labels", {
+		return await ctx.db.insert('labels', {
 			organizationId: args.organizationId,
 			name: args.name.trim(),
 			color: args.color,
@@ -138,7 +138,7 @@ export const ensureDefaults = mutation({
 	returns: v.number(),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
 		return await seedDefaultLabelsForOrganization(ctx, args.organizationId);
@@ -147,7 +147,7 @@ export const ensureDefaults = mutation({
 
 export const update = mutation({
 	args: {
-		labelId: v.id("labels"),
+		labelId: v.id('labels'),
 		name: v.optional(v.string()),
 		color: v.optional(v.string()),
 		description: v.optional(v.string())
@@ -155,15 +155,15 @@ export const update = mutation({
 	returns: v.null(),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 
 		const label = await ctx.db.get(args.labelId);
-		if (!label) throw new ConvexError("Label not found");
-		await requirePermission(ctx, user._id, label.organizationId, "label", "update");
+		if (!label) throw new ConvexError('Label not found');
+		await requirePermission(ctx, user._id, label.organizationId, 'label', 'update');
 
 		const updates: Record<string, unknown> = {};
 		if (args.name !== undefined) {
-			if (!args.name.trim()) throw new ConvexError("Label name cannot be empty");
+			if (!args.name.trim()) throw new ConvexError('Label name cannot be empty');
 			updates.name = args.name.trim();
 		}
 		if (args.color !== undefined) updates.color = args.color;
@@ -176,16 +176,26 @@ export const update = mutation({
 
 export const remove = mutation({
 	args: {
-		labelId: v.id("labels")
+		labelId: v.id('labels')
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 
 		const label = await ctx.db.get(args.labelId);
-		if (!label) throw new ConvexError("Label not found");
-		await requirePermission(ctx, user._id, label.organizationId, "label", "delete");
+		if (!label) throw new ConvexError('Label not found');
+		await requirePermission(ctx, user._id, label.organizationId, 'label', 'delete');
+
+		for await (const issue of ctx.db
+			.query('issues')
+			.withIndex('by_organization', (q) => q.eq('organizationId', label.organizationId))) {
+			if (issue.labelIds.includes(args.labelId)) {
+				throw new ConvexError(
+					'This label is still used by existing issues. Remove it from those issues before deleting the label.'
+				);
+			}
+		}
 
 		await ctx.db.delete(args.labelId);
 		return null;

@@ -9,6 +9,7 @@ describe('home page', () => {
 	it('shows marketing copy and unauthenticated nav CTA', async () => {
 		render(HomePage, {
 			data: {
+				authState: { isAuthenticated: false },
 				currentUser: null
 			},
 			form: undefined,
@@ -46,6 +47,7 @@ describe('home page', () => {
 
 		render(HomePage, {
 			data: {
+				authState: { isAuthenticated: true },
 				currentUser
 			},
 			form: undefined,

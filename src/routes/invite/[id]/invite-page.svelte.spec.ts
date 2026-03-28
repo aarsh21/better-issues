@@ -37,7 +37,10 @@ vi.mock('$lib/goto-resolved', () => ({
 	gotoResolvedPath: mocks.gotoResolvedPath
 }));
 
-vi.mock('$lib/components/mode-toggle.svelte', () => import('$lib/components/mode-toggle.stub.svelte'));
+vi.mock(
+	'$lib/components/mode-toggle.svelte',
+	() => import('$lib/components/mode-toggle.stub.svelte')
+);
 
 describe('invite page', () => {
 	const currentUser: PageProps['data']['currentUser'] = {
@@ -70,7 +73,7 @@ describe('invite page', () => {
 
 	function renderInvite(id: string) {
 		render(InvitePage, {
-			data: { currentUser },
+			data: { authState: { isAuthenticated: true }, currentUser },
 			form: undefined,
 			params: { id }
 		});
@@ -126,7 +129,9 @@ describe('invite page', () => {
 			expect(mocks.getInvitation).toHaveBeenCalledWith('inv_2');
 		});
 
-		await expect.element(page.getByText('You’ve been invited', { exact: true })).toBeInTheDocument();
+		await expect
+			.element(page.getByText('You’ve been invited', { exact: true }))
+			.toBeInTheDocument();
 		await expect.element(page.getByText('admin', { exact: true })).toBeInTheDocument();
 	});
 

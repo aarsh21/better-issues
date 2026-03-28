@@ -1,48 +1,75 @@
-import type { Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { Id } from './_generated/dataModel';
+import type { MutationCtx } from './_generated/server';
 
-import { paginationOptsValidator } from "convex/server";
-import { ConvexError, v } from "convex/values";
+import { paginationOptsValidator } from 'convex/server';
+import { ConvexError, v } from 'convex/values';
 
-import { authComponent } from "./auth";
-import { mutation, query } from "./_generated/server";
-import { requireOrgMembership, requirePermission } from "./lib/permissions";
-import { parseTemplateSchema, validateTemplateData } from "./lib/templateSchema";
+import { authComponent } from './auth';
+import { mutation, query } from './_generated/server';
+import { collectTemplateStorageIds } from './lib/issueTemplateFiles';
+import { requireOrgMembership, requirePermission } from './lib/permissions';
+import { parseTemplateSchema, validateTemplateData } from './lib/templateSchema';
 
 const issueValidator = v.object({
-	_id: v.id("issues"),
+	_id: v.id('issues'),
 	_creationTime: v.number(),
 	organizationId: v.string(),
 	number: v.number(),
 	title: v.string(),
 	description: v.optional(v.string()),
-	status: v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed")),
-	priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent")),
+	status: v.union(v.literal('open'), v.literal('in_progress'), v.literal('closed')),
+	priority: v.union(v.literal('low'), v.literal('medium'), v.literal('high'), v.literal('urgent')),
 	assigneeId: v.optional(v.string()),
-	labelIds: v.array(v.id("labels")),
+	labelIds: v.array(v.id('labels')),
 	createdBy: v.string(),
-	templateId: v.optional(v.id("issueTemplates")),
+	templateId: v.optional(v.id('issueTemplates')),
+	templateNameSnapshot: v.optional(v.string()),
+	templateSchemaSnapshot: v.optional(v.string()),
 	templateData: v.optional(v.string()),
 	createdAt: v.number(),
 	updatedAt: v.number(),
 	closedAt: v.optional(v.number())
 });
 
+function getIssueTemplateSchemaSnapshot(
+	issue: {
+		templateSchemaSnapshot?: string;
+		templateData?: string;
+		templateId?: Id<'issueTemplates'>;
+	},
+	template: { organizationId: string; schema: string } | null,
+	organizationId: string
+) {
+	if (!issue.templateData) {
+		return null;
+	}
+
+	if (issue.templateSchemaSnapshot) {
+		return issue.templateSchemaSnapshot;
+	}
+
+	if (template && template.organizationId === organizationId) {
+		return template.schema;
+	}
+
+	return null;
+}
+
 async function requireTemplateInOrganization(
 	ctx: MutationCtx,
-	templateId: Id<"issueTemplates">,
+	templateId: Id<'issueTemplates'>,
 	organizationId: string
 ) {
 	const template = await ctx.db.get(templateId);
 	if (!template || template.organizationId !== organizationId) {
-		throw new ConvexError("Template not found");
+		throw new ConvexError('Template not found');
 	}
 	return template;
 }
 
 async function requireLabelsInOrganization(
 	ctx: MutationCtx,
-	labelIds: Id<"labels">[],
+	labelIds: Id<'labels'>[],
 	organizationId: string
 ): Promise<void> {
 	if (labelIds.length === 0) {
@@ -53,16 +80,16 @@ async function requireLabelsInOrganization(
 	const hasInvalidLabel = labels.some((label) => !label || label.organizationId !== organizationId);
 
 	if (hasInvalidLabel) {
-		throw new ConvexError("One or more labels are invalid for this organization");
+		throw new ConvexError('One or more labels are invalid for this organization');
 	}
 }
 
 export const list = query({
 	args: {
 		organizationId: v.string(),
-		status: v.optional(v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed"))),
+		status: v.optional(v.union(v.literal('open'), v.literal('in_progress'), v.literal('closed'))),
 		assigneeId: v.optional(v.string()),
-		labelId: v.optional(v.id("labels")),
+		labelId: v.optional(v.id('labels')),
 		paginationOpts: paginationOptsValidator
 	},
 	returns: v.object({
@@ -71,7 +98,7 @@ export const list = query({
 		continueCursor: v.string(),
 		splitCursor: v.optional(v.union(v.string(), v.null())),
 		pageStatus: v.optional(
-			v.union(v.literal("SplitRecommended"), v.literal("SplitRequired"), v.null())
+			v.union(v.literal('SplitRecommended'), v.literal('SplitRequired'), v.null())
 		)
 	}),
 	handler: async (ctx, args) => {
@@ -80,7 +107,7 @@ export const list = query({
 			return {
 				page: [],
 				isDone: true,
-				continueCursor: args.paginationOpts.cursor ?? "",
+				continueCursor: args.paginationOpts.cursor ?? '',
 				splitCursor: null,
 				pageStatus: null
 			};
@@ -91,23 +118,23 @@ export const list = query({
 
 		if (args.assigneeId) {
 			issueQuery = ctx.db
-				.query("issues")
-				.withIndex("by_assignee", (q) =>
-					q.eq("organizationId", args.organizationId).eq("assigneeId", args.assigneeId!)
+				.query('issues')
+				.withIndex('by_assignee', (q) =>
+					q.eq('organizationId', args.organizationId).eq('assigneeId', args.assigneeId!)
 				);
 		} else if (args.status) {
 			issueQuery = ctx.db
-				.query("issues")
-				.withIndex("by_org_and_status", (q) =>
-					q.eq("organizationId", args.organizationId).eq("status", args.status!)
+				.query('issues')
+				.withIndex('by_org_and_status', (q) =>
+					q.eq('organizationId', args.organizationId).eq('status', args.status!)
 				);
 		} else {
 			issueQuery = ctx.db
-				.query("issues")
-				.withIndex("by_org_and_status", (q) => q.eq("organizationId", args.organizationId));
+				.query('issues')
+				.withIndex('by_org_and_status', (q) => q.eq('organizationId', args.organizationId));
 		}
 
-		const result = await issueQuery.order("desc").paginate(args.paginationOpts);
+		const result = await issueQuery.order('desc').paginate(args.paginationOpts);
 		let filteredPage = result.page;
 
 		if (args.assigneeId && args.status) {
@@ -126,20 +153,20 @@ export const search = query({
 	args: {
 		organizationId: v.string(),
 		searchQuery: v.string(),
-		status: v.optional(v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed")))
+		status: v.optional(v.union(v.literal('open'), v.literal('in_progress'), v.literal('closed')))
 	},
 	returns: v.array(issueValidator),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
 		if (!args.searchQuery.trim()) return [];
 
-		let searchQuery = ctx.db.query("issues").withSearchIndex("search_issues", (q) => {
-			let current = q.search("title", args.searchQuery).eq("organizationId", args.organizationId);
+		let searchQuery = ctx.db.query('issues').withSearchIndex('search_issues', (q) => {
+			let current = q.search('title', args.searchQuery).eq('organizationId', args.organizationId);
 			if (args.status) {
-				current = current.eq("status", args.status);
+				current = current.eq('status', args.status);
 			}
 			return current;
 		});
@@ -156,13 +183,13 @@ export const getByNumber = query({
 	returns: v.union(issueValidator, v.null()),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
 		return await ctx.db
-			.query("issues")
-			.withIndex("by_org_and_number", (q) =>
-				q.eq("organizationId", args.organizationId).eq("number", args.number)
+			.query('issues')
+			.withIndex('by_org_and_number', (q) =>
+				q.eq('organizationId', args.organizationId).eq('number', args.number)
 			)
 			.unique();
 	}
@@ -174,40 +201,42 @@ export const create = mutation({
 		title: v.string(),
 		description: v.optional(v.string()),
 		priority: v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
+			v.literal('low'),
+			v.literal('medium'),
+			v.literal('high'),
+			v.literal('urgent')
 		),
 		assigneeId: v.optional(v.string()),
-		labelIds: v.array(v.id("labels")),
-		templateId: v.optional(v.id("issueTemplates")),
+		labelIds: v.array(v.id('labels')),
+		templateId: v.optional(v.id('issueTemplates')),
 		templateData: v.optional(v.string())
 	},
-	returns: v.object({ issueId: v.id("issues"), number: v.number() }),
+	returns: v.object({ issueId: v.id('issues'), number: v.number() }),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
-		await requirePermission(ctx, user._id, args.organizationId, "issue", "create");
+		if (!user) throw new ConvexError('Not authenticated');
+		await requirePermission(ctx, user._id, args.organizationId, 'issue', 'create');
 
 		if (!args.title.trim()) {
-			throw new ConvexError("Title is required");
+			throw new ConvexError('Title is required');
 		}
 		await requireLabelsInOrganization(ctx, args.labelIds, args.organizationId);
 
 		let parsedTemplateData: Record<string, unknown> | null = null;
+		let templateNameSnapshot: string | undefined;
+		let templateSchemaSnapshot: string | undefined;
 		if (args.templateData !== undefined) {
 			try {
 				const parsed = JSON.parse(args.templateData) as unknown;
-				if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-					throw new ConvexError("Template data must be an object");
+				if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+					throw new ConvexError('Template data must be an object');
 				}
 				parsedTemplateData = parsed as Record<string, unknown>;
 			} catch (error) {
 				if (error instanceof ConvexError) {
 					throw error;
 				}
-				throw new ConvexError("Invalid template data");
+				throw new ConvexError('Invalid template data');
 			}
 		}
 
@@ -223,37 +252,43 @@ export const create = mutation({
 				schema = parseTemplateSchema(template.schema);
 			} catch (error) {
 				throw new ConvexError(
-					`Invalid template schema: ${error instanceof Error ? error.message : "Unknown error"}`
+					`Invalid template schema: ${error instanceof Error ? error.message : 'Unknown error'}`
 				);
 			}
 
 			const validation = validateTemplateData(schema, parsedTemplateData ?? {});
 			if (!validation.valid) {
-				throw new ConvexError(validation.errors.join(", "));
+				throw new ConvexError(validation.errors.join(', '));
 			}
+
+			templateNameSnapshot = template.name;
+			templateSchemaSnapshot = template.schema;
 		} else if (parsedTemplateData !== null) {
-			throw new ConvexError("Template data provided without template");
+			throw new ConvexError('Template data provided without template');
 		}
 
 		const existingIssue = await ctx.db
-			.query("issues")
-			.withIndex("by_org_and_number", (q) => q.eq("organizationId", args.organizationId))
-			.order("desc")
+			.query('issues')
+			.withIndex('by_org_and_number', (q) => q.eq('organizationId', args.organizationId))
+			.order('desc')
 			.first();
 
 		const nextNumber = existingIssue ? existingIssue.number + 1 : 1;
 		const now = Date.now();
-		const issueId = await ctx.db.insert("issues", {
+
+		const issueId = await ctx.db.insert('issues', {
 			organizationId: args.organizationId,
 			number: nextNumber,
 			title: args.title.trim(),
 			description: args.description?.trim(),
-			status: "open",
+			status: 'open',
 			priority: args.priority,
 			assigneeId: args.assigneeId,
 			labelIds: args.labelIds,
 			createdBy: user._id,
 			templateId: args.templateId,
+			templateNameSnapshot,
+			templateSchemaSnapshot,
 			templateData: args.templateData,
 			createdAt: now,
 			updatedAt: now
@@ -265,28 +300,28 @@ export const create = mutation({
 
 export const update = mutation({
 	args: {
-		issueId: v.id("issues"),
+		issueId: v.id('issues'),
 		title: v.optional(v.string()),
 		description: v.optional(v.string()),
 		priority: v.optional(
-			v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent"))
+			v.union(v.literal('low'), v.literal('medium'), v.literal('high'), v.literal('urgent'))
 		),
 		assigneeId: v.optional(v.union(v.string(), v.null())),
-		labelIds: v.optional(v.array(v.id("labels")))
+		labelIds: v.optional(v.array(v.id('labels')))
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 
 		const issue = await ctx.db.get(args.issueId);
-		if (!issue) throw new ConvexError("Issue not found");
-		await requirePermission(ctx, user._id, issue.organizationId, "issue", "update");
+		if (!issue) throw new ConvexError('Issue not found');
+		await requirePermission(ctx, user._id, issue.organizationId, 'issue', 'update');
 
 		const updates: Record<string, unknown> = { updatedAt: Date.now() };
 
 		if (args.title !== undefined) {
-			if (!args.title.trim()) throw new ConvexError("Title cannot be empty");
+			if (!args.title.trim()) throw new ConvexError('Title cannot be empty');
 			updates.title = args.title.trim();
 		}
 		if (args.description !== undefined) updates.description = args.description?.trim();
@@ -306,19 +341,19 @@ export const update = mutation({
 
 export const updateStatus = mutation({
 	args: {
-		issueId: v.id("issues"),
-		status: v.union(v.literal("open"), v.literal("in_progress"), v.literal("closed"))
+		issueId: v.id('issues'),
+		status: v.union(v.literal('open'), v.literal('in_progress'), v.literal('closed'))
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 
 		const issue = await ctx.db.get(args.issueId);
-		if (!issue) throw new ConvexError("Issue not found");
+		if (!issue) throw new ConvexError('Issue not found');
 
-		const action = args.status === "closed" ? "close" : "update";
-		await requirePermission(ctx, user._id, issue.organizationId, "issue", action);
+		const action = args.status === 'closed' ? 'close' : 'update';
+		await requirePermission(ctx, user._id, issue.organizationId, 'issue', action);
 
 		if (issue.status === args.status) {
 			return null;
@@ -329,9 +364,9 @@ export const updateStatus = mutation({
 			updatedAt: Date.now()
 		};
 
-		if (args.status === "closed") {
+		if (args.status === 'closed') {
 			updates.closedAt = Date.now();
-		} else if (issue.status === "closed") {
+		} else if (issue.status === 'closed') {
 			updates.closedAt = undefined;
 		}
 
@@ -342,68 +377,35 @@ export const updateStatus = mutation({
 
 export const remove = mutation({
 	args: {
-		issueId: v.id("issues")
+		issueId: v.id('issues')
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError("Not authenticated");
+		if (!user) throw new ConvexError('Not authenticated');
 
 		const issue = await ctx.db.get(args.issueId);
-		if (!issue) throw new ConvexError("Issue not found");
-		await requirePermission(ctx, user._id, issue.organizationId, "issue", "delete");
+		if (!issue) throw new ConvexError('Issue not found');
+		await requirePermission(ctx, user._id, issue.organizationId, 'issue', 'delete');
 
-		if (issue.templateId && issue.templateData) {
-			const template = await ctx.db.get(issue.templateId);
-			if (template) {
-				try {
-					const parsedTemplateData = JSON.parse(issue.templateData) as Record<string, unknown>;
-					if (
-						parsedTemplateData &&
-						typeof parsedTemplateData === "object" &&
-						!Array.isArray(parsedTemplateData)
-					) {
-						const schema = parseTemplateSchema(template.schema);
-						const storageIds: Id<"_storage">[] = [];
+		if (issue.templateData) {
+			const template = issue.templateId ? await ctx.db.get(issue.templateId) : null;
+			const templateSchemaJson = getIssueTemplateSchemaSnapshot(
+				issue,
+				template,
+				issue.organizationId
+			);
+			const storageIds = collectTemplateStorageIds(templateSchemaJson, issue.templateData);
 
-						const addStorageId = (candidate: unknown) => {
-							if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
-								return;
-							}
-							const record = candidate as { storageId?: unknown };
-							if (typeof record.storageId === "string") {
-								storageIds.push(record.storageId as Id<"_storage">);
-							}
-						};
-
-						for (const field of schema.fields) {
-							if (field.type !== "file") continue;
-
-							const rawValue = parsedTemplateData[field.key];
-							const allowsMultiple = field.multiple !== false;
-							if (allowsMultiple) {
-								if (Array.isArray(rawValue)) {
-									rawValue.forEach(addStorageId);
-								}
-							} else {
-								addStorageId(rawValue);
-							}
-						}
-
-						await Promise.allSettled(
-							storageIds.map(async (storageId) => {
-								try {
-									await ctx.storage.delete(storageId);
-								} catch {
-									return;
-								}
-							})
-						);
+			await Promise.allSettled(
+				Array.from(storageIds).map(async (storageId) => {
+					try {
+						await ctx.storage.delete(storageId);
+					} catch {
+						return;
 					}
-				} catch {
-					// Best-effort cleanup; ignore parse or delete failures.
-				}
-			}
+				})
+			);
 		}
 
 		await ctx.db.delete(args.issueId);

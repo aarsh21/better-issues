@@ -37,6 +37,7 @@ describe('sign-up page', () => {
 	it('creates an account and redirects to the protected page', async () => {
 		render(SignUpPage, {
 			data: {
+				authState: { isAuthenticated: false },
 				returnTo: '/org'
 			},
 			form: undefined,

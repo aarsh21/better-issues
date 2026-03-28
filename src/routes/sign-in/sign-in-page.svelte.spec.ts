@@ -47,6 +47,7 @@ describe('sign-in page', () => {
 	it('uses email sign-in when the identifier is an email address', async () => {
 		render(SignInPage, {
 			data: {
+				authState: { isAuthenticated: false },
 				returnTo: '/org'
 			},
 			form: undefined,
@@ -71,6 +72,7 @@ describe('sign-in page', () => {
 	it('uses username sign-in when the identifier is not an email address', async () => {
 		render(SignInPage, {
 			data: {
+				authState: { isAuthenticated: false },
 				returnTo: '/org'
 			},
 			form: undefined,

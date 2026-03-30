@@ -1,0 +1,38 @@
+{
+  "$schema": "https://btca.dev/btca.schema.json",
+  "dataDirectory": ".btca",
+  "resources": [
+    {
+      "type": "git",
+      "name": "svelte",
+      "url": "https://github.com/sveltejs/svelte.dev",
+      "branch": "main",
+      "searchPath": "apps/svelte.dev/content",
+      "specialNotes": "This is the svelte docs website repo, not the actual svelte repo. Focus on the content directory, it has all the markdown files for the docs."
+    },
+    {
+      "type": "git",
+      "name": "tailwindcss",
+      "url": "https://github.com/tailwindlabs/tailwindcss.com",
+      "branch": "main",
+      "searchPath": "src/docs",
+      "specialNotes": "This is the tailwindcss docs website repo, not the actual tailwindcss repo. Use the docs to answer questions about tailwindcss."
+    },
+    {
+      "type": "git",
+      "name": "sveltekit",
+      "url": "https://github.com/sveltejs/kit",
+      "branch": "main",
+      "searchPath": "documentation/docs"
+    },
+    {
+      "type": "git",
+      "name": "convex-backend",
+      "url": "https://github.com/get-convex/convex-backend",
+      "branch": "main",
+      "searchPath": "npm-packages/docs/docs/"
+    }
+  ],
+  "model": "claude-haiku-4.5",
+  "provider": "github-copilot"
+}

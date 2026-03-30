@@ -1,14 +1,26 @@
 # AGENTS
 
 better-issues is a premium issue tracker with best-in-market UI and UX.
-It is Sveltekit app and a Convex backend.
-Treat every change as user-facing and keep design quality high.
+It is Sveltekit app and a Convex backend.Treat every change as user-facing and keep design quality high.
 
 **Non-Negotiables**
 
-- Always use shadcn-svelte colors from @layout.css and shadcn-svelte/ui components for UI work.
+- Always use shadcn-svelte colors from @layout.css.
+- ALWAYS USE shadcn-svelte components available components are: accordion,alert,alert-dialog,aspect-ratio,avatar,badge,breadcrumb,button,calendar,card,carousel,chart,checkbox,collapsible,command,context-menu,dialog,drawer,dropdown-menu,hover-card,input,input-otp,kbd,label,menubar,navigation-menu,pagination,popover,progress,radio-group,range-calendar,resizable,scroll-area,select,separator,sheet,sidebar,skeleton,slider,sonner,switch,table,tabs,textarea,toggle,toggle-group,tooltip
 - Never run `bun run dev`; the user will run it manually.
 - Keep the UX clean, fast, and consistent with existing patterns.
+
+## Core Priorities
+
+1. Performance first.
+2. Reliability first.
+3. Keep behavior predictable under load and during failures (session restarts, reconnects, partial streams).
+
+If a tradeoff is required, choose correctness and robustness over short-term convenience.
+
+## Maintainability
+
+Long term maintainability is a core priority. If you add new functionality, first check if there is shared logic that can be extracted to a separate module. Duplicate logic across multiple files is a code smell and should be avoided. Don't be afraid to change existing code. Don't take shortcuts by just adding local logic to solve a problem.
 
 **Code Style and Conventions**
 
@@ -20,19 +32,6 @@ Treat every change as user-facing and keep design quality high.
 **btca Research Tool**
 
 Use `btca` for detailed research on project dependencies. Resources are configured in `btca.config.jsonc`.
-
-Configured resources:
-
-- `tanstack-start` — TanStack Start framework
-- `tanstack-router` — Type-safe React routing
-- `convex` — Backend platform
-- `tanstack-query` — Server state management
-- `tanstack-form` — Form state management
-- `better-auth` — Authentication framework
-- `tailwindcss` — CSS framework
-- `shadcn-ui` — UI component library
-- `turborepo` — Monorepo build system
-- `vite` — Build tool
 
 Example usage:
 

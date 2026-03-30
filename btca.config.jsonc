@@ -31,6 +31,13 @@
       "url": "https://github.com/get-convex/convex-backend",
       "branch": "main",
       "searchPath": "npm-packages/docs/docs/"
+    },
+    {
+      "type": "git",
+      "name": "better-auth",
+      "url": "https://github.com/better-auth/better-auth",
+      "branch": "main",
+      "searchPath": "docs/content/docs"
     }
   ],
   "model": "claude-haiku-4.5",

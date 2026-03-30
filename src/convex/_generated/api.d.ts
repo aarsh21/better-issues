@@ -13,6 +13,7 @@ import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as issues from "../issues.js";
 import type * as labels from "../labels.js";
+import type * as lib_issueTemplateFiles from "../lib/issueTemplateFiles.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_templateSchema from "../lib/templateSchema.js";
 import type * as templates from "../templates.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   issues: typeof issues;
   labels: typeof labels;
+  "lib/issueTemplateFiles": typeof lib_issueTemplateFiles;
   "lib/permissions": typeof lib_permissions;
   "lib/templateSchema": typeof lib_templateSchema;
   templates: typeof templates;

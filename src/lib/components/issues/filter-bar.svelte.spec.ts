@@ -49,7 +49,7 @@ describe('filter bar', () => {
 			onStatusChange: vi.fn()
 		});
 
-		expect(page.getByRole('button', { name: 'Clear' }).query()).toBeNull();
+		await expect.element(page.getByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 	});
 
 	it('calls onStatusChange with undefined when Clear is clicked', async () => {

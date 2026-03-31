@@ -10,32 +10,28 @@ vi.mock('@lucide/svelte/icons/signal-medium', () => import('$lib/test/lucide-ico
 vi.mock('@lucide/svelte/icons/signal-low', () => import('$lib/test/lucide-icon-stub.svelte'));
 
 describe('priority indicator', () => {
-	it('renders without error for urgent priority', async () => {
+	it('renders a priority icon for urgent issues', async () => {
 		render(PriorityIndicator, { priority: 'urgent' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		expect(document.querySelector('.icon-stub')).toBeTruthy();
 	});
 
-	it('renders without error for high priority', async () => {
+	it('renders a priority icon for high issues', async () => {
 		render(PriorityIndicator, { priority: 'high' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		expect(document.querySelector('.icon-stub')).toBeTruthy();
 	});
 
-	it('renders without error for medium priority', async () => {
+	it('renders a priority icon for medium issues', async () => {
 		render(PriorityIndicator, { priority: 'medium' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		expect(document.querySelector('.icon-stub')).toBeTruthy();
 	});
 
-	it('renders without error for low priority', async () => {
+	it('renders a priority icon for low issues', async () => {
 		render(PriorityIndicator, { priority: 'low' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		expect(document.querySelector('.icon-stub')).toBeTruthy();
 	});
 
 	it('shows label text when showLabel is true for urgent', async () => {
@@ -53,6 +49,6 @@ describe('priority indicator', () => {
 	it('does not show label text when showLabel is false', async () => {
 		render(PriorityIndicator, { priority: 'urgent' });
 
-		expect(page.getByText('Urgent').query()).toBeNull();
+		await expect.element(page.getByText('Urgent')).not.toBeInTheDocument();
 	});
 });

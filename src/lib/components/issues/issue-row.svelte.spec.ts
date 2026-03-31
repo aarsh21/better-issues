@@ -76,9 +76,18 @@ describe('issue row', () => {
 			labels: mockLabels
 		});
 
-		await expect.element(page.getByText('#42')).toBeInTheDocument();
+		await expect.element(page.getByRole('link')).toHaveAttribute('href', '/org/acme/issues/42');
+		await expect.element(page.getByText('Fix the sidebar bug')).toHaveClass(/line-through/);
+		await expect.element(page.getByText('Bug', { exact: true })).toBeInTheDocument();
+	});
 
-		const link = page.getByRole('link').element();
-		expect(link.className).toContain('opacity-60');
+	it('links to the issue detail page for the current slug', async () => {
+		render(IssueRow, {
+			slug: 'acme',
+			issue: mockIssue,
+			labels: mockLabels
+		});
+
+		await expect.element(page.getByRole('link')).toHaveAttribute('href', '/org/acme/issues/42');
 	});
 });

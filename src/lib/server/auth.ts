@@ -8,6 +8,10 @@ import { publicEnv } from '$lib/public-env';
 import { api } from '$convex/_generated/api';
 
 const fetchCurrentUser = async () => {
+	if (env.E2E_MOCK_AUTH === 'true') {
+		return null;
+	}
+
 	const convexUrl = env.CONVEX_URL ?? publicEnv.convexUrl;
 	const client = createConvexHttpClient({ convexUrl });
 

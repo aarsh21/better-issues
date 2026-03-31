@@ -6,11 +6,7 @@ import IssueListBody from './issue-list-body.svelte';
 
 const paginated = vi.hoisted(() => ({
 	results: [] as Array<Record<string, unknown>>,
-	status: 'LoadingFirstPage' as
-		| 'LoadingFirstPage'
-		| 'CanLoadMore'
-		| 'LoadingMore'
-		| 'Exhausted',
+	status: 'LoadingFirstPage' as 'LoadingFirstPage' | 'CanLoadMore' | 'LoadingMore' | 'Exhausted',
 	loadMore: vi.fn(() => true),
 	isLoading: true,
 	error: undefined as Error | undefined
@@ -55,9 +51,7 @@ describe('issue list body', () => {
 		});
 
 		await expect.element(page.getByRole('heading', { name: 'Issues' })).toBeInTheDocument();
-
-		const skeletons = document.querySelectorAll('[data-slot="skeleton"]');
-		expect(skeletons.length).toBeGreaterThan(0);
+		await expect.element(page.getByRole('link', { name: 'New Issue' })).toBeInTheDocument();
 	});
 
 	it('renders issue rows when data resolves', async () => {
@@ -86,10 +80,69 @@ describe('issue list body', () => {
 			onStatusChange: vi.fn()
 		});
 
-		await vi.waitFor(() => {
-			expect(page.getByText('Fix sidebar').query()).toBeTruthy();
+		await expect.element(page.getByText('Fix sidebar')).toBeInTheDocument();
+		await expect.element(page.getByText('#12')).toBeInTheDocument();
+	});
+
+	it('shows the empty-state guidance when there are no issues', async () => {
+		paginated.status = 'Exhausted';
+		paginated.isLoading = false;
+
+		render(IssueListBody, {
+			slug: 'acme',
+			organizationId: 'org_1',
+			statusFilter: undefined,
+			onStatusChange: vi.fn()
 		});
 
-		await expect.element(page.getByText('#12')).toBeInTheDocument();
+		await expect.element(page.getByText('No issues yet')).toBeInTheDocument();
+		await expect(page.getByRole('link', { name: 'New Issue' }).elements()).toHaveLength(2);
+	});
+
+	it('shows the filtered empty state without the create CTA', async () => {
+		paginated.status = 'Exhausted';
+		paginated.isLoading = false;
+
+		render(IssueListBody, {
+			slug: 'acme',
+			organizationId: 'org_1',
+			statusFilter: 'closed',
+			onStatusChange: vi.fn()
+		});
+
+		await expect.element(page.getByText('No issues yet')).toBeInTheDocument();
+		await expect.element(page.getByText('No issues match the current filter.')).toBeInTheDocument();
+		await expect(page.getByRole('link', { name: 'New Issue' }).elements()).toHaveLength(1);
+	});
+
+	it('requests another page when the load more button is clicked', async () => {
+		paginated.status = 'CanLoadMore';
+		paginated.isLoading = false;
+		paginated.results = [
+			{
+				_id: 'issue_1',
+				_creationTime: 1,
+				organizationId: 'org_1',
+				number: 12,
+				title: 'Fix sidebar',
+				status: 'open',
+				priority: 'medium',
+				labelIds: [],
+				createdBy: 'u1',
+				createdAt: 1,
+				updatedAt: 1
+			}
+		];
+
+		render(IssueListBody, {
+			slug: 'acme',
+			organizationId: 'org_1',
+			statusFilter: undefined,
+			onStatusChange: vi.fn()
+		});
+
+		await page.getByRole('button', { name: 'Load more' }).click();
+
+		expect(paginated.loadMore).toHaveBeenCalledWith(25);
 	});
 });

@@ -91,4 +91,49 @@ describe('sign-in page', () => {
 			expect(mocks.gotoResolvedPath).toHaveBeenCalledWith('/org');
 		});
 	});
+
+	it('shows an inline error when sign-in returns an error payload', async () => {
+		mocks.signInEmail.mockResolvedValue({
+			error: {
+				message: 'Invalid credentials'
+			}
+		});
+
+		render(SignInPage, {
+			data: {
+				authState: { isAuthenticated: false },
+				returnTo: '/org'
+			},
+			form: undefined,
+			params: {}
+		});
+
+		await page.getByLabelText('Email or Username').fill('user@example.com');
+		await page.getByLabelText('Password').fill('WrongPassword');
+		await page.getByRole('button', { name: 'Sign In' }).click();
+
+		await expect.element(page.getByText('Invalid credentials')).toBeInTheDocument();
+		expect(mocks.gotoResolvedPath).not.toHaveBeenCalled();
+	});
+
+	it('surfaces thrown sign-in failures and resets the button state', async () => {
+		mocks.signInUsername.mockRejectedValue(new Error('Auth provider unavailable'));
+
+		render(SignInPage, {
+			data: {
+				authState: { isAuthenticated: false },
+				returnTo: '/org'
+			},
+			form: undefined,
+			params: {}
+		});
+
+		await page.getByLabelText('Email or Username').fill('issue-admin');
+		await page.getByLabelText('Password').fill('SuperSecret123!');
+		await page.getByRole('button', { name: 'Sign In' }).click();
+
+		await expect.element(page.getByText('Auth provider unavailable')).toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Sign In' })).toBeEnabled();
+		expect(mocks.gotoResolvedPath).not.toHaveBeenCalled();
+	});
 });

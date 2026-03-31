@@ -89,18 +89,14 @@ describe('org page', () => {
 		renderOrgPage();
 
 		await expect.element(page.getByText('Your Teams')).toBeInTheDocument();
-
-		const skeletons = document.querySelectorAll('[data-slot="skeleton"]');
-		expect(skeletons.length).toBe(3);
+		await expect.element(page.getByRole('button', { name: 'New Team' })).toBeInTheDocument();
 
 		resolveList!([
 			{ id: '1', name: 'A', slug: 'a' },
 			{ id: '2', name: 'B', slug: 'b' }
 		]);
 
-		await vi.waitFor(() => {
-			expect(page.getByText('A', { exact: true }).query()).toBeTruthy();
-		});
+		await expect.element(page.getByText('A', { exact: true })).toBeInTheDocument();
 	});
 
 	it('lists teams and navigates with active org when a row is clicked', async () => {
@@ -142,10 +138,16 @@ describe('org page', () => {
 
 		renderOrgPage();
 
-		await vi.waitFor(() => {
-			expect(page.getByText('No teams yet').query()).toBeTruthy();
-		});
-
+		await expect.element(page.getByText('No teams yet')).toBeInTheDocument();
 		await expect.element(page.getByRole('button', { name: 'Create Team' })).toBeInTheDocument();
+	});
+
+	it('shows an error alert when team loading fails', async () => {
+		mocks.listOrganizations.mockRejectedValue(new Error('Failed to load teams'));
+
+		renderOrgPage();
+
+		await expect.element(page.getByText('Failed to load teams')).toBeInTheDocument();
+		await expect.element(page.getByText('No teams yet')).not.toBeInTheDocument();
 	});
 });

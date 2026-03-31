@@ -135,9 +135,7 @@ describe('setActiveOrganization', () => {
 		vi.mocked(org.setActive).mockResolvedValue({
 			error: { message: 'switch failed' }
 		});
-		await expect(setActiveOrganization({ organizationId: '1' })).rejects.toThrow(
-			'switch failed'
-		);
+		await expect(setActiveOrganization({ organizationId: '1' })).rejects.toThrow('switch failed');
 	});
 });
 
@@ -157,9 +155,9 @@ describe('createOrganization', () => {
 		vi.mocked(org.create).mockResolvedValue({
 			error: { message: 'create failed' }
 		});
-		await expect(
-			createOrganization({ name: 'Fail', slug: 'fail' })
-		).rejects.toThrow('create failed');
+		await expect(createOrganization({ name: 'Fail', slug: 'fail' })).rejects.toThrow(
+			'create failed'
+		);
 	});
 });
 
@@ -227,9 +225,7 @@ describe('rejectInvitation', () => {
 // ---------------------------------------------------------------------------
 describe('listMembers', () => {
 	it('unwraps nested members array', async () => {
-		const members = [
-			{ id: 'm1', role: 'admin', user: { id: 'u1', email: 'a@b.com' } }
-		];
+		const members = [{ id: 'm1', role: 'admin', user: { id: 'u1', email: 'a@b.com' } }];
 		vi.mocked(org.listMembers).mockResolvedValue({ data: { members } });
 		const result = await listMembers();
 		expect(result).toEqual(members);

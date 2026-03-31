@@ -19,6 +19,11 @@ const createAuthWithEnv: typeof createAuth = (ctx) => {
 };
 
 export const handle: Handle = async ({ event, resolve }) => {
+	if (env.E2E_MOCK_AUTH === 'true') {
+		event.locals.token = undefined;
+		return resolve(event);
+	}
+
 	const token = await getToken(createAuthWithEnv, event.cookies);
 
 	event.locals.token = token;

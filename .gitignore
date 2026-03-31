@@ -27,6 +27,7 @@ vite.config.ts.timestamp-*
 test-results
 coverage
 .vitest-attachments
+.husky/_
 
 # Convex local
 .convex

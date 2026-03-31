@@ -29,6 +29,22 @@ Long term maintainability is a core priority. If you add new functionality, firs
 - Use double quotes, semicolons, 2-space indentation, trailing commas in multiline literals.
 - Prefer `const`, `readonly` props, and named exports.
 
+## Testing
+
+- Use `bun run`, never `npm` or `npx`, for repo test commands.
+- Main test commands:
+  - `bun run test:browser`
+  - `bun run test:server`
+  - `bun run test:convex`
+  - `bun run test:coverage`
+  - `bun run test:e2e`
+  - `bun run ci:test`
+- Vitest is split into `browser`, `server`, and `convex` projects in `vitest.config.ts`. Keep new tests in the matching layer instead of collapsing everything into one project.
+- Playwright E2E runs against preview mode, not `bun run dev`.
+- Public-page E2E must remain hermetic: it should not require `bunx convex dev` or a live local Convex deployment to pass.
+- Do not place `convex-test` helpers or other Node-only test utilities inside `src/convex/**`; Convex bundles that directory for runtime code. Keep those helpers under `src/test/**`.
+- When changing server auth/bootstrap behavior, preserve the E2E mock mode used by Playwright in `playwright.config.ts`, `src/hooks.server.ts`, and `src/lib/server/auth.ts`.
+
 **btca Research Tool**
 
 Use `btca` for detailed research on project dependencies. Resources are configured in `btca.config.jsonc`.

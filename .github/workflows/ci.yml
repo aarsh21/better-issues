@@ -9,6 +9,14 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      PUBLIC_SITE_URL: http://127.0.0.1:4173
+      PUBLIC_CONVEX_URL: http://127.0.0.1:3210
+      PUBLIC_CONVEX_SITE_URL: http://127.0.0.1:3211
+      BETTER_AUTH_URL: http://127.0.0.1:4173
+      PUBLIC_ALLOWED_SIGNUPS: "true"
+      BETTER_AUTH_SECRET: test-secret-for-ci-only-32-chars
+      PROFILE_IMAGE_SIGNING_SECRET: test-secret-for-ci-only-32-chars
 
     steps:
       - name: Checkout

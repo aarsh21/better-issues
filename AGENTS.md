@@ -8,7 +8,7 @@ It is Sveltekit app and a Convex backend.Treat every change as user-facing and k
 - Always use shadcn-svelte colors from @layout.css.
 - ALWAYS USE shadcn-svelte components available components are: accordion,alert,alert-dialog,aspect-ratio,avatar,badge,breadcrumb,button,calendar,card,carousel,chart,checkbox,collapsible,command,context-menu,dialog,drawer,dropdown-menu,hover-card,input,input-otp,kbd,label,menubar,navigation-menu,pagination,popover,progress,radio-group,range-calendar,resizable,scroll-area,select,separator,sheet,sidebar,skeleton,slider,sonner,switch,table,tabs,textarea,toggle,toggle-group,tooltip
 - Never run `bun run dev`; the user will run it manually.
-- Keep the UX clean, fast, and consistent with existing patterns.
+- Keep the UX clean, fast.
 
 ## Core Priorities
 

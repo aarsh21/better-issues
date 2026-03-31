@@ -1,42 +1,46 @@
-# sv
+# better-issues
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+`better-issues` is a SvelteKit issue tracker with a Convex backend.
 
-## Creating a project
+## Commands
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+Use `bun` for scripts and `bunx` for one-off tooling.
 
 ```sh
-# recreate this project
-bun x sv@0.13.0 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" tailwindcss="plugins:none" mcp="ide:cursor,claude-code,opencode+setup:local" --install bun svelte-migration
+bun install
+bun run check
+bun run lint
+bun run test
+bun run test:coverage
+bun run test:e2e
+bun run build
 ```
 
-## Developing
+Do not run `bun run dev` through the agent. Start it manually when you need a local app server.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Testing Strategy
+
+The repo uses three Vitest projects plus Playwright:
+
+- `bun run test:browser` for Svelte component/browser specs
+- `bun run test:server` for SvelteKit server loads, endpoints, and server utilities
+- `bun run test:convex` for Convex-focused specs running on `edge-runtime`
+- `bun run test:e2e` for Playwright smoke and critical-path coverage against preview mode
+
+Coverage is collected with:
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+bun run test:coverage
 ```
 
-## Building
+## CI
 
-To create a production version of your app:
+GitHub Actions is the merge gate. The CI workflow installs dependencies with Bun and runs:
 
 ```sh
-npm run build
+bun run check
+bun run lint
+bun run test:coverage
+bun run build
+bun run test:e2e
 ```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

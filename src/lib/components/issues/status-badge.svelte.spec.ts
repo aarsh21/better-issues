@@ -9,24 +9,21 @@ vi.mock('@lucide/svelte/icons/circle-dot', () => import('$lib/test/lucide-icon-s
 vi.mock('@lucide/svelte/icons/circle-check', () => import('$lib/test/lucide-icon-stub.svelte'));
 
 describe('status badge', () => {
-	it('renders for open status', async () => {
+	it('announces the open status', async () => {
 		render(StatusBadge, { status: 'open' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		await expect.element(page.getByLabelText('Open')).toBeInTheDocument();
 	});
 
-	it('renders for in_progress status', async () => {
+	it('announces the in-progress status', async () => {
 		render(StatusBadge, { status: 'in_progress' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		await expect.element(page.getByLabelText('In Progress')).toBeInTheDocument();
 	});
 
-	it('renders for closed status', async () => {
+	it('announces the closed status', async () => {
 		render(StatusBadge, { status: 'closed' });
 
-		const icons = document.querySelectorAll('.icon-stub');
-		expect(icons.length).toBe(1);
+		await expect.element(page.getByLabelText('Closed')).toBeInTheDocument();
 	});
 });

@@ -62,4 +62,53 @@ describe('sign-up page', () => {
 
 		await expect.element(page.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
 	});
+
+	it('shows an inline error when the auth client returns an error payload', async () => {
+		mocks.signUpEmail.mockResolvedValue({
+			error: {
+				message: 'Username is already taken'
+			}
+		});
+
+		render(SignUpPage, {
+			data: {
+				authState: { isAuthenticated: false },
+				returnTo: '/org'
+			},
+			form: undefined,
+			params: {}
+		});
+
+		await page.getByLabelText(/^Name$/).fill('Better Issues');
+		await page.getByLabelText(/^Username$/).fill('better-issues');
+		await page.getByLabelText(/^Email$/).fill('owner@example.com');
+		await page.getByLabelText(/^Password$/).fill('SuperSecret123!');
+		await page.getByRole('button', { name: 'Create Account' }).click();
+
+		await expect.element(page.getByText('Username is already taken')).toBeInTheDocument();
+		expect(mocks.gotoResolvedPath).not.toHaveBeenCalled();
+	});
+
+	it('surfaces thrown sign-up failures and resets the submitting state', async () => {
+		mocks.signUpEmail.mockRejectedValue(new Error('Service unavailable'));
+
+		render(SignUpPage, {
+			data: {
+				authState: { isAuthenticated: false },
+				returnTo: '/org'
+			},
+			form: undefined,
+			params: {}
+		});
+
+		await page.getByLabelText(/^Name$/).fill('Better Issues');
+		await page.getByLabelText(/^Username$/).fill('better-issues');
+		await page.getByLabelText(/^Email$/).fill('owner@example.com');
+		await page.getByLabelText(/^Password$/).fill('SuperSecret123!');
+		await page.getByRole('button', { name: 'Create Account' }).click();
+
+		await expect.element(page.getByText('Service unavailable')).toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Create Account' })).toBeEnabled();
+		expect(mocks.gotoResolvedPath).not.toHaveBeenCalled();
+	});
 });

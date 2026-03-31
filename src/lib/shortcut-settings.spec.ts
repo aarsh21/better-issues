@@ -73,15 +73,11 @@ describe('formatShortcut', () => {
 	});
 
 	it('includes both Shift and Alt', () => {
-		expect(formatShortcut({ key: 'x', shift: true, alt: true })).toBe(
-			'Ctrl/Cmd + Shift + Alt + X'
-		);
+		expect(formatShortcut({ key: 'x', shift: true, alt: true })).toBe('Ctrl/Cmd + Shift + Alt + X');
 	});
 
 	it('does not uppercase multi-character key names', () => {
-		expect(formatShortcut({ key: 'enter', shift: false, alt: false })).toBe(
-			'Ctrl/Cmd + enter'
-		);
+		expect(formatShortcut({ key: 'enter', shift: false, alt: false })).toBe('Ctrl/Cmd + enter');
 	});
 });
 

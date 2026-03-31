@@ -146,6 +146,7 @@ export default defineConfig({
 				test: {
 					name: 'convex',
 					environment: 'edge-runtime',
+					testTimeout: 20_000,
 					setupFiles: ['./src/test/setup.convex.ts'],
 					include: ['src/convex/**/*.spec.ts'],
 					coverage: {

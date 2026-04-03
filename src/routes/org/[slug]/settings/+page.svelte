@@ -34,6 +34,7 @@
 		listInvitations,
 		listMembers,
 		removeMember,
+		setActiveOrganization,
 		type OrganizationInvitation,
 		type OrganizationMember
 	} from '$lib/organization';
@@ -148,30 +149,47 @@
 
 	$effect(() => {
 		const id = organizationId;
+		const currentSlug = slug;
 		if (!id) return;
 
 		membersLoading = true;
 		invitationsLoading = true;
 
+		// Guard against stale writes when the org changes mid-flight
+		let stale = false;
+
 		void (async () => {
 			try {
-				members = await listMembers();
+				await setActiveOrganization({ organizationSlug: currentSlug });
+				if (stale) return;
+
+				const result = await listMembers();
+				if (!stale) members = result;
 			} catch (error) {
-				toast.error(error instanceof Error ? error.message : 'Failed to load members');
+				if (!stale) toast.error(error instanceof Error ? error.message : 'Failed to load members');
 			} finally {
-				membersLoading = false;
+				if (!stale) membersLoading = false;
 			}
 		})();
 
 		void (async () => {
 			try {
-				invitations = await listInvitations();
+				await setActiveOrganization({ organizationSlug: currentSlug });
+				if (stale) return;
+
+				const result = await listInvitations();
+				if (!stale) invitations = result;
 			} catch (error) {
-				toast.error(error instanceof Error ? error.message : 'Failed to load invitations');
+				if (!stale)
+					toast.error(error instanceof Error ? error.message : 'Failed to load invitations');
 			} finally {
-				invitationsLoading = false;
+				if (!stale) invitationsLoading = false;
 			}
 		})();
+
+		return () => {
+			stale = true;
+		};
 	});
 
 	$effect(() => {
@@ -316,6 +334,9 @@
 				throw new Error(error.message || error.statusText || 'Failed to update profile photo');
 			}
 
+			if (avatarPreview && avatarPreview.startsWith('blob:')) {
+				URL.revokeObjectURL(avatarPreview);
+			}
 			avatarPreview = URL.createObjectURL(file);
 			toast.success('Profile photo updated');
 		} catch (error) {

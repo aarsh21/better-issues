@@ -33,11 +33,13 @@
 
 	let { data, children }: LayoutProps = $props();
 
-	const workspace = $state<WorkspaceState>({
-		organizations: null,
-		activeOrg: null,
-		organizationId: undefined
-	});
+	const workspace = $state<WorkspaceState>(
+		(() => ({
+			organizations: data.organizations,
+			activeOrg: data.organization,
+			organizationId: data.organization.id
+		}))()
+	);
 
 	setWorkspaceContext(workspace);
 
@@ -51,7 +53,6 @@
 
 	let activeCommand = $state<'issueSearch' | 'actionCommand' | null>(null);
 	let shortcuts = $state<ShortcutSettings>(readShortcutSettings());
-	let initialized = false;
 
 	const issueSearchOpen = $derived(activeCommand === 'issueSearch');
 	const actionCommandOpen = $derived(activeCommand === 'actionCommand');
@@ -90,70 +91,33 @@
 		}
 	}
 
+	// Keep server data and workspace in sync when SvelteKit navigates between slugs.
 	$effect(() => {
-		const orgs = workspace.organizations;
+		workspace.organizations = data.organizations;
+		workspace.activeOrg = data.organization;
+		workspace.organizationId = data.organization.id;
+	});
+
+	// Sync the Better Auth session's active organization when the slug changes.
+	$effect(() => {
 		const s = slug;
-		if (!orgs) {
-			workspace.organizationId = undefined;
-			return;
-		}
-		const active = workspace.activeOrg;
-		if (active?.slug === s) {
-			workspace.organizationId = active.id;
-		} else {
-			workspace.organizationId = orgs.find((o) => o.slug === s)?.id;
-		}
-	});
+		if (lastSyncedSlug === s) return;
 
-	$effect(() => {
-		if (initialized) return;
-		initialized = true;
-
-		shortcuts = readShortcutSettings();
-
+		lastSyncedSlug = s;
 		void (async () => {
 			try {
-				const [orgs, active] = await Promise.all([listOrganizations(), getActiveOrganization()]);
-				workspace.organizations = orgs;
-				workspace.activeOrg = active;
-			} catch {
-				workspace.organizations = [];
-			}
-		})();
-	});
-
-	$effect(() => {
-		const orgs = workspace.organizations;
-		if (orgs === null) return;
-
-		if (!orgs.some((o) => o.slug === slug)) {
-			void goto(resolve('/org'));
-		}
-	});
-
-	$effect(() => {
-		const orgs = workspace.organizations;
-		if (!orgs) return;
-
-		if (!orgs.some((o) => o.slug === slug)) return;
-
-		if (lastSyncedSlug === slug) return;
-		if (workspace.activeOrg?.slug === slug) {
-			lastSyncedSlug = slug;
-			return;
-		}
-
-		lastSyncedSlug = slug;
-		void (async () => {
-			try {
-				await setActiveOrganization({ organizationSlug: slug });
-				workspace.activeOrg = await getActiveOrganization();
+				await setActiveOrganization({ organizationSlug: s });
+				const activeOrg = await getActiveOrganization();
+				if (page.params.slug === s) {
+					workspace.activeOrg = activeOrg ?? data.organization;
+				}
 			} catch {
 				lastSyncedSlug = null;
 			}
 		})();
 	});
 
+	// Seed default labels once per org.
 	$effect(() => {
 		if (auth.isLoading || !auth.isAuthenticated) return;
 		const id = workspace.organizationId;

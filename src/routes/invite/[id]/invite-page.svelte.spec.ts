@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 import type { PageProps } from './$types';
+import type { InvitationSummary } from '$lib/server/organization';
 import InvitePage from './+page.svelte';
 
 const mocks = vi.hoisted(() => ({
-	getInvitation: vi.fn(),
 	acceptInvitation: vi.fn(),
 	rejectInvitation: vi.fn(),
 	gotoResolvedPath: vi.fn()
@@ -28,7 +28,7 @@ vi.mock('$lib/organization', () => ({
 	setActiveOrganization: vi.fn(),
 	createOrganization: vi.fn(),
 	getActiveOrganization: vi.fn(),
-	getInvitation: mocks.getInvitation,
+	getInvitation: vi.fn(),
 	acceptInvitation: mocks.acceptInvitation,
 	rejectInvitation: mocks.rejectInvitation
 }));
@@ -43,8 +43,8 @@ vi.mock(
 );
 
 describe('invite page', () => {
-	const currentUser: PageProps['data']['currentUser'] = {
-		_id: 'user_123' as PageProps['data']['currentUser']['_id'],
+	const currentUser: NonNullable<PageProps['data']['currentUser']> = {
+		_id: 'user_123' as NonNullable<PageProps['data']['currentUser']>['_id'],
 		_creationTime: 0,
 		name: 'Invited User',
 		email: 'invitee@example.com',
@@ -58,7 +58,6 @@ describe('invite page', () => {
 	};
 
 	beforeEach(() => {
-		mocks.getInvitation.mockReset();
 		mocks.acceptInvitation.mockReset();
 		mocks.rejectInvitation.mockReset();
 		mocks.gotoResolvedPath.mockReset();
@@ -71,66 +70,42 @@ describe('invite page', () => {
 		vi.useRealTimers();
 	});
 
-	function renderInvite(id: string) {
+	function renderInvite(opts: {
+		invitation?: InvitationSummary | null;
+		isAuthenticated?: boolean;
+	}) {
+		const isAuthenticated = opts.isAuthenticated ?? true;
 		render(InvitePage, {
-			data: { authState: { isAuthenticated: true }, currentUser },
+			data: {
+				authState: { isAuthenticated },
+				currentUser: isAuthenticated ? currentUser : null,
+				invitation: opts.invitation ?? null,
+				isAuthenticated
+			},
 			form: undefined,
-			params: { id }
+			params: { id: opts.invitation?.id ?? 'inv_0' }
 		});
 	}
 
-	it('shows loading until the invitation is fetched', async () => {
-		let resolveGet: (v: {
-			id: string;
-			organizationId: string;
-			email: string;
-			role: string;
-			status: 'pending';
-			expiresAt: null;
-		}) => void;
-		mocks.getInvitation.mockImplementation(
-			() =>
-				new Promise((resolve) => {
-					resolveGet = resolve;
-				})
-		);
+	it('shows not-found when invitation is null', async () => {
+		renderInvite({ invitation: null });
 
-		renderInvite('inv_1');
-
-		await expect.element(page.getByText('Loading invitation...')).toBeInTheDocument();
-
-		resolveGet!({
-			id: 'inv_1',
-			organizationId: 'org1',
-			email: 'a@b.com',
-			role: 'member',
-			status: 'pending',
-			expiresAt: null
-		});
-
-		await vi.waitFor(() => {
-			expect(page.getByText('You’ve been invited', { exact: true }).query()).toBeTruthy();
-		});
+		await expect.element(page.getByText('Invitation not found')).toBeInTheDocument();
 	});
 
 	it('renders pending invitation details', async () => {
-		mocks.getInvitation.mockResolvedValue({
-			id: 'inv_2',
-			organizationId: 'org1',
-			email: 'a@b.com',
-			role: 'admin',
-			status: 'pending',
-			expiresAt: new Date('2030-01-15T00:00:00.000Z')
-		});
-
-		renderInvite('inv_2');
-
-		await vi.waitFor(() => {
-			expect(mocks.getInvitation).toHaveBeenCalledWith('inv_2');
+		renderInvite({
+			invitation: {
+				id: 'inv_2',
+				status: 'pending',
+				role: 'admin',
+				expiresAt: new Date('2030-01-15T00:00:00.000Z').getTime(),
+				organizationName: 'Acme'
+			}
 		});
 
 		await expect
-			.element(page.getByText('You’ve been invited', { exact: true }))
+			.element(page.getByText('You\u2019ve been invited', { exact: true }))
 			.toBeInTheDocument();
 		await expect.element(page.getByText('admin', { exact: true })).toBeInTheDocument();
 	});
@@ -138,16 +113,15 @@ describe('invite page', () => {
 	it('accepts an invitation and schedules navigation to /org', async () => {
 		vi.useFakeTimers();
 
-		mocks.getInvitation.mockResolvedValue({
-			id: 'inv_3',
-			organizationId: 'org1',
-			email: 'a@b.com',
-			role: 'member',
-			status: 'pending',
-			expiresAt: null
+		renderInvite({
+			invitation: {
+				id: 'inv_3',
+				status: 'pending',
+				role: 'member',
+				expiresAt: Date.now() + 86400000,
+				organizationName: 'Acme'
+			}
 		});
-
-		renderInvite('inv_3');
 
 		await vi.waitFor(() => {
 			expect(page.getByRole('button', { name: 'Accept Invitation' }).query()).toBeTruthy();
@@ -169,16 +143,15 @@ describe('invite page', () => {
 	});
 
 	it('rejects an invitation and shows the declined state', async () => {
-		mocks.getInvitation.mockResolvedValue({
-			id: 'inv_4',
-			organizationId: 'org1',
-			email: 'a@b.com',
-			role: 'member',
-			status: 'pending',
-			expiresAt: null
+		renderInvite({
+			invitation: {
+				id: 'inv_4',
+				status: 'pending',
+				role: 'member',
+				expiresAt: Date.now() + 86400000,
+				organizationName: 'Acme'
+			}
 		});
-
-		renderInvite('inv_4');
 
 		await vi.waitFor(() => {
 			expect(page.getByRole('button', { name: 'Decline' }).query()).toBeTruthy();
@@ -191,5 +164,42 @@ describe('invite page', () => {
 		});
 
 		await expect.element(page.getByText('Invitation declined')).toBeInTheDocument();
+	});
+
+	it('shows sign-in prompt for signed-out users with a pending invitation', async () => {
+		renderInvite({
+			isAuthenticated: false,
+			invitation: {
+				id: 'inv_5',
+				status: 'pending',
+				role: 'member',
+				expiresAt: Date.now() + 86400000,
+				organizationName: 'Acme'
+			}
+		});
+
+		await expect
+			.element(page.getByText('You\u2019ve been invited', { exact: true }))
+			.toBeInTheDocument();
+		await expect
+			.element(page.getByRole('button', { name: 'Sign in to accept' }))
+			.toBeInTheDocument();
+	});
+
+	it('shows expired invitations as non-actionable', async () => {
+		renderInvite({
+			isAuthenticated: false,
+			invitation: {
+				id: 'inv_6',
+				status: 'expired',
+				role: 'member',
+				expiresAt: Date.now() - 60_000,
+				organizationName: 'Acme'
+			}
+		});
+
+		await expect.element(page.getByText('Invitation expired')).toBeInTheDocument();
+		expect(page.getByRole('button', { name: 'Sign in to accept' }).query()).toBeNull();
+		expect(page.getByRole('button', { name: 'Accept Invitation' }).query()).toBeNull();
 	});
 });

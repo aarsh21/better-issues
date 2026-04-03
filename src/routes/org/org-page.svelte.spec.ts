@@ -6,7 +6,6 @@ import type { PageProps } from './$types';
 import OrgPage from './+page.svelte';
 
 const mocks = vi.hoisted(() => ({
-	listOrganizations: vi.fn(),
 	setActiveOrganization: vi.fn(),
 	createOrganization: vi.fn(),
 	gotoResolvedPath: vi.fn()
@@ -22,7 +21,7 @@ vi.mock('$lib/organization', () => ({
 			.trim()
 			.replace(/[^a-z0-9]+/g, '-')
 			.replace(/^-|-$/g, ''),
-	listOrganizations: mocks.listOrganizations,
+	listOrganizations: vi.fn(),
 	setActiveOrganization: mocks.setActiveOrganization,
 	createOrganization: mocks.createOrganization,
 	getActiveOrganization: vi.fn(),
@@ -56,7 +55,6 @@ describe('org page', () => {
 	};
 
 	beforeEach(() => {
-		mocks.listOrganizations.mockReset();
 		mocks.setActiveOrganization.mockReset();
 		mocks.createOrganization.mockReset();
 		mocks.gotoResolvedPath.mockReset();
@@ -69,47 +67,23 @@ describe('org page', () => {
 		});
 	});
 
-	function renderOrgPage() {
+	function renderOrgPage(organizations: PageProps['data']['organizations'] = []) {
 		render(OrgPage, {
-			data: { authState: { isAuthenticated: true }, currentUser },
+			data: {
+				authState: { isAuthenticated: true },
+				currentUser,
+				organizations
+			},
 			form: undefined,
 			params: {}
 		});
 	}
 
-	it('shows loading skeletons until organizations resolve', async () => {
-		let resolveList: (v: { id: string; name: string; slug: string }[]) => void;
-		mocks.listOrganizations.mockImplementation(
-			() =>
-				new Promise((resolve) => {
-					resolveList = resolve;
-				})
-		);
-
-		renderOrgPage();
-
-		await expect.element(page.getByText('Your Teams')).toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'New Team' })).toBeInTheDocument();
-
-		resolveList!([
-			{ id: '1', name: 'A', slug: 'a' },
-			{ id: '2', name: 'B', slug: 'b' }
-		]);
-
-		await expect.element(page.getByText('A', { exact: true })).toBeInTheDocument();
-	});
-
 	it('lists teams and navigates with active org when a row is clicked', async () => {
-		mocks.listOrganizations.mockResolvedValue([
+		renderOrgPage([
 			{ id: 'o1', name: 'Acme', slug: 'acme' },
 			{ id: 'o2', name: 'Beta', slug: 'beta' }
 		]);
-
-		renderOrgPage();
-
-		await vi.waitFor(() => {
-			expect(mocks.listOrganizations).toHaveBeenCalled();
-		});
 
 		await expect.element(page.getByText('Acme', { exact: true })).toBeInTheDocument();
 		await expect.element(page.getByText('/acme')).toBeInTheDocument();
@@ -123,9 +97,7 @@ describe('org page', () => {
 	});
 
 	it('auto-selects the only team and navigates once', async () => {
-		mocks.listOrganizations.mockResolvedValue([{ id: 'only', name: 'Solo', slug: 'solo' }]);
-
-		renderOrgPage();
+		renderOrgPage([{ id: 'only', name: 'Solo', slug: 'solo' }]);
 
 		await vi.waitFor(() => {
 			expect(mocks.gotoResolvedPath).toHaveBeenCalledWith('/org/solo');
@@ -134,20 +106,9 @@ describe('org page', () => {
 	});
 
 	it('shows the empty state when there are no teams', async () => {
-		mocks.listOrganizations.mockResolvedValue([]);
-
-		renderOrgPage();
+		renderOrgPage([]);
 
 		await expect.element(page.getByText('No teams yet')).toBeInTheDocument();
 		await expect.element(page.getByRole('button', { name: 'Create Team' })).toBeInTheDocument();
-	});
-
-	it('shows an error alert when team loading fails', async () => {
-		mocks.listOrganizations.mockRejectedValue(new Error('Failed to load teams'));
-
-		renderOrgPage();
-
-		await expect.element(page.getByText('Failed to load teams')).toBeInTheDocument();
-		await expect.element(page.getByText('No teams yet')).not.toBeInTheDocument();
 	});
 });

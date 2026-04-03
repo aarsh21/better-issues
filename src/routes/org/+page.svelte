@@ -4,50 +4,31 @@
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 
-	import {
-		listOrganizations,
-		setActiveOrganization,
-		type OrganizationSummary
-	} from '$lib/organization';
+	import { setActiveOrganization } from '$lib/organization';
 	import { gotoResolvedPath } from '$lib/goto-resolved';
 	import CreateOrgDialog from '$lib/components/create-org-dialog.svelte';
 	import ModeToggle from '$lib/components/mode-toggle.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 
-	let { data: _data }: PageProps = $props();
+	let { data }: PageProps = $props();
 
 	let createOpen = $state(false);
+	const orgs = $derived(data.organizations);
 
-	let orgs = $state<OrganizationSummary[] | null>(null);
-	let loading = $state(true);
-	let loadError = $state<string | null>(null);
-	let initialized = false;
+	// Auto-redirect to the only team when there is exactly one.
+	let autoRedirected = false;
+	$effect(() => {
+		if (autoRedirected) return;
+		if (orgs.length === 1 && orgs[0]) {
+			autoRedirected = true;
+			void handleTeamClick(orgs[0].slug);
+		}
+	});
 
 	async function handleTeamClick(slug: string) {
-		await gotoResolvedPath(`/org/${slug}`);
 		await setActiveOrganization({ organizationSlug: slug });
+		await gotoResolvedPath(`/org/${slug}`);
 	}
-
-	$effect(() => {
-		if (initialized) return;
-		initialized = true;
-
-		void (async () => {
-			try {
-				const list = await listOrganizations();
-				orgs = list;
-				if (list.length === 1 && list[0]) {
-					await handleTeamClick(list[0].slug);
-				}
-			} catch (e) {
-				loadError = e instanceof Error ? e.message : 'Failed to load teams';
-				orgs = [];
-			} finally {
-				loading = false;
-			}
-		})();
-	});
 </script>
 
 <div class="flex h-full flex-col">
@@ -69,15 +50,7 @@
 				Select a team to view its issues, or create a new one.
 			</p>
 
-			{#if loadError}
-				<p class="text-sm text-destructive" role="alert">{loadError}</p>
-			{:else if loading}
-				<div class="space-y-2">
-					{#each [0, 1, 2] as i (i)}
-						<Skeleton class="h-16 w-full" />
-					{/each}
-				</div>
-			{:else if orgs && orgs.length > 0}
+			{#if orgs.length > 0}
 				<div class="space-y-2">
 					{#each orgs as org (org.id)}
 						<button

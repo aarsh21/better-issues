@@ -1,10 +1,48 @@
-import type { MutationCtx } from './_generated/server';
+import type { Id } from './_generated/dataModel';
+import type { MutationCtx, QueryCtx } from './_generated/server';
 
 import { ConvexError, v } from 'convex/values';
 
 import { authComponent } from './auth';
 import { internalMutation, mutation, query } from './_generated/server';
 import { requireOrgMembership, requirePermission } from './lib/permissions';
+
+const normalizeLabelName = (name: string) => name.trim().toLowerCase();
+
+/**
+ * Check if a normalized label name already exists for an org, optionally
+ * excluding a specific label (for update checks).
+ */
+async function isLabelNameTaken(
+	ctx: QueryCtx | MutationCtx,
+	organizationId: string,
+	normalizedName: string,
+	excludeLabelId?: Id<'labels'>
+): Promise<boolean> {
+	// Try the composite index first (works for labels with normalizedName set)
+	const byIndex = await ctx.db
+		.query('labels')
+		.withIndex('by_org_normalized_name', (q) =>
+			q.eq('organizationId', organizationId).eq('normalizedName', normalizedName)
+		)
+		.first();
+
+	if (byIndex && byIndex._id !== excludeLabelId) {
+		return true;
+	}
+
+	// Fall back to scanning for legacy labels without normalizedName
+	const orgLabels = await ctx.db
+		.query('labels')
+		.withIndex('by_organization', (q) => q.eq('organizationId', organizationId))
+		.collect();
+
+	return orgLabels.some(
+		(label) =>
+			label._id !== excludeLabelId &&
+			label.name.toLowerCase() === normalizedName
+	);
+}
 
 const DEFAULT_LABELS: ReadonlyArray<{
 	readonly name: string;
@@ -44,6 +82,7 @@ async function seedDefaultLabelsForOrganization(
 			ctx.db.insert('labels', {
 				organizationId,
 				name: label.name,
+				normalizedName: normalizeLabelName(label.name),
 				color: label.color,
 				description: label.description
 			})
@@ -58,6 +97,7 @@ const labelValidator = v.object({
 	_creationTime: v.number(),
 	organizationId: v.string(),
 	name: v.string(),
+	normalizedName: v.optional(v.string()),
 	color: v.string(),
 	description: v.optional(v.string())
 });
@@ -95,7 +135,8 @@ export const create = mutation({
 		if (!user) throw new ConvexError('Not authenticated');
 		await requirePermission(ctx, user._id, args.organizationId, 'label', 'create');
 
-		if (!args.name.trim()) {
+		const trimmedName = args.name.trim();
+		if (!trimmedName) {
 			throw new ConvexError('Label name is required');
 		}
 
@@ -108,13 +149,15 @@ export const create = mutation({
 			throw new ConvexError('Maximum of 15 labels per organization');
 		}
 
-		if (existing.some((label) => label.name.toLowerCase() === args.name.trim().toLowerCase())) {
+		const normalized = normalizeLabelName(trimmedName);
+		if (await isLabelNameTaken(ctx, args.organizationId, normalized)) {
 			throw new ConvexError('A label with this name already exists');
 		}
 
 		return await ctx.db.insert('labels', {
 			organizationId: args.organizationId,
-			name: args.name.trim(),
+			name: trimmedName,
+			normalizedName: normalized,
 			color: args.color,
 			description: args.description?.trim()
 		});
@@ -163,8 +206,16 @@ export const update = mutation({
 
 		const updates: Record<string, unknown> = {};
 		if (args.name !== undefined) {
-			if (!args.name.trim()) throw new ConvexError('Label name cannot be empty');
-			updates.name = args.name.trim();
+			const trimmedName = args.name.trim();
+			if (!trimmedName) throw new ConvexError('Label name cannot be empty');
+
+			const normalized = normalizeLabelName(trimmedName);
+			if (await isLabelNameTaken(ctx, label.organizationId, normalized, args.labelId)) {
+				throw new ConvexError('A label with this name already exists');
+			}
+
+			updates.name = trimmedName;
+			updates.normalizedName = normalized;
 		}
 		if (args.color !== undefined) updates.color = args.color;
 		if (args.description !== undefined) updates.description = args.description?.trim();
@@ -187,14 +238,29 @@ export const remove = mutation({
 		if (!label) throw new ConvexError('Label not found');
 		await requirePermission(ctx, user._id, label.organizationId, 'label', 'delete');
 
-		for await (const issue of ctx.db
-			.query('issues')
-			.withIndex('by_organization', (q) => q.eq('organizationId', label.organizationId))) {
-			if (issue.labelIds.includes(args.labelId)) {
-				throw new ConvexError(
-					'This label is still used by existing issues. Remove it from those issues before deleting the label.'
-				);
+		// Check for any issue that references this label. We use a paginated
+		// scan to avoid reading the entire org in one go, bailing as soon as
+		// a reference is found.
+		let cursor: string | null = null;
+		let done = false;
+		const BATCH = 200;
+
+		while (!done) {
+			const batch = await ctx.db
+				.query('issues')
+				.withIndex('by_organization', (q) => q.eq('organizationId', label.organizationId))
+				.paginate({ cursor, numItems: BATCH });
+
+			for (const issue of batch.page) {
+				if (issue.labelIds.includes(args.labelId)) {
+					throw new ConvexError(
+						'This label is still used by existing issues. Remove it from those issues before deleting the label.'
+					);
+				}
 			}
+
+			done = batch.isDone;
+			cursor = batch.continueCursor;
 		}
 
 		await ctx.db.delete(args.labelId);

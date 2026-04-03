@@ -183,6 +183,46 @@ describe('labels functions', () => {
 		expect(labels.map((label) => label.name)).toContain('bug');
 	});
 
+	it('rejects renaming a label to an existing name (case-insensitive)', async () => {
+		const t = createConvexTest();
+
+		await t.mutation(api.labels.create, {
+			organizationId: 'org_1',
+			name: 'Bug',
+			color: '#ef4444'
+		});
+
+		const secondId = await t.mutation(api.labels.create, {
+			organizationId: 'org_1',
+			name: 'Feature',
+			color: '#22c55e'
+		});
+
+		await expect(
+			t.mutation(api.labels.update, {
+				labelId: secondId,
+				name: 'BUG'
+			})
+		).rejects.toThrow('A label with this name already exists');
+	});
+
+	it('allows renaming a label to itself (same name, different case)', async () => {
+		const t = createConvexTest();
+
+		const labelId = await t.mutation(api.labels.create, {
+			organizationId: 'org_1',
+			name: 'Bug',
+			color: '#ef4444'
+		});
+
+		await expect(
+			t.mutation(api.labels.update, {
+				labelId,
+				name: 'BUG'
+			})
+		).resolves.toBeNull();
+	});
+
 	it('rejects label creation once the organization reaches the label limit', async () => {
 		const t = createConvexTest();
 

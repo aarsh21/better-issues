@@ -6,6 +6,7 @@ import { ConvexError, v } from 'convex/values';
 
 import { authComponent } from './auth';
 import { mutation, query } from './_generated/server';
+import { deleteAttachmentClaims, requireClaimedAttachments } from './lib/attachments';
 import { collectTemplateStorageIds } from './lib/issueTemplateFiles';
 import { requireOrgMembership, requirePermission } from './lib/permissions';
 import { parseTemplateSchema, validateTemplateData } from './lib/templateSchema';
@@ -114,9 +115,20 @@ export const list = query({
 		}
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
+		// Choose the most selective index for the filter combination.
+		// All assignee+status combos are now fully index-backed.
 		let issueQuery;
 
-		if (args.assigneeId) {
+		if (args.assigneeId && args.status) {
+			issueQuery = ctx.db
+				.query('issues')
+				.withIndex('by_org_assignee_status', (q) =>
+					q
+						.eq('organizationId', args.organizationId)
+						.eq('assigneeId', args.assigneeId!)
+						.eq('status', args.status!)
+				);
+		} else if (args.assigneeId) {
 			issueQuery = ctx.db
 				.query('issues')
 				.withIndex('by_assignee', (q) =>
@@ -134,18 +146,27 @@ export const list = query({
 				.withIndex('by_org_and_status', (q) => q.eq('organizationId', args.organizationId));
 		}
 
-		const result = await issueQuery.order('desc').paginate(args.paginationOpts);
-		let filteredPage = result.page;
+		// labelId cannot be index-backed (array membership). We increase
+		// maximumRowsRead so Convex scans enough to fill the page even when
+		// the label is sparse, then post-filter the result.
+		const paginationOpts = args.labelId
+			? {
+					...args.paginationOpts,
+					maximumRowsRead: Math.max(
+						args.paginationOpts.maximumRowsRead ?? 0,
+						(args.paginationOpts.numItems ?? 25) * 10
+					)
+				}
+			: args.paginationOpts;
 
-		if (args.assigneeId && args.status) {
-			filteredPage = filteredPage.filter((issue) => issue.status === args.status);
-		}
+		const result = await issueQuery.order('desc').paginate(paginationOpts);
 
 		if (args.labelId) {
-			filteredPage = filteredPage.filter((issue) => issue.labelIds.includes(args.labelId!));
+			const targetLabelId = args.labelId;
+			return { ...result, page: result.page.filter((issue) => issue.labelIds.includes(targetLabelId)) };
 		}
 
-		return { ...result, page: filteredPage };
+		return result;
 	}
 });
 
@@ -158,7 +179,7 @@ export const search = query({
 	returns: v.array(issueValidator),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError('Not authenticated');
+		if (!user) return [];
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
 		if (!args.searchQuery.trim()) return [];
@@ -183,7 +204,7 @@ export const getByNumber = query({
 	returns: v.union(issueValidator, v.null()),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError('Not authenticated');
+		if (!user) return null;
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
 		return await ctx.db
@@ -265,6 +286,12 @@ export const create = mutation({
 			templateSchemaSnapshot = template.schema;
 		} else if (parsedTemplateData !== null) {
 			throw new ConvexError('Template data provided without template');
+		}
+
+		// Validate that any file references in template data are claimed for this org
+		if (args.templateData && templateSchemaSnapshot) {
+			const storageIds = collectTemplateStorageIds(templateSchemaSnapshot, args.templateData);
+			await requireClaimedAttachments(ctx, args.organizationId, storageIds);
 		}
 
 		const existingIssue = await ctx.db
@@ -397,6 +424,7 @@ export const remove = mutation({
 			);
 			const storageIds = collectTemplateStorageIds(templateSchemaJson, issue.templateData);
 
+			// Clean up both storage files and their claim records
 			await Promise.allSettled(
 				Array.from(storageIds).map(async (storageId) => {
 					try {
@@ -406,6 +434,7 @@ export const remove = mutation({
 					}
 				})
 			);
+			await deleteAttachmentClaims(ctx, issue.organizationId, storageIds);
 		}
 
 		await ctx.db.delete(args.issueId);

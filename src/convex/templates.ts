@@ -19,43 +19,58 @@ const templateValidator = v.object({
 	createdAt: v.number()
 });
 
+/**
+ * Snapshot template name/schema into linked issues that don't already have
+ * them, and optionally clear the templateId reference.
+ *
+ * Processes in batches to avoid hitting mutation write limits on large orgs.
+ */
 async function snapshotTemplateIssues(
 	ctx: MutationCtx,
 	template: Pick<Doc<'issueTemplates'>, '_id' | 'organizationId' | 'name' | 'schema'>,
 	clearTemplateId: boolean
 ) {
-	const issues = await ctx.db
-		.query('issues')
-		.withIndex('by_organization_and_templateId', (q) =>
-			q.eq('organizationId', template.organizationId).eq('templateId', template._id)
-		)
-		.collect();
+	const BATCH = 200;
+	let cursor: string | null = null;
+	let done = false;
 
-	await Promise.all(
-		issues.map(async (issue) => {
-			const updates: {
-				templateId?: undefined;
-				templateNameSnapshot?: string;
-				templateSchemaSnapshot?: string;
-			} = {};
+	while (!done) {
+		const batch = await ctx.db
+			.query('issues')
+			.withIndex('by_organization_and_templateId', (q) =>
+				q.eq('organizationId', template.organizationId).eq('templateId', template._id)
+			)
+			.paginate({ cursor, numItems: BATCH });
 
-			if (!issue.templateNameSnapshot) {
-				updates.templateNameSnapshot = template.name;
-			}
-			if (!issue.templateSchemaSnapshot) {
-				updates.templateSchemaSnapshot = template.schema;
-			}
-			if (clearTemplateId) {
-				updates.templateId = undefined;
-			}
+		await Promise.all(
+			batch.page.map(async (issue) => {
+				const updates: {
+					templateId?: undefined;
+					templateNameSnapshot?: string;
+					templateSchemaSnapshot?: string;
+				} = {};
 
-			if (Object.keys(updates).length === 0) {
-				return;
-			}
+				if (!issue.templateNameSnapshot) {
+					updates.templateNameSnapshot = template.name;
+				}
+				if (!issue.templateSchemaSnapshot) {
+					updates.templateSchemaSnapshot = template.schema;
+				}
+				if (clearTemplateId) {
+					updates.templateId = undefined;
+				}
 
-			await ctx.db.patch(issue._id, updates);
-		})
-	);
+				if (Object.keys(updates).length === 0) {
+					return;
+				}
+
+				await ctx.db.patch(issue._id, updates);
+			})
+		);
+
+		done = batch.isDone;
+		cursor = batch.continueCursor;
+	}
 }
 
 export const list = query({
@@ -85,7 +100,7 @@ export const get = query({
 	returns: v.union(templateValidator, v.null()),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
-		if (!user) throw new ConvexError('Not authenticated');
+		if (!user) return null;
 
 		const template = await ctx.db.get(args.templateId);
 		if (!template) return null;

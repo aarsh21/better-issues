@@ -11,11 +11,14 @@
 import type * as auth from "../auth.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as invitations from "../invitations.js";
 import type * as issues from "../issues.js";
 import type * as labels from "../labels.js";
+import type * as lib_attachments from "../lib/attachments.js";
 import type * as lib_issueTemplateFiles from "../lib/issueTemplateFiles.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_templateSchema from "../lib/templateSchema.js";
+import type * as organizations from "../organizations.js";
 import type * as templates from "../templates.js";
 
 import type {
@@ -28,11 +31,14 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   files: typeof files;
   http: typeof http;
+  invitations: typeof invitations;
   issues: typeof issues;
   labels: typeof labels;
+  "lib/attachments": typeof lib_attachments;
   "lib/issueTemplateFiles": typeof lib_issueTemplateFiles;
   "lib/permissions": typeof lib_permissions;
   "lib/templateSchema": typeof lib_templateSchema;
+  organizations: typeof organizations;
   templates: typeof templates;
 }>;
 

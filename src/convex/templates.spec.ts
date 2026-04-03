@@ -361,11 +361,8 @@ describe('templates functions', () => {
 
 		mocks.safeGetAuthUser.mockResolvedValueOnce(null);
 
-		await expect(
-			t.query(api.templates.get, {
-				templateId
-			})
-		).rejects.toThrow('Not authenticated');
+		const unauthResult = await t.query(api.templates.get, { templateId });
+		expect(unauthResult).toBeNull();
 	});
 
 	it('rejects invalid template creation requests', async () => {

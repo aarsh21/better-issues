@@ -5,15 +5,19 @@ import { ConvexError, v } from 'convex/values';
 
 import {
 	authComponent,
+	createAttachmentUploadToken,
 	createAvatarUploadToken,
 	createProfileImageReference,
+	resolveAttachmentUploadToken,
 	resolveAvatarUploadToken
 } from './auth';
 import { mutation, query } from './_generated/server';
+import { deleteAttachmentClaims } from './lib/attachments';
 import { collectTemplateStorageIds } from './lib/issueTemplateFiles';
 import { requireOrgMembership, requirePermission } from './lib/permissions';
 
 const MAX_AVATAR_UPLOAD_TOKEN_AGE_MS = 15 * 60 * 1_000;
+const MAX_ATTACHMENT_UPLOAD_TOKEN_AGE_MS = 15 * 60 * 1_000;
 
 const collectIssueStorageIds = (
 	issue: Doc<'issues'>,
@@ -53,13 +57,79 @@ export const generateUploadUrl = mutation({
 	args: {
 		organizationId: v.string()
 	},
-	returns: v.string(),
+	returns: v.object({
+		uploadUrl: v.string(),
+		uploadToken: v.string()
+	}),
 	handler: async (ctx, args) => {
 		const user = await authComponent.safeGetAuthUser(ctx);
 		if (!user) throw new ConvexError('Not authenticated');
 		await requireOrgMembership(ctx, user._id, args.organizationId);
 
-		return await ctx.storage.generateUploadUrl();
+		const issuedAt = Date.now();
+		const [uploadUrl, uploadToken] = await Promise.all([
+			ctx.storage.generateUploadUrl(),
+			createAttachmentUploadToken({
+				organizationId: args.organizationId,
+				userId: user._id,
+				issuedAt
+			})
+		]);
+
+		return { uploadUrl, uploadToken };
+	}
+});
+
+/**
+ * Claim an uploaded file so it can be referenced by issues/templates.
+ * Must be called after a successful upload and before using the storageId.
+ */
+export const claimUpload = mutation({
+	args: {
+		organizationId: v.string(),
+		storageId: v.id('_storage'),
+		uploadToken: v.string()
+	},
+	returns: v.id('attachments'),
+	handler: async (ctx, args) => {
+		const user = await authComponent.safeGetAuthUser(ctx);
+		if (!user) throw new ConvexError('Not authenticated');
+		await requireOrgMembership(ctx, user._id, args.organizationId);
+
+		const uploadToken = await resolveAttachmentUploadToken({
+			token: args.uploadToken,
+			userId: user._id,
+			organizationId: args.organizationId,
+			maxAgeMs: MAX_ATTACHMENT_UPLOAD_TOKEN_AGE_MS
+		});
+		if (!uploadToken) {
+			throw new ConvexError('File upload authorization expired. Please upload again.');
+		}
+
+		const storageDoc = await ctx.db.system.get(args.storageId);
+		if (!storageDoc || storageDoc._creationTime < uploadToken.issuedAt) {
+			throw new ConvexError('Uploaded file not found');
+		}
+
+		const existingClaim = await ctx.db
+			.query('attachments')
+			.withIndex('by_storage_id', (q) => q.eq('storageId', args.storageId))
+			.unique();
+
+		if (existingClaim) {
+			if (existingClaim.organizationId !== args.organizationId) {
+				throw new ConvexError('Uploaded file is already claimed by another organization');
+			}
+
+			return existingClaim._id;
+		}
+
+		return await ctx.db.insert('attachments', {
+			storageId: args.storageId,
+			organizationId: args.organizationId,
+			uploadedBy: user._id,
+			claimedAt: Date.now()
+		});
 	}
 });
 
@@ -175,6 +245,7 @@ export const remove = mutation({
 		}
 
 		await ctx.storage.delete(args.storageId);
+		await deleteAttachmentClaims(ctx, args.organizationId, new Set([args.storageId]));
 		return null;
 	}
 });

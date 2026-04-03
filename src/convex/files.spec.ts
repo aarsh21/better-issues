@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Id } from './_generated/dataModel';
+
 const mocks = vi.hoisted(() => ({
+	createAttachmentUploadToken: vi.fn(),
 	createAvatarUploadToken: vi.fn(),
 	createProfileImageReference: vi.fn(),
 	requireOrgMembership: vi.fn(),
+	resolveAttachmentUploadToken: vi.fn(),
 	requirePermission: vi.fn(),
 	resolveAvatarUploadToken: vi.fn(),
 	safeGetAuthUser: vi.fn()
@@ -17,8 +21,10 @@ vi.mock('./auth', async () => {
 		authComponent: {
 			safeGetAuthUser: mocks.safeGetAuthUser
 		},
+		createAttachmentUploadToken: mocks.createAttachmentUploadToken,
 		createAvatarUploadToken: mocks.createAvatarUploadToken,
 		createProfileImageReference: mocks.createProfileImageReference,
+		resolveAttachmentUploadToken: mocks.resolveAttachmentUploadToken,
 		resolveAvatarUploadToken: mocks.resolveAvatarUploadToken
 	};
 });
@@ -41,8 +47,10 @@ describe('files functions', () => {
 		mocks.safeGetAuthUser.mockReset();
 		mocks.requireOrgMembership.mockReset();
 		mocks.requirePermission.mockReset();
+		mocks.createAttachmentUploadToken.mockReset();
 		mocks.createAvatarUploadToken.mockReset();
 		mocks.createProfileImageReference.mockReset();
+		mocks.resolveAttachmentUploadToken.mockReset();
 		mocks.resolveAvatarUploadToken.mockReset();
 
 		mocks.safeGetAuthUser.mockResolvedValue({ _id: 'user_1' });
@@ -60,9 +68,27 @@ describe('files functions', () => {
 			role: 'admin',
 			createdAt: 1
 		});
+		mocks.createAttachmentUploadToken.mockResolvedValue('attachment-token');
 		mocks.createAvatarUploadToken.mockResolvedValue('avatar-token');
 		mocks.createProfileImageReference.mockResolvedValue('storage:v1:storage_1:org_1:sig');
+		mocks.resolveAttachmentUploadToken.mockResolvedValue({ issuedAt: 0 });
 		mocks.resolveAvatarUploadToken.mockResolvedValue({ issuedAt: 0 });
+	});
+
+	it('returns an upload URL and attachment token for members', async () => {
+		const t = createConvexTest();
+
+		const result = await t.mutation(api.files.generateUploadUrl, {
+			organizationId: 'org_1'
+		});
+
+		expect(result.uploadUrl).toContain('https://');
+		expect(result.uploadToken).toBe('attachment-token');
+		expect(mocks.createAttachmentUploadToken).toHaveBeenCalledWith({
+			issuedAt: expect.any(Number),
+			organizationId: 'org_1',
+			userId: 'user_1'
+		});
 	});
 
 	it('returns an upload URL and avatar token for members', async () => {
@@ -210,11 +236,12 @@ describe('files functions', () => {
 	it('returns a generic upload URL for organization members', async () => {
 		const t = createConvexTest();
 
-		const uploadUrl = await t.mutation(api.files.generateUploadUrl, {
+		const upload = await t.mutation(api.files.generateUploadUrl, {
 			organizationId: 'org_1'
 		});
 
-		expect(uploadUrl).toContain('https://');
+		expect(upload.uploadUrl).toContain('https://');
+		expect(upload.uploadToken).toBe('attachment-token');
 	});
 
 	it('uses the live template schema when resolving referenced file URLs', async () => {
@@ -349,6 +376,100 @@ describe('files functions', () => {
 				uploadToken: 'valid-token'
 			})
 		).rejects.toThrow('Invalid avatar file. Please upload a new image.');
+	});
+
+	it('claims an uploaded file for an organization', async () => {
+		const t = createConvexTest();
+		const storageId = await t.run((ctx) =>
+			ctx.storage.store(new Blob(['file'], { type: 'text/plain' }))
+		);
+
+		const attachmentId = await t.mutation(api.files.claimUpload, {
+			organizationId: 'org_1',
+			storageId,
+			uploadToken: 'valid-token'
+		});
+
+		expect(attachmentId).toBeTruthy();
+
+		const attachment = await t.run((ctx) => ctx.db.get(attachmentId));
+		expect(attachment).toMatchObject({
+			storageId,
+			organizationId: 'org_1',
+			uploadedBy: 'user_1'
+		});
+	});
+
+	it('returns existing claim when claiming the same file twice', async () => {
+		const t = createConvexTest();
+		const storageId = await t.run((ctx) =>
+			ctx.storage.store(new Blob(['file'], { type: 'text/plain' }))
+		);
+
+		const first = await t.mutation(api.files.claimUpload, {
+			organizationId: 'org_1',
+			storageId,
+			uploadToken: 'valid-token'
+		});
+		const second = await t.mutation(api.files.claimUpload, {
+			organizationId: 'org_1',
+			storageId,
+			uploadToken: 'valid-token'
+		});
+
+		expect(first).toBe(second);
+	});
+
+	it('rejects claiming a nonexistent storage document', async () => {
+		const t = createConvexTest();
+
+		await expect(
+			t.mutation(api.files.claimUpload, {
+				organizationId: 'org_1',
+				storageId: 'kg2f7r3mw5a7ptbz4kp28apcss7gwzc0' as unknown as Id<'_storage'>,
+				uploadToken: 'valid-token'
+			})
+		).rejects.toThrow();
+	});
+
+	it('rejects claims with an expired upload token', async () => {
+		const t = createConvexTest();
+		const storageId = await t.run((ctx) =>
+			ctx.storage.store(new Blob(['file'], { type: 'text/plain' }))
+		);
+		mocks.resolveAttachmentUploadToken.mockResolvedValueOnce(null);
+
+		await expect(
+			t.mutation(api.files.claimUpload, {
+				organizationId: 'org_1',
+				storageId,
+				uploadToken: 'expired-token'
+			})
+		).rejects.toThrow('File upload authorization expired. Please upload again.');
+	});
+
+	it('rejects claims for files already claimed in another organization', async () => {
+		const t = createConvexTest();
+		const storageId = await t.run((ctx) =>
+			ctx.storage.store(new Blob(['file'], { type: 'text/plain' }))
+		);
+
+		await t.run((ctx) =>
+			ctx.db.insert('attachments', {
+				storageId,
+				organizationId: 'org_a',
+				uploadedBy: 'user_a',
+				claimedAt: 1
+			})
+		);
+
+		await expect(
+			t.mutation(api.files.claimUpload, {
+				organizationId: 'org_1',
+				storageId,
+				uploadToken: 'valid-token'
+			})
+		).rejects.toThrow('Uploaded file is already claimed by another organization');
 	});
 
 	it('rejects file removals when the referenced file is missing from the issue payload', async () => {

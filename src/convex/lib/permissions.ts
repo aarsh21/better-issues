@@ -42,22 +42,23 @@ export const owner = ac.newRole({
 	template: ["create", "update", "delete"]
 });
 
+// Derive the runtime permission map from the AC role definitions
+// so there is a single source of truth for what each role can do.
+const extractStatements = (
+	role: ReturnType<typeof ac.newRole>
+): Record<string, readonly string[]> => {
+	const stmts = role.statements as Record<string, readonly string[]>;
+	return {
+		issue: stmts["issue"] ?? [],
+		label: stmts["label"] ?? [],
+		template: stmts["template"] ?? [],
+	};
+};
+
 const rolePermissions: Record<string, Record<string, readonly string[]>> = {
-	owner: {
-		issue: ["create", "update", "delete", "close"],
-		label: ["create", "update", "delete"],
-		template: ["create", "update", "delete"]
-	},
-	admin: {
-		issue: ["create", "update", "delete", "close"],
-		label: ["create", "update", "delete"],
-		template: ["create", "update", "delete"]
-	},
-	member: {
-		issue: ["create", "update"],
-		label: [],
-		template: []
-	}
+	owner: extractStatements(owner),
+	admin: extractStatements(admin),
+	member: extractStatements(member),
 };
 
 type Resource = "issue" | "label" | "template";
